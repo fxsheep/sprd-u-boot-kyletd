@@ -26,10 +26,22 @@
  * KARO TX25 board - SoC Configuration
  */
 #define CONFIG_ARM926EJS			/* arm926ejs CPU core */
+#define CONFIG_SC8800X
+#define CONFIG_BIGPHONE
+
 #define CONFIG_MX25
 #define CONFIG_TX25
 #define CONFIG_MX25_CLK32		32000	/* OSC32K frequency */
 #define CONFIG_SYS_HZ			1000
+
+/*system clock config, it should be in range hardware support */
+#define CONFIG_SYS_PLL_MHZ	164
+/* F(AHB)= F(PLL)/AHB_DIV */
+#define CONFIG_SYS_AHB_DIV      4
+/* F(ARM) = F(PLL)/ARM_DIV */
+#define CONFIG_SYS_ARM_DIV	2
+/* F(EMC) = F(PLL)/EMC_DIV */
+#define CONFIG_SYS_EMC_DIV	2
 
 #define	CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* 256 kB for U-Boot */
 
