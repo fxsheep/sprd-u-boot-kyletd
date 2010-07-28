@@ -34,7 +34,7 @@ SECTIONS
 		lowlevel_init.o		(.text)
 		nand_boot_fsl_nfc.o	(.text)
 		*(.text)
-		. = 2K;
+		. = 4K;
 	}
 
 	. = ALIGN(4);

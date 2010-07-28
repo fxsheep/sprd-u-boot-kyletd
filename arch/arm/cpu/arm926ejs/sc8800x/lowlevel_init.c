@@ -1,4 +1,7 @@
+#include <linux/types.h>
 void lowlevel_init(void)
 {
-	config_clk();
+	uint32_t ahb_clk;
+	ahb_clk = config_clk();
+	emc_init(ahb_clk);
 }
