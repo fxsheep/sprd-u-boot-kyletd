@@ -115,6 +115,13 @@
 #define ARM_VPLL_FORCE_PD               BIT_14
 #define ARM_APLL_FORCE_PD               BIT_15
 
+
+//UART0, UART1, UART2, UART3 registers
+#define ARM_UART0_BASE        0x83000000 
+#define ARM_UART1_BASE        0x84000000
+#define ARM_UART2_BASE        0x8E000000
+#define ARM_UART3_BASE        0x8F000000
+
 #define REG32(x) (*(volatile uint32_t *)(x))
 
 

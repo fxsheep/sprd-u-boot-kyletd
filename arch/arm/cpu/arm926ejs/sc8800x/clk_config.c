@@ -13,7 +13,7 @@
  *
  * return value is frequency in Mhz, 26 or 13
  * ***********************************************/
-static uint32_t get_input_clk(void)
+uint32_t get_input_clk(void)
 {
 	uint32_t reg_content;
 	reg_content = readl(GR_GEN1);
