@@ -167,18 +167,25 @@
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_SYS_LONGHELP
 
+/* support OS choose */
+#undef CONFIG_BOOTM_NETBSD 
+#undef CONFIG_BOOTM_RTEMS
+
 /* U-Boot commands */
 #include <config_cmd_default.h>
 #define CONFIG_CMD_NAND
+#undef CONFIG_CMD_FPGA
+#undef CONFIG_CMD_LOADS
+#undef CONFIG_CMD_NET
+#undef CONFIG_CMD_NFS
+#undef CONFIG_CMD_SETGETDCR
 
 /*
  * Ethernet
  */
-#define CONFIG_FEC_MXC
-#define CONFIG_FEC_MXC_PHYADDR		0x1f
-#define CONFIG_MII
-#define CONFIG_CMD_NET
-#define CONFIG_NET_MULTI
+//#define CONFIG_FEC_MXC
+//#define CONFIG_FEC_MXC_PHYADDR		0x1f
+//#define CONFIG_MII
 #define BOARD_LATE_INIT
 #define CONFIG_ENV_OVERWRITE
 

@@ -26,7 +26,7 @@ LIB	= $(obj)lib$(SOC).a
 
 COBJS	= generic.o timer.o reset.o
 ifndef CONFIG_SKIP_LOWLEVEL_INIT
-COBJS   += lowlevel_init.o clk_config.o sdram.o
+COBJS   += lowlevel_init.o clk_config.o sdram.o remap.o
 endif
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)

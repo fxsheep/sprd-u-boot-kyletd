@@ -30,13 +30,14 @@ AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 
 SOBJS	= start.o _udivsi3.o _divsi3.o
-COBJS	= nand_boot_fsl_nfc.o lowlevel_init.o clk_config.o div0.o sdram.o
+COBJS	= nand_boot_fsl_nfc.o lowlevel_init.o clk_config.o div0.o sdram.o remap.o
 
 SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c
 SRCS	+= $(SRCTREE)/arch/arm/cpu/arm926ejs/start.S
 SRCS	+= $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800x/lowlevel_init.c
 SRCS	+= $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800x/clk_config.c
 SRCS    += $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800x/sdram.c
+SRCS    += $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800x/remap.c
 SRCS    += $(SRCTREE)/arch/arm/lib/_udivsi3.S
 SRCS    += $(SRCTREE)/arch/arm/lib/_divsi3.S
 SRCS    += $(SRCTREE)/arch/arm/lib/div0.c
