@@ -158,6 +158,10 @@ reset:
 	orr	r0,r0,#0xd3
 	msr	cpsr,r0
 
+	mov	r1, #0x7fffffff
+time:	subs	r1,r1,#0x1
+	bne	time
+
 	/*
 	 * we do sys-critical inits only at reboot,
 	 * not when booting from ram!
@@ -186,16 +190,17 @@ copy_loop:
 
 	/* Set up the stack						    */
 stack_setup:
-	ldr	r0, _TEXT_BASE		/* upper 128 KiB: relocated uboot   */
-	sub	sp, r0, #128		/* leave 32 words for abort-stack   */
+	ldr	r0, _bss_end		/* upper 128 KiB: relocated uboot   */
+	add	sp, r0, #128		/* leave 32 words for abort-stack   */
 #ifndef CONFIG_PRELOADER
-	sub	r0, r0, #CONFIG_SYS_MALLOC_LEN	/* malloc area                      */
-	sub	r0, r0, #CONFIG_SYS_GBL_DATA_SIZE /* bdinfo                        */
+	add	r0, r0, #CONFIG_SYS_MALLOC_LEN	/* malloc area                      */
+	add	r0, r0, #CONFIG_SYS_GBL_DATA_SIZE /* bdinfo                        */
 #ifdef CONFIG_USE_IRQ
-	sub	r0, r0, #(CONFIG_STACKSIZE_IRQ+CONFIG_STACKSIZE_FIQ)
+	add	r0, r0, #(CONFIG_STACKSIZE_IRQ+CONFIG_STACKSIZE_FIQ)
 #endif
 #endif /* CONFIG_PRELOADER */
-	sub	sp, r0, #12		/* leave 3 words for abort-stack    */
+	add	sp, r0, #12		/* leave 3 words for abort-stack    */
+	add	sp, sp,	#CONFIG_SYS_STACK_SIZE 
 	bic	sp, sp, #7		/* 8-byte alignment for ABI compliance */
 
 clear_bss:
@@ -203,16 +208,16 @@ clear_bss:
 	ldr	r1, _bss_end		/* stop here                        */
 	mov	r2, #0x00000000		/* clear                            */
 
-#ifndef CONFIG_PRELOADER
 clbss_l:str	r2, [r0]		/* clear loop...                    */
 	add	r0, r0, #4
 	cmp	r0, r1
 	ble	clbss_l
 
-	bl coloured_LED_init
-	bl red_LED_on
-#endif /* CONFIG_PRELOADER */
 
+	
+#ifndef CONFIG_SKIP_LOWLEVEL_INIT
+	bl	lowlevel_init	/* go setup pll,mux,memory */
+#endif
 	ldr	pc, _start_armboot
 
 _start_armboot:
@@ -256,7 +261,7 @@ cpu_init_crit:
 	 * Go setup Memory and board specific bits prior to relocation.
 	 */
 	mov	ip, lr		/* perserve link reg across call */
-	bl	lowlevel_init	/* go setup pll,mux,memory */
+@	bl	lowlevel_init	/* go setup pll,mux,memory */
 	mov	lr, ip		/* restore link */
 	mov	pc, lr		/* back to my caller */
 #endif /* CONFIG_SKIP_LOWLEVEL_INIT */

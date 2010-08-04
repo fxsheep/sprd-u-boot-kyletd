@@ -83,23 +83,18 @@ uint32_t config_clk(void)
 	if(great_divisor <= 0)
 		return 0;
 
-	pll_div_n = input_clk / great_divisor;
-	if(pll_div_n <= 0)
-		pll_div_n = 1;
-	else if(pll_div_n > PLLMN_N_MAX)
-		pll_div_n = PLLMN_N_MAX;
-
-	pll_div_m = pll_clk / great_divisor;
-	if(pll_div_m > PLLMN_M_MAX){
-		pll_div_m = PLLMN_M_MAX;
-		pll_div_n = (input_clk * pll_div_m)/pll_clk;
-	}else if(pll_div_m <= 0)
+	pll_div_m = input_clk / great_divisor;
+	if(pll_div_m <= 0)
 		pll_div_m = 1;
-	
-	if(pll_div_n == 0)
-		pll_div_n = 1;
-	else if(pll_div_n > PLLMN_N_MAX)
+	else if(pll_div_m > PLLMN_M_MAX)
+		pll_div_m = PLLMN_M_MAX;
+
+	pll_div_n = pll_clk / great_divisor;
+	if(pll_div_n > PLLMN_N_MAX){
 		pll_div_n = PLLMN_N_MAX;
+		pll_div_m = (input_clk * pll_div_n)/pll_clk;
+	}else if(pll_div_n <= 0)
+		pll_div_n = 1;
 	
 	reg_config = readl(GR_GEN1);  //enable mpll write
 	reg_config |= GEN1_MPLLMN_WN;

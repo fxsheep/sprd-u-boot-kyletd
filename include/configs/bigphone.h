@@ -34,10 +34,10 @@
 #define CONFIG_MX25_CLK32		32000	/* OSC32K frequency */
 #define CONFIG_SYS_HZ			1000
 
-
+#define CONFIG_SYS_STACK_SIZE	0x400
 #ifdef CONFIG_NAND_SPL
 /*system clock config, it should be in range hardware support */
-#define CONFIG_SYS_PLL_MHZ	164
+#define CONFIG_SYS_PLL_MHZ	328	
 /* F(AHB)= F(PLL)/AHB_DIV */
 #define CONFIG_SYS_AHB_DIV      4
 /* F(ARM) = F(PLL)/ARM_DIV */
@@ -46,6 +46,9 @@
 #define CONFIG_SYS_EMC_DIV	2
 #endif
 
+#ifdef CONFIG_NAND_SPL
+#define CONFIG_PRELOADER
+#endif
 
 #ifdef CONFIG_NAND_SPL
 #define CONFIG_SYS_SDRAM_BANK_CNT   2
