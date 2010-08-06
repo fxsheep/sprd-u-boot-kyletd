@@ -17,7 +17,7 @@ static void pin_driver_set(void)
 {
 	uint32_t i;
 	uint32_t reg_config;
-	for(i = CPC_EMA0_REG; i<= CPC_NFRB_REG; i+=4)
+	for(i = CPC_EMA0_REG; i<= CPC_EMD15_REG; i+=4)
 		writel(0x31, i); //sdram config, direction:output, driver strength:3
 
 	//use SDRAM/DDR, set the bit on
@@ -26,7 +26,12 @@ static void pin_driver_set(void)
 	writel(reg_config, CPC_EMBA1_REG);
 }
 
-
+/*
+static void on_chip_ram_en(void)
+{
+	REG32(GEN2_ADDR)= ON_CHIP_RAM_EN;
+}
+*/
 //file the sdram_config_info structure
 static void get_config(sdram_cfg_t *sdram_config_info)
 {
@@ -133,7 +138,7 @@ void dmem_ctl_cfg(uint32_t ahb_clk, const sdram_cfg_t *sdram_cfg_ptr, const sdra
 	uint32_t t_wtr = 0xf;
 
 	if(cas_latency == 3)
-	    	t_rtw = 3;
+	    	t_rtw = 4;
 	else if(cas_latency == 2)
 		t_rtw = 2;
 	else 
@@ -155,6 +160,15 @@ void dmem_ctl_cfg(uint32_t ahb_clk, const sdram_cfg_t *sdram_cfg_ptr, const sdra
 	{
 		row_number = 13;
 	}
+
+	if(data_width == DATA_WIDTH_16)
+	{
+		data_width = 0;
+	}else if(data_width == DATA_WIDTH_32)
+	{
+		data_width = 1;
+	}
+
 	REG32(EXT_MEM_DCFG0) = ( \
 	                         DCFG0_BKPOS_HADDR_24_23 |       \
 				(data_width<<3) |               \
@@ -281,6 +295,7 @@ void emc_init(uint32_t ahb_clk)
 	sdram_timing_t sdram_timing_param;
 
 	pin_driver_set();
+//	on_chip_ram_en();
 	get_config(&sdram_config_info);
 	get_timing_param(&sdram_timing_param);
 
