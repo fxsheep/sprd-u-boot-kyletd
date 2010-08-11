@@ -30,7 +30,7 @@ AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 
 SOBJS	= start.o _udivsi3.o _divsi3.o
-COBJS	= nand_boot_fsl_nfc.o lowlevel_init.o clk_config.o div0.o sdram.o remap.o
+COBJS	= nand_boot.o nand_ecc.o sprd_nand.o lowlevel_init.o clk_config.o div0.o sdram.o remap.o
 
 SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c
 SRCS	+= $(SRCTREE)/arch/arm/cpu/arm926ejs/start.S
@@ -69,20 +69,22 @@ $(nandobj)u-boot.lds: $(LDSCRIPT)
 #########################################################################
 
 $(obj)%.o:	$(SRCTREE)/arch/arm/cpu/arm926ejs/%.S
-	$(CC) $(AFLAGS) -c -o $@ $<
+	$(CC) $(AFLAGS) -mbig-endian -c -o $@ $<
 
 $(obj)%.o:	$(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800x/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -mbig-endian -c -o $@ $<
 
 $(obj)%.o:	$(SRCTREE)/nand_spl/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -mbig-endian -c -o $@ $<
 
 $(obj)%.o:	$(SRCTREE)/arch/arm/lib/%.S
-	$(CC) $(AFLAGS) -c -o $@ $<
+	$(CC) $(AFLAGS) -mbig-endian -c -o $@ $<
 
 $(obj)%.o:      $(SRCTREE)/arch/arm/lib/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -mbig-endian -c -o $@ $<
 
+$(obj)%.o:      $(SRCTREE)/drivers/mtd/nand/%.c
+	$(CC) $(CFLAGS) -mbig-endian -c -o $@ $<
 # defines $(obj).depend target
 include $(SRCTREE)/rules.mk
 

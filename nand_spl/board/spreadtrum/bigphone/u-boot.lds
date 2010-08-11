@@ -20,7 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307 USA
  */
-OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
+OUTPUT_FORMAT("elf32-bigarm", "elf32-bigarm", "elf32-bigarm")
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS
@@ -32,9 +32,9 @@ SECTIONS
 	{
 		start.o			(.text)
 		lowlevel_init.o		(.text)
-		nand_boot_fsl_nfc.o	(.text)
+		nand_boot.o
 		*(.text)
-		. = 4K;
+		. = 16K;
 	}
 
 	. = ALIGN(4);

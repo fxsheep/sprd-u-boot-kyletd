@@ -239,7 +239,17 @@
 #define CPC_SD1_D6_REG             	    (PIN_CTL_BASE + 0x0364)
 #define CPC_SD1_D7_REG            		(PIN_CTL_BASE + 0x0368)
 
+#define CPC_NFD9_REG CPC_LCD_D9_REG 
+#define CPC_NFD10_REG CPC_LCD_D10_REG
+#define CPC_NFD11_REG CPC_LCD_D11_REG
+#define CPC_NFD12_REG CPC_LCD_D12_REG
+#define CPC_NFD13_REG CPC_LCD_D13_REG
+#define CPC_NFD14_REG CPC_LCD_D14_REG
+#define CPC_NFD15_REG CPC_LCD_D15_REG
+
 #ifdef   __cplusplus
-    }
+}
 #endif
 #endif
+
+

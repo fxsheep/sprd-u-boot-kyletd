@@ -122,6 +122,9 @@
 #define ARM_UART2_BASE        0x8E000000
 #define ARM_UART3_BASE        0x8F000000
 
+//NAND flash controller 
+#define ARM_NAND_BASE	      0x60000000
+
 #define REG32(x) (*(volatile uint32_t *)(x))
 
 
