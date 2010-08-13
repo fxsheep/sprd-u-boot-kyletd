@@ -27,7 +27,7 @@ include $(TOPDIR)/nand_spl/board/$(BOARDDIR)/config.mk
 LDSCRIPT= $(TOPDIR)/nand_spl/board/$(BOARDDIR)/u-boot.lds
 LDFLAGS	= -Bstatic -T $(nandobj)u-boot.lds -Ttext $(TEXT_BASE) $(PLATFORM_LDFLAGS)
 AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
-CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
+CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL -g
 
 SOBJS	= start.o _udivsi3.o _divsi3.o
 COBJS	= nand_boot.o nand_ecc.o sprd_nand.o lowlevel_init.o clk_config.o div0.o sdram.o remap.o

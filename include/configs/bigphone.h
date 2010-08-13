@@ -23,19 +23,21 @@
 
 
 /*
- * KARO TX25 board - SoC Configuration
+ * SPREADTRUM BIGPHONE board - SoC Configuration
  */
 #define CONFIG_ARM926EJS			/* arm926ejs CPU core */
 #define CONFIG_SC8800X
 #define CONFIG_BIGPHONE
-
+/*
 #define CONFIG_MX25
 #define CONFIG_TX25
-#define CONFIG_MX25_CLK32		32000	/* OSC32K frequency */
+#define CONFIG_MX25_CLK32		32000	*/  /* OSC32K frequency */
 #define CONFIG_SYS_HZ			1000
+#define CONFIG_SPRD_TIMER_CLK		32768
 
+#define WATCHDOG_LOAD_VALUE	0x4000
 #define CONFIG_SYS_STACK_SIZE	0x400
-#ifdef CONFIG_NAND_SPL
+
 /*system clock config, it should be in range hardware support */
 #define CONFIG_SYS_PLL_MHZ	328	
 /* F(AHB)= F(PLL)/AHB_DIV */
@@ -44,7 +46,7 @@
 #define CONFIG_SYS_ARM_DIV	2
 /* F(EMC) = F(PLL)/EMC_DIV */
 #define CONFIG_SYS_EMC_DIV	2
-#endif
+
 
 #ifdef CONFIG_NAND_SPL
 #define CONFIG_PRELOADER
@@ -88,13 +90,17 @@
 
 #define CONFIG_SYS_SDRAM_BASE 0x00
 
-#define CONFIG_SYS_NAND_PAGE_SIZE	2048
 #define CONFIG_SYS_NAND_SPARE_SIZE	64
 #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
 #define CONFIG_SYS_NAND_PAGE_COUNT	64
 #define CONFIG_SYS_NAND_SIZE		(128 * 1024 * 1024)
 #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0
+#else
+#define CONFIG_SKIP_LOWLEVEL_INIT
+#define CONFIG_SKIP_RELOCATE_UBOOT
+#endif
 
+#define CONFIG_SYS_NAND_PAGE_SIZE	2048
 /* Size of the block protected by one OOB (Spare Area in Samsung terminology) */
 #define CONFIG_SYS_NAND_ECCSIZE	CONFIG_SYS_NAND_PAGE_SIZE
 /* Number of ECC bytes per OOB - S3C6400 calculates 4 bytes ECC in 1-bit mode */
@@ -109,12 +115,8 @@
 #define CONFIG_SYS_NAND_ECCPOS		{40, 41, 42, 43, 44, 45, 46, 47, \
 				 48, 49, 50, 51, 52, 53, 54, 55, \
 				 56, 57, 58, 59, 60, 61, 62, 63}
-#else
-#define CONFIG_SKIP_LOWLEVEL_INIT
-#define CONFIG_SKIP_RELOCATE_UBOOT
-#endif
 
-
+#define CONFIG_HW_WATCHDOG
 
 #define CONFIG_DISPLAY_CPUINFO
 
@@ -170,7 +172,7 @@
 #define CONFIG_SPRD_NAND_REGS_BASE	(0x60000000)
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_SYS_NAND_BASE		(0x60000000)
-#define CONFIG_JFFS2_NAND
+//#define CONFIG_JFFS2_NAND
 #define CONFIG_SPRD_NAND_HWECC
 #define CONFIG_SYS_NAND_LARGEPAGE
 
@@ -213,12 +215,12 @@
 //#define CONFIG_FEC_MXC
 //#define CONFIG_FEC_MXC_PHYADDR		0x1f
 //#define CONFIG_MII
-#define BOARD_LATE_INIT
+//#define BOARD_LATE_INIT
 #define CONFIG_ENV_OVERWRITE
 
 #define CONFIG_BOOTDELAY	5
 
-#define CONFIG_LOADADDR		0x81000000	/* loadaddr env var */
+#define CONFIG_LOADADDR		0x01000000	/* loadaddr env var */
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
 
 #define xstr(s)	str(s)

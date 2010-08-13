@@ -30,13 +30,13 @@ void serial_setbrg(void)
 	uint32_t clk = __REG(GR_GEN1);
 	uint32_t brg_div;
 
-	if(clk & GEN1_CLK_26MHZ_EN)
-		brg_div = 26000000/CONFIG_BAUDRATE;
-	else
-		brg_div = 13000000/CONFIG_BAUDRATE;
-
 	if (!gd->baudrate)
 		gd->baudrate = CONFIG_BAUDRATE;
+
+	if(clk & GEN1_CLK_26MHZ_EN)
+		brg_div = 26000000/gd->baudrate;
+	else
+		brg_div = 13000000/gd->baudrate;
 
 /* Set baud rate  */
     __REG( UART_PHYS + ARM_UART_CLKD0 ) = LWORD(brg_div);

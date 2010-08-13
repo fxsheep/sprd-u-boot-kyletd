@@ -190,18 +190,22 @@ copy_loop:
 
 	/* Set up the stack						    */
 stack_setup:
-	ldr	r0, _bss_end		/* upper 128 KiB: relocated uboot   */
-	add	sp, r0, #128		/* leave 32 words for abort-stack   */
+#ifndef CONFIG_NAND_SPL
+	ldr	r0, _TEXT_BASE		/* upper 128 KiB: relocated uboot   */
+	sub	sp, r0, #128		/* leave 32 words for abort-stack   */
 #ifndef CONFIG_PRELOADER
-	add	r0, r0, #CONFIG_SYS_MALLOC_LEN	/* malloc area                      */
-	add	r0, r0, #CONFIG_SYS_GBL_DATA_SIZE /* bdinfo                        */
+	sub	r0, r0, #CONFIG_SYS_MALLOC_LEN	/* malloc area                      */
+	sub	r0, r0, #CONFIG_SYS_GBL_DATA_SIZE /* bdinfo                        */
 #ifdef CONFIG_USE_IRQ
-	add	r0, r0, #(CONFIG_STACKSIZE_IRQ+CONFIG_STACKSIZE_FIQ)
+	sub	r0, r0, #(CONFIG_STACKSIZE_IRQ+CONFIG_STACKSIZE_FIQ)
 #endif
 #endif /* CONFIG_PRELOADER */
-	add	sp, r0, #12		/* leave 3 words for abort-stack    */
-	add	sp, sp,	#CONFIG_SYS_STACK_SIZE 
+	sub	sp, r0, #12		/* leave 3 words for abort-stack    */
+	sub	sp, sp,	#CONFIG_SYS_STACK_SIZE 
 	bic	sp, sp, #7		/* 8-byte alignment for ABI compliance */
+#else
+	ldr 	sp, =0x40007000
+#endif /*CONFIG_NAND_SPL*/
 
 clear_bss:
 	ldr	r0, _bss_start		/* find start of bss segment        */
@@ -218,6 +222,7 @@ clbss_l:str	r2, [r0]		/* clear loop...                    */
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
 	bl	lowlevel_init	/* go setup pll,mux,memory */
 #endif
+	ldr	sp, =0x400
 	ldr	pc, _start_armboot
 
 _start_armboot:

@@ -32,9 +32,8 @@ SECTIONS
 	{
 		start.o			(.text)
 		lowlevel_init.o		(.text)
-		nand_boot.o
 		*(.text)
-		. = 16K;
+		. = 24K;
 	}
 
 	. = ALIGN(4);

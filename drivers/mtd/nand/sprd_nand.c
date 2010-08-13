@@ -6,6 +6,7 @@
 #include <asm/arch/regs_cpc.h>
 #include <nand.h>
 #include <asm/io.h>
+#include <linux/mtd/nand.h>
 
 #ifdef CONFIG_NAND_SPL
 #define printf(arg...) do{}while(0)
@@ -265,6 +266,8 @@ static void nand_copy(unsigned char *src, unsigned char *dst, unsigned long len)
 static void memset(unsigned char * s, unsigned char c, unsigned long len)
 {
 	unsigned long i = 0;
+	if(len < 1)
+		return;
 	for(i = 0; i<len; i++)
 	{
 		*(s+i) = c;
@@ -829,7 +832,7 @@ int board_nand_init(struct nand_chip *this)
 //	this->nfc_readid = sprd_nand_readid;
 //	this->nfc_wr_oob = sprd_nand_wr_oob;
 
-#ifdef CONFIG_SYS_SPRD_NAND_HWECC
+#ifdef CONFIG_SPRD_NAND_HWECC
 	this->ecc.calculate = sprd_nand_calculate_ecc;
 	this->ecc.correct = sprd_nand_correct_data;
 	this->ecc.hwctl = sprd_nand_enable_hwecc;

@@ -29,6 +29,10 @@ ifndef CONFIG_SKIP_LOWLEVEL_INIT
 COBJS   += lowlevel_init.o clk_config.o sdram.o remap.o
 endif
 
+ifdef CONFIG_HW_WATCHDOG
+COBJS  += watchdog.o
+endif
+
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
 OBJS	:= $(addprefix $(obj),$(SOBJS) $(COBJS) )
 

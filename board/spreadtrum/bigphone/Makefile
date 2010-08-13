@@ -25,7 +25,7 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(BOARD).a
 
-COBJS	:= tx25.o
+COBJS	:= bigphone.o
 SOBJS	:= 
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
