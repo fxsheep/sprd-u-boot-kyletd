@@ -45,7 +45,7 @@ void serial_setbrg(void)
 
 int serial_getc(void)
 {
-	while(SIO_RX_READY( SIO_GET_RX_STATUS( UART_PHYS ) ));
+	while(!SIO_RX_READY( SIO_GET_RX_STATUS( UART_PHYS ) ));
 	return SIO_GET_CHAR(UART_PHYS);
 }
 
@@ -95,4 +95,5 @@ int serial_init (void)
 	__REG( UART_PHYS + ARM_UART_CTL0 ) = UARTCTL_BL8BITS | UARTCTL_SL1BITS;    
 	__REG( UART_PHYS + ARM_UART_CTL1 ) = 0;
 	__REG( UART_PHYS + ARM_UART_CTL2 ) = 0;  
+	return 0;
 }

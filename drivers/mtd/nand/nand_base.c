@@ -79,6 +79,7 @@
 #include <jffs2/jffs2.h>
 #endif
 
+#define CONFIG_MTD_NAND_SC8800S 1
 /*
  * CONFIG_SYS_NAND_RESET_CNT is used as a timeout mechanism when resetting
  * a flash.  NAND flash is initialized prior to interrupts so standard timers
@@ -625,7 +626,7 @@ static void nand_command(struct mtd_info *mtd, unsigned int command,
 	 * any case on any machine. */
 	ndelay(100);
 
-	nand_wait_ready(mtd);
+	//nand_wait_ready(mtd);
 }
 
 /**
@@ -2608,21 +2609,35 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	int i, dev_id, maf_idx;
 	int tmp_id, tmp_manf;
 
+#ifdef CONFIG_MTD_NAND_SC8800S
+	unsigned long flash_id = 0;
+#endif
 	/* Select the device */
 	chip->select_chip(mtd, 0);
 
+#if 1
 	/*
 	 * Reset the chip, required by some chips (e.g. Micron MT29FxGxxxxx)
 	 * after power-up
 	 */
 	chip->cmdfunc(mtd, NAND_CMD_RESET, -1, -1);
+#endif
 
 	/* Send the command for reading device ID */
-	chip->cmdfunc(mtd, NAND_CMD_READID, 0x00, -1);
+#ifdef CONFIG_MTD_NAND_SC8800S
+	chip->cmdfunc(mtd, NAND_CMD_READID, -1, -1);
+	flash_id = chip->nfc_readid(mtd);
+
+	/*Read manufacturer and device IDs */
+	*maf_id = flash_id & 0xff;
+	dev_id = (flash_id >> 8)&0xff;
+#else
+	chip->cmdfunc(mtd, NAND_CMD_READID, 0x0, -1);
 
 	/* Read manufacturer and device IDs */
 	*maf_id = chip->read_byte(mtd);
 	dev_id = chip->read_byte(mtd);
+#endif
 
 	/* Try again to make sure, as some systems the bus-hold or other
 	 * interface concerns can cause random data which looks like a
@@ -2630,12 +2645,21 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	 * not match, ignore the device completely.
 	 */
 
+#ifdef CONFIG_MTD_NAND_SC8800S
+	chip->cmdfunc(mtd, NAND_CMD_READID, -1, -1);
+	flash_id = chip->nfc_readid(mtd);
+
+	/* Read manufacturer and device IDs*/
+	tmp_manf = flash_id & 0xff;
+	tmp_id = (flash_id >> 8) & 0xff;
+#else
 	chip->cmdfunc(mtd, NAND_CMD_READID, 0x00, -1);
 
 	/* Read manufacturer and device IDs */
 
 	tmp_manf = chip->read_byte(mtd);
 	tmp_id = chip->read_byte(mtd);
+#endif
 
 	if (tmp_manf != *maf_id || tmp_id != dev_id) {
 		printk(KERN_INFO "%s: second ID read did not match "
@@ -2643,7 +2667,7 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 		       *maf_id, dev_id, tmp_manf, tmp_id);
 		return ERR_PTR(-ENODEV);
 	}
-
+#if 1
 	/* Lookup the flash id */
 	for (i = 0; nand_flash_ids[i].name != NULL; i++) {
 		if (dev_id == nand_flash_ids[i].id) {
@@ -2663,10 +2687,17 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	/* Newer devices have all the information in additional id bytes */
 	if (!type->pagesize) {
 		int extid;
+#ifdef CONFIG_MTD_NAND_SC8800S
+		/* The 3rd id byte holds MLC / multichip data */
+		chip->cellinfo = (flash_id >> 16) & 0xff;
+		/* The 4th id byte is the important one */
+		extid = (flash_id >> 24) & 0xff;
+#else
 		/* The 3rd id byte holds MLC / multichip data */
 		chip->cellinfo = chip->read_byte(mtd);
 		/* The 4th id byte is the important one */
 		extid = chip->read_byte(mtd);
+#endif
 		/* Calc pagesize */
 		mtd->writesize = 1024 << (extid & 0x3);
 		extid >>= 2;
@@ -2753,7 +2784,10 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	MTDDEBUG (MTD_DEBUG_LEVEL0, "NAND device: Manufacturer ID:"
 	          " 0x%02x, Chip ID: 0x%02x (%s %s)\n", *maf_id, dev_id,
 	          nand_manuf_ids[maf_idx].name, type->name);
-
+	printf("NAND device: Manufacturer ID:"
+	          " 0x%02x, Chip ID: 0x%02x (%s %s)\n", *maf_id, dev_id,
+	          nand_manuf_ids[maf_idx].name, type->name);
+#endif
 	return type;
 }
 
@@ -2780,7 +2814,10 @@ int nand_scan_ident(struct mtd_info *mtd, int maxchips)
 
 	/* Read the flash type */
 	type = nand_get_flash_type(mtd, chip, busw, &nand_maf_id);
-
+#if 0
+	i=0xfffffff;
+	while(i--);
+#endif
 	if (IS_ERR(type)) {
 #ifndef CONFIG_SYS_NAND_QUIET_TEST
 		printk(KERN_WARNING "No NAND device found!!!\n");
@@ -2847,6 +2884,7 @@ int nand_scan_tail(struct mtd_info *mtd)
 			chip->ecc.layout = &nand_oob_16;
 			break;
 		case 64:
+			printf("nand oob size 64\n");
 			chip->ecc.layout = &nand_oob_64;
 			break;
 		case 128:
@@ -3074,6 +3112,7 @@ int nand_scan(struct mtd_info *mtd, int maxchips)
 	ret = nand_scan_ident(mtd, maxchips);
 	if (!ret)
 		ret = nand_scan_tail(mtd);
+	printf("nand scan return %d\n", ret);
 	return ret;
 }
 

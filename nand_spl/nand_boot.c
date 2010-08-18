@@ -22,6 +22,8 @@
 #include <nand.h>
 #include <asm/io.h>
 
+#define CONFIG_MTD_NAND_SC8800S 1
+
 #define CONFIG_SYS_NAND_READ_DELAY \
 	{ volatile int dummy; int i; for (i=0; i<10000; i++) dummy = i; }
 
@@ -94,13 +96,21 @@ static int nand_command(struct mtd_info *mtd, int block, int page, int offs, u8 
 	this->cmd_ctrl(mtd, cmd, NAND_CTRL_CLE | NAND_CTRL_CHANGE);
 	/* Set ALE and clear CLE to start address cycle */
 	/* Column address */
+#ifdef CONFIG_MTD_NAND_SC8800S
+	this->cmd_ctrl(mtd, offs>>1, NAND_CTRL_ALE | NAND_CTRL_CHANGE);
+#else
 	this->cmd_ctrl(mtd, offs & 0xff,
 		       NAND_CTRL_ALE | NAND_CTRL_CHANGE); /* A[7:0] */
 	this->cmd_ctrl(mtd, (offs >> 8) & 0xff, NAND_CTRL_ALE); /* A[11:9] */
+#endif
 	/* Row address */
+#ifdef CONFIG_MTD_NAND_SC8800S
+	this->cmd_ctrl(mtd, page_addr, NAND_CTRL_ALE); /* A[19:12] */
+#else
 	this->cmd_ctrl(mtd, (page_addr & 0xff), NAND_CTRL_ALE); /* A[19:12] */
 	this->cmd_ctrl(mtd, ((page_addr >> 8) & 0xff),
 		       NAND_CTRL_ALE); /* A[27:20] */
+#endif
 #ifdef CONFIG_SYS_NAND_5_ADDR_CYCLE
 	/* One more address cycle for devices > 128MiB */
 	this->cmd_ctrl(mtd, (page_addr >> 16) & 0x0f,
@@ -247,6 +257,12 @@ void nand_boot(void)
 	/*
 	 * Load U-Boot image from NAND into RAM
 	 */
+	nand_info.erasesize = 64*2048;
+	nand_info.writesize = 2048;
+	nand_info.oobsize = 64;
+	//nand_command(&nand_info, -1,-1,-1,NAND_CMD_RESET);
+	nand_chip.cmd_ctrl(&nand_info, NAND_CMD_RESET, NAND_NCE|NAND_CLE|NAND_CTRL_CHANGE);
+	nand_chip.cmd_ctrl(&nand_info, NAND_CMD_NONE, NAND_NCE|NAND_CTRL_CHANGE);
 	ret = nand_load(&nand_info, CONFIG_SYS_NAND_U_BOOT_OFFS, CONFIG_SYS_NAND_U_BOOT_SIZE,
 			(uchar *)CONFIG_SYS_NAND_U_BOOT_DST);
 

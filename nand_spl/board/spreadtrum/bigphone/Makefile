@@ -29,7 +29,7 @@ LDFLAGS	= -Bstatic -T $(nandobj)u-boot.lds -Ttext $(TEXT_BASE) $(PLATFORM_LDFLAG
 AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL -g
 
-SOBJS	= start.o _udivsi3.o _divsi3.o
+SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o
 COBJS	= nand_boot.o nand_ecc.o sprd_nand.o lowlevel_init.o clk_config.o div0.o sdram.o remap.o
 
 SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c

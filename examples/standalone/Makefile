@@ -92,7 +92,7 @@ $(ELF):
 $(obj)%:	$(obj)%.o $(LIB)
 		$(LD) -g -Ttext $(STANDALONE_LOAD_ADDR) \
 			-o $@ -e $(SYM_PREFIX)$(notdir $(<:.o=)) $< $(LIB) \
-			-L$(gcclibdir) -lgcc
+			-L$(gcclibdir) -lgcc 
 
 $(SREC):
 $(obj)%.srec:	$(obj)%

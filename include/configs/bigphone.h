@@ -79,7 +79,7 @@
 
 /* NAND BOOT is the only boot method */
 #define CONFIG_NAND_U_BOOT
-
+#define DYNAMIC_CRC_TABLE
 #ifdef CONFIG_NAND_SPL
 /* Start copying real U-boot from the second page */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x800
@@ -104,7 +104,8 @@
 /* Size of the block protected by one OOB (Spare Area in Samsung terminology) */
 #define CONFIG_SYS_NAND_ECCSIZE	CONFIG_SYS_NAND_PAGE_SIZE
 /* Number of ECC bytes per OOB - S3C6400 calculates 4 bytes ECC in 1-bit mode */
-#define CONFIG_SYS_NAND_ECCBYTES	4
+//#define CONFIG_SYS_NAND_ECCBYTES	4
+#define CONFIG_SYS_NAND_ECCBYTES	12
 /* Number of ECC-blocks per NAND page */
 #define CONFIG_SYS_NAND_ECCSTEPS	(CONFIG_SYS_NAND_PAGE_SIZE / CONFIG_SYS_NAND_ECCSIZE)
 /* Size of a single OOB region */
