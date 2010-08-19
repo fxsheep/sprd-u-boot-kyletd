@@ -13,6 +13,8 @@
 #define printf(arg...) do{}while(0)
 #endif
 
+#define NAND_DEBUG 1
+
 #define NF_PARA_20M        	0x7ac05      //trwl = 0  trwh = 0
 #define NF_PARA_40M        	0x7ac15      //trwl = 1  trwh = 0
 #define NF_PARA_53M        	0x7ad26      //trwl = 2  trwh = 1
@@ -150,7 +152,7 @@ static sprd_nand_wr_mode_t sprd_wr_mode = NO_OP;
 static sprd_nand_area_mode_t sprd_area_mode = NO_AREA;
 static unsigned long nand_flash_id = 0;
 static struct sprd_nand_address sprd_colrow_addr = {0, 0, 0, 0};
-static unsigned char io_wr_port[NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE];
+static __attribute__((aligned(4))) unsigned char io_wr_port[NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE];
 static nand_ecc_modes_t sprd_ecc_mode = NAND_ECC_NONE;
 
 static void nand_copy(unsigned char *src, unsigned char *dst, unsigned long len)
@@ -165,7 +167,9 @@ static void nand_copy(unsigned char *src, unsigned char *dst, unsigned long len)
 
 	switch (flag) {
 		case 0://word alignment
+#ifdef NAND_DEBUG
 			printf("%s  %d\n", __FUNCTION__, __LINE__);
+#endif
         		pDst_32 = (unsigned long *)dst;
                 	pSrc_32 = (unsigned long *)src;
                 	for (i = 0; i < (len / 4); i++) {
@@ -175,7 +179,9 @@ static void nand_copy(unsigned char *src, unsigned char *dst, unsigned long len)
 			}
         	break;
         	case 2://half word alignment
+#ifdef NAND_DEBUG
 			printf("%s  %d\n", __FUNCTION__, __LINE__);
+#endif
                 	pDst_16 = (unsigned short *)dst;
                 	pSrc_16 = (unsigned short *)src;
                 	for (i = 0; i < (len / 2); i++) {
@@ -185,7 +191,9 @@ static void nand_copy(unsigned char *src, unsigned char *dst, unsigned long len)
                 	}
             	break;
         	default://byte alignment
+#ifdef NAND_DEBUG
 			printf("%s  %d\n", __FUNCTION__, __LINE__);
+#endif
                 	for (i = 0; i < len; i++) {
                     		*dst = *src;
                     		dst++;
@@ -323,19 +331,23 @@ static void sprd_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 			
 			memset((unsigned char *)(this->IO_ADDR_R), 0xff, NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE);
 			nand_copy((unsigned char *)NFC_IDSTATUS, this->IO_ADDR_R, 4);
-#if 0
+#if 0 
 			/* transfer to big endian */
 			i = io_wr_port[3]; io_wr_port[3] = io_wr_port[0]; io_wr_port[0] = i;
 			i = io_wr_port[2]; io_wr_port[2] = io_wr_port[1]; io_wr_port[1] = i;
 #endif
-			/*for (i = 0; i < 4; i++)
-*                 			printf("io_wr_port[%d] = 0x%02x\n", i, io_wr_port[i]);*/
+#ifdef NAND_DEBUG
+			for (i = 0; i < 4; i++)
+                 			printf("io_wr_port[%d] = 0x%02x\n", i, io_wr_port[i]);
+#endif
 		break;
 		case NAND_CMD_READID:
 			REG_NFC_CMD = cmd | (0x1 << 31);
 			nfc_wait_command_finish();
 			nand_flash_id = REG_NFC_IDSTATUS;
+#ifdef NAND_DEBUG
 			printf("nand id: %x\n", nand_flash_id);
+#endif
 		break;
 		case NAND_CMD_ERASE1:
 			sprd_colrow_addr.column = 0;
@@ -539,7 +551,7 @@ static unsigned long sprd_nand_wr_oob(struct mtd_info *mtd)
 
 void nand_ecc_trans(unsigned char *pEccIn, unsigned char *pEccOut, unsigned char nSct)
 {
-#if 1
+#if 0
 	/* little endian */
         switch(nSct)
         {
@@ -646,9 +658,13 @@ static int sprd_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_ch
 		nand_copy(io_wr_port, (unsigned char *)NFC_MBUF, mtd->writesize);
 		/* large page */
 		pecc_val[0] = REG_NFC_PAGEECC0;
-               	pecc_val[1] = REG_NFC_PAGEECC1;
-               	pecc_val[2] = REG_NFC_PAGEECC2;
-               	pecc_val[3] = REG_NFC_PAGEECC3;
+		pecc_val[1] = REG_NFC_PAGEECC1;
+		pecc_val[2] = REG_NFC_PAGEECC2;
+		pecc_val[3] = REG_NFC_PAGEECC3;
+#ifdef NAND_DEBUG
+		for(i = 0; i< 4; i++)
+			printf("write ecc %d is %x\n", i, pecc_val[i]);
+#endif
 		nand_ecc_trans(ecc_val_in, ecc_val_out, 4);
 
 		ecc_code[0] = ecc_val_out[0];
@@ -676,6 +692,10 @@ static int sprd_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_ch
                 pecc_val[1] = REG_NFC_PAGEECC1;
                 pecc_val[2] = REG_NFC_PAGEECC2;
                 pecc_val[3] = REG_NFC_PAGEECC3;
+#ifdef NAND_DEBUG
+		for(i = 0; i< 4; i++)
+			printf("read ecc %d is %x\n", i, pecc_val[i]);
+#endif
 		nand_ecc_trans(ecc_val_in, ecc_val_out, 4);
 
 		ecc_code[0] = ecc_val_out[0];

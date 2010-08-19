@@ -207,7 +207,7 @@ static uint8_t nand_read_byte16(struct mtd_info *mtd)
 	struct nand_chip *chip = mtd->priv;
 
 #ifdef CONFIG_MTD_NAND_SC8800S
-	return (uint8_t)readw(chip->IO_ADDR_R);
+	return (uint8_t)readl(chip->IO_ADDR_R);
 #else
 	return (uint8_t) cpu_to_le16(readw(chip->IO_ADDR_R));
 #endif
@@ -370,7 +370,7 @@ static int nand_verify_buf16(struct mtd_info *mtd, const uint8_t *buf, int len)
 	len >>= 1;
 
 	for (i = 0; i < len; i++)
-		if (p[i] != readw(chip->IO_ADDR_R))
+		if (p[i] != readw((uint16_t *)chip->IO_ADDR_R + i))
 			return -EFAULT;
 
 	return 0;

@@ -75,15 +75,15 @@
 #endif
 
 
-#define	CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* 256 kB for U-Boot */
+//#define	CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* 256 kB for U-Boot */
 
 /* NAND BOOT is the only boot method */
 #define CONFIG_NAND_U_BOOT
 #define DYNAMIC_CRC_TABLE
-#ifdef CONFIG_NAND_SPL
 /* Start copying real U-boot from the second page */
-#define CONFIG_SYS_NAND_U_BOOT_OFFS	0x800
-#define CONFIG_SYS_NAND_U_BOOT_SIZE	0x30000
+#define CONFIG_SYS_NAND_U_BOOT_OFFS	0x20000
+#define CONFIG_SYS_NAND_U_BOOT_SIZE	0x60000
+#ifdef CONFIG_NAND_SPL
 /* Load U-Boot to this address */
 #define CONFIG_SYS_NAND_U_BOOT_DST	0x00f00000
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_NAND_U_BOOT_DST
@@ -162,6 +162,7 @@
  * Flash & Environment
  */
 /* No NOR flash present */
+#define CONFIG_SYS_MONITOR_LEN ((CONFIG_SYS_NAND_U_BOOT_OFFS)+(CONFIG_SYS_NAND_U_BOOT_SIZE))
 #define CONFIG_SYS_NO_FLASH	1
 #define	CONFIG_ENV_IS_IN_NAND
 #define	CONFIG_ENV_OFFSET	CONFIG_SYS_MONITOR_LEN
