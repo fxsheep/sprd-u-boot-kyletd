@@ -836,7 +836,7 @@ int board_nand_init(struct nand_chip *this)
 	this->read_buf  = nand_read_buf;
 #endif
 	this->nfc_readid = sprd_nand_readid;
-//	this->nfc_wr_oob = sprd_nand_wr_oob;
+	this->nfc_wr_oob = sprd_nand_wr_oob;
 
 #ifdef CONFIG_SPRD_NAND_HWECC
 	this->ecc.calculate = sprd_nand_calculate_ecc;

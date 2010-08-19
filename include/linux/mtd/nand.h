@@ -389,6 +389,7 @@ struct nand_chip {
 	int		(*write_page)(struct mtd_info *mtd, struct nand_chip *chip,
 				      const uint8_t *buf, int page, int cached, int raw);
 	int		(*nfc_readid)(struct mtd_info *mtd);
+	int		(*nfc_wr_oob)(struct mtd_info *mtd);
 
 	int		chip_delay;
 	unsigned int	options;

@@ -205,7 +205,12 @@ static uint8_t nand_read_byte(struct mtd_info *mtd)
 static uint8_t nand_read_byte16(struct mtd_info *mtd)
 {
 	struct nand_chip *chip = mtd->priv;
+
+#ifdef CONFIG_MTD_NAND_SC8800S
+	return (uint8_t)readw(chip->IO_ADDR_R);
+#else
 	return (uint8_t) cpu_to_le16(readw(chip->IO_ADDR_R));
+#endif
 }
 
 /**
@@ -257,8 +262,12 @@ static void nand_write_buf(struct mtd_info *mtd, const uint8_t *buf, int len)
 	int i;
 	struct nand_chip *chip = mtd->priv;
 
+#ifdef CONFIG_MTD_NAND_SC8800S
+	memcpy(chip->IO_ADDR_W, buf, len);
+#else
 	for (i = 0; i < len; i++)
 		writeb(buf[i], chip->IO_ADDR_W);
+#endif
 }
 
 /**
@@ -309,12 +318,16 @@ static void nand_write_buf16(struct mtd_info *mtd, const uint8_t *buf, int len)
 {
 	int i;
 	struct nand_chip *chip = mtd->priv;
+
+#ifdef CONFIG_MTD_NAND_SC8800S
+	memcpy(chip->IO_ADDR_W, buf, len);
+#else
 	u16 *p = (u16 *) buf;
 	len >>= 1;
 
 	for (i = 0; i < len; i++)
 		writew(p[i], chip->IO_ADDR_W);
-
+#endif
 }
 
 /**
@@ -329,11 +342,16 @@ static void nand_read_buf16(struct mtd_info *mtd, uint8_t *buf, int len)
 {
 	int i;
 	struct nand_chip *chip = mtd->priv;
+
+#ifdef CONFIG_MTD_NAND_SC8800S
+	memcpy(buf, chip->IO_ADDR_R, len);
+#else
 	u16 *p = (u16 *) buf;
 	len >>= 1;
 
 	for (i = 0; i < len; i++)
 		p[i] = readw(chip->IO_ADDR_R);
+#endif
 }
 
 /**
@@ -664,11 +682,18 @@ static void nand_command_lp(struct mtd_info *mtd, unsigned int command,
 			/* Adjust columns for 16 bit buswidth */
 			if (chip->options & NAND_BUSWIDTH_16)
 				column >>= 1;
+#ifdef CONFIG_MTD_NAND_SC8800S
+			chip->cmd_ctrl(mtd, column, ctrl);
+#else
 			chip->cmd_ctrl(mtd, column, ctrl);
 			ctrl &= ~NAND_CTRL_CHANGE;
 			chip->cmd_ctrl(mtd, column >> 8, ctrl);
+#endif
 		}
 		if (page_addr != -1) {
+#ifdef CONFIG_MTD_NAND_SC8800S
+			chip->cmd_ctrl(mtd, page_addr, ctrl);
+#else
 			chip->cmd_ctrl(mtd, page_addr, ctrl);
 			chip->cmd_ctrl(mtd, page_addr >> 8,
 				       NAND_NCE | NAND_ALE);
@@ -676,6 +701,7 @@ static void nand_command_lp(struct mtd_info *mtd, unsigned int command,
 			if (chip->chipsize > (128 << 20))
 				chip->cmd_ctrl(mtd, page_addr >> 16,
 					       NAND_NCE | NAND_ALE);
+#endif
 		}
 	}
 	chip->cmd_ctrl(mtd, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
@@ -1827,6 +1853,9 @@ static void nand_write_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->oob_poi[eccpos[i]] = ecc_calc[i];
 
 	chip->write_buf(mtd, chip->oob_poi, mtd->oobsize);
+#ifdef CONFIG_MTD_NAND_SC8800S
+	chip->nfc_wr_oob(mtd);
+#endif
 }
 
 /**

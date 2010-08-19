@@ -221,8 +221,8 @@ clbss_l:str	r2, [r0]		/* clear loop...                    */
 	
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
 	bl	lowlevel_init	/* go setup pll,mux,memory */
-#endif
 	ldr	sp, =0x800
+#endif
 	ldr	pc, _start_armboot
 
 _start_armboot:
