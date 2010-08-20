@@ -242,7 +242,11 @@ void nand_boot(void)
 	nand_info_t nand_info;
 	int ret;
 	__attribute__((noreturn)) void (*uboot)(void);
-
+#if 0
+	unsigned int i = 0;
+	for(i=0xffffffff;i>0;)
+	  i--;
+#endif
 	/*
 	 * Init board specific nand support
 	 */

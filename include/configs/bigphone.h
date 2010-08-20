@@ -33,7 +33,7 @@
 #define CONFIG_TX25
 #define CONFIG_MX25_CLK32		32000	*/  /* OSC32K frequency */
 #define CONFIG_SYS_HZ			1000
-#define CONFIG_SPRD_TIMER_CLK		32768
+#define CONFIG_SPRD_TIMER_CLK		1000 /*32768*/
 
 #define WATCHDOG_LOAD_VALUE	0x4000
 #define CONFIG_SYS_STACK_SIZE	0x400
@@ -81,7 +81,7 @@
 #define CONFIG_NAND_U_BOOT
 #define DYNAMIC_CRC_TABLE
 /* Start copying real U-boot from the second page */
-#define CONFIG_SYS_NAND_U_BOOT_OFFS	0x20000
+#define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
 #define CONFIG_SYS_NAND_U_BOOT_SIZE	0x60000
 #ifdef CONFIG_NAND_SPL
 /* Load U-Boot to this address */

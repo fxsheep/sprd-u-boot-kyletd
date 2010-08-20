@@ -33,7 +33,7 @@ SECTIONS
 		start.o			(.text)
 		lowlevel_init.o		(.text)
 		*(.text)
-		. = 24K;
+		. = 16K;
 	}
 
 	. = ALIGN(4);

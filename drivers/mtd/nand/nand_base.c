@@ -927,7 +927,10 @@ static int nand_wait(struct mtd_info *mtd, struct nand_chip *this)
 static int nand_read_page_raw(struct mtd_info *mtd, struct nand_chip *chip,
 			      uint8_t *buf, int page)
 {
+	uint8_t ecc_calc[CONFIG_SYS_NAND_OOBSIZE];
+	chip->ecc.hwctl(mtd, NAND_ECC_READ);
 	chip->read_buf(mtd, buf, mtd->writesize);
+	chip->ecc.calculate(mtd, NULL, ecc_calc);
 	chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
 	return 0;
 }
@@ -1120,8 +1123,15 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->ecc.hwctl(mtd, NAND_ECC_READ);
 		chip->read_buf(mtd, p, eccsize);
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
+		printf("nand_read_page_hwecc\n");
 	}
 	chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
+	printf("nand_read_page_hwecc next\n");
+	for(i=0;i<64;i++){
+		printf("%x ", chip->oob_poi[i]);
+		if(i!=0 && i%8==7)
+		  printf("\n");
+	}
 
 	for (i = 0; i < chip->ecc.total; i++)
 		ecc_code[i] = chip->oob_poi[eccpos[i]];

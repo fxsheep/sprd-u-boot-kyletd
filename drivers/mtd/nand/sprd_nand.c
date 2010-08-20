@@ -204,10 +204,14 @@ static void nand_copy(unsigned char *src, unsigned char *dst, unsigned long len)
 }
 
 #ifdef CONFIG_NAND_SPL
-static u_char nand_read_byte(struct mtd_info *mtd)
+static u_char nand_read_byte16(struct mtd_info *mtd)
 {
 	struct nand_chip *this = mtd->priv;
+#ifdef CONFIG_MTD_NAND_SC8800S
+	return (uint8_t)readl(this->IO_ADDR_R);
+#else
 	return readb(this->IO_ADDR_R);
+#endif
 }
 
 static void nand_write_buf(struct mtd_info *mtd, const uint8_t *buf, int len)
@@ -215,8 +219,12 @@ static void nand_write_buf(struct mtd_info *mtd, const uint8_t *buf, int len)
 	int i;
 	struct nand_chip *this = mtd->priv;
 
+#ifdef CONFIG_MTD_NAND_SC8800S
+	nand_copy(buf,this->IO_ADDR_W, len);
+#else
 	for (i = 0; i < len; i++)
 		writeb(buf[i], this->IO_ADDR_W);
+#endif
 }
 
 static void nand_read_buf(struct mtd_info *mtd, u_char *buf, int len)
@@ -287,11 +295,6 @@ static void memset(unsigned char * s, unsigned char c, unsigned long len)
 	}
 }
 
-static void udelay(unsigned long len)
-{
-	while(len)
-		len--;
-}
 static void sprd_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 				   unsigned int ctrl)
 {
@@ -323,7 +326,6 @@ static void sprd_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 		case NAND_CMD_RESET:
 			REG_NFC_CMD = cmd | (0x1 << 31);
 			nfc_wait_command_finish();
-			udelay(2);
 		break;
 		case NAND_CMD_STATUS:
 			REG_NFC_CMD = cmd | (0x1 << 31);
@@ -539,7 +541,12 @@ static unsigned long sprd_nand_wr_oob(struct mtd_info *mtd)
 {
 	unsigned int i;
         nand_copy(io_wr_port, (unsigned char *)NFC_SBUF, mtd->oobsize);
-
+	printf("%s\n", __FUNCTION__);
+	for(i=0;i<64;i++) {
+		printf("%x ", io_wr_port[i]);
+		if(i!=0 && i%8==7)
+		  printf("\n");
+	}
 	/* write oob area */
 	if (sprd_area_mode == NO_AREA)
 		sprd_area_mode = OOB_AREA;
@@ -716,7 +723,14 @@ static int sprd_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_ch
 
                 memset(io_wr_port, 0xff, NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE);
 		nand_copy((unsigned char *)NFC_SBUF, io_wr_port, mtd->oobsize);
-
+#ifdef NAND_DEBUG
+		printf("read oob \n");
+		for(i = 0; i<64; i++){
+			printf("%x ", io_wr_port[i]);
+			if(i!=0 && i%8 == 7)
+			  printf("\n");
+		}
+#endif
 	}	
 	sprd_ecc_mode = NAND_ECC_NONE;
 
@@ -851,7 +865,7 @@ int board_nand_init(struct nand_chip *this)
 	this->select_chip = sprd_nand_select_chip;
 
 #ifdef CONFIG_NAND_SPL
-	this->read_byte	= nand_read_byte;
+	this->read_byte	= nand_read_byte16;
 	this->write_buf = nand_write_buf;
 	this->read_buf  = nand_read_buf;
 #endif

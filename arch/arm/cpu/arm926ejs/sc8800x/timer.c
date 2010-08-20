@@ -42,9 +42,8 @@
 #include <linux/types.h>
 #include <asm/arch/regs_global.h>
 #include <asm/arch/bits.h>
-#include <asm/arch/regs_timer.h>
+#include <asm/arch/regs_syscnt.h>
 
-#define TIMER_BASE TIMER0_BASE
 
 static unsigned long long timestamp;
 static ulong lastinc;
@@ -80,25 +79,16 @@ static inline unsigned long long us_to_tick(unsigned long long us)
 
 int timer_init(void)
 {
-	timer_s	*timer = (timer_s *)TIMER_BASE;
-
 	//Enable System Counter device
 	REG32(GR_GEN1) |= GEN1_SYSCLK_EN;
-	//Enable Timer device
-	REG32(GR_GEN0) |= GEN0_TIMER_EN;
 	
-	timer->load = TIMER_MAX_VALUE;
-	timer->clr |= TMCTL_MODE_B;
-	timer->ctl |= TMCTL_EN;	
 	return 0;
 }
 
 void reset_timer(void)
 {
-	timer_s *timer = (timer_s *)TIMER_BASE;
-	//reset timer
 	//capture current incrementer value time
-	lastinc = readl(&timer->value);
+	lastinc = readl(SYSCNT_COUNT);
 	timestamp = 0;
 }
 void reset_timer_masked(void)
@@ -107,8 +97,7 @@ void reset_timer_masked(void)
 }
 unsigned long long get_ticks(void)
 {
-	timer_s *timer = (timer_s *)TIMER_BASE;
-	ulong now = readl(&timer->value);
+	ulong now = readl(SYSCNT_COUNT);
 	
 	if(now >= lastinc) {
 	/* not roll
