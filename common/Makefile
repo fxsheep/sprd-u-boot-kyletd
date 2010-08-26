@@ -49,6 +49,11 @@ COBJS-y += cmd_nvedit.o
 COBJS-y += cmd_version.o
 
 COBJS-y += cmd_cboot.o
+COBJS-y += normal_mode.o
+COBJS-y += recv_mode.o
+COBJS-y += fastboot_mode.o
+COBJS-y += charge_mode.o
+COBJS-y += dloader_mode.o
 
 # environment
 COBJS-y += env_common.o

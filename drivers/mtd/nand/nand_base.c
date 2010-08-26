@@ -2824,9 +2824,6 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	MTDDEBUG (MTD_DEBUG_LEVEL0, "NAND device: Manufacturer ID:"
 	          " 0x%02x, Chip ID: 0x%02x (%s %s)\n", *maf_id, dev_id,
 	          nand_manuf_ids[maf_idx].name, type->name);
-	printf("NAND device: Manufacturer ID:"
-	          " 0x%02x, Chip ID: 0x%02x (%s %s)\n", *maf_id, dev_id,
-	          nand_manuf_ids[maf_idx].name, type->name);
 #endif
 	return type;
 }
@@ -2924,14 +2921,13 @@ int nand_scan_tail(struct mtd_info *mtd)
 			chip->ecc.layout = &nand_oob_16;
 			break;
 		case 64:
-			printf("nand oob size 64\n");
 			chip->ecc.layout = &nand_oob_64;
 			break;
 		case 128:
 			chip->ecc.layout = &nand_oob_128;
 			break;
 		default:
-			printk(KERN_WARNING "No oob scheme defined for "
+			printf("No oob scheme defined for "
 			       "oobsize %d\n", mtd->oobsize);
 		}
 	}
@@ -3152,7 +3148,6 @@ int nand_scan(struct mtd_info *mtd, int maxchips)
 	ret = nand_scan_ident(mtd, maxchips);
 	if (!ret)
 		ret = nand_scan_tail(mtd);
-	printf("nand scan return %d\n", ret);
 	return ret;
 }
 

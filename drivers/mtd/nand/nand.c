@@ -65,7 +65,6 @@ static void nand_init_chip(struct mtd_info *mtd, struct nand_chip *nand,
 			 * via the mtdcore infrastructure (e.g. ubi).
 			 */
 			sprintf(dev_name[i], "nand%d", i);
-			printf("mtd name is %s\n", dev_name[i]);
 			mtd->name = dev_name[i++];
 			add_mtd_device(mtd);
 #endif
