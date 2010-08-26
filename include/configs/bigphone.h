@@ -22,6 +22,8 @@
 #define __CONFIG_H
 
 
+/*#define NAND_DEBUG 1  */
+/*#define DEBUG*/
 /*
  * SPREADTRUM BIGPHONE board - SoC Configuration
  */
@@ -228,29 +230,10 @@
 #define xstr(s)	str(s)
 #define str(s)	#s
 
-#define	CONFIG_EXTRA_ENV_SETTINGS					\
-	"netdev=eth0\0"							\
-	"nfsargs=setenv bootargs root=/dev/nfs rw "			\
-		"nfsroot=${serverip}:${rootpath}\0"			\
-	"ramargs=setenv bootargs root=/dev/ram rw\0"			\
-	"addip=setenv bootargs ${bootargs} "				\
-		"ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}"	\
-		":${hostname}:${netdev}:off panic=1\0"			\
-	"addtty=setenv bootargs ${bootargs}"				\
-		" console=ttymxc0,${baudrate}\0"			\
-	"addmtd=setenv bootargs ${bootargs} ${mtdparts}\0"		\
-	"addmisc=setenv bootargs ${bootargs}\0"				\
-	"u-boot=tx25/u-boot.bin\0"					\
-	"kernel_addr_r=" xstr(CONFIG_LOADADDR) "\0"			\
-	"hostname=tx25\0"						\
-	"bootfile=tx25/uImage\0"					\
-	"rootpath=/opt/eldk/arm\0"					\
-	"net_nfs=tftp ${kernel_addr_r} ${bootfile};"			\
-		"run nfsargs addip addtty addmtd addmisc;"		\
-		"bootm\0"						\
-	"bootcmd=run net_nfs\0"						\
-	"load=tftp ${loadaddr} ${u-boot}\0"				\
-	"update=nand erase 0 40000;nand write ${loadaddr} 0 40000\0"	\
-	"upd=run load update\0"						\
+#define MTDIDS_DEFAULT "nand0=sprd-nand"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),4m(kernel1),6m(kernel2),6m(ramdisk)"
+#define CONFIG_BOOTARGS "mem=128M console=ttyS1,115200n8 initrd=0x3000000,4194304 init=/init root=/dev/ram0 rw"
+#define CONFIG_BOOTCOMMAND ""
+#define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
 #endif /* __CONFIG_H */

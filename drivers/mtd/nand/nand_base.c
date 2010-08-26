@@ -1123,15 +1123,16 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->ecc.hwctl(mtd, NAND_ECC_READ);
 		chip->read_buf(mtd, p, eccsize);
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
-		printf("nand_read_page_hwecc\n");
 	}
 	chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
+#ifdef NAND_DEBUG
 	printf("nand_read_page_hwecc next\n");
 	for(i=0;i<64;i++){
 		printf("%x ", chip->oob_poi[i]);
 		if(i!=0 && i%8==7)
 		  printf("\n");
 	}
+#endif
 
 	for (i = 0; i < chip->ecc.total; i++)
 		ecc_code[i] = chip->oob_poi[eccpos[i]];

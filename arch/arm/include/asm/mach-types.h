@@ -2862,7 +2862,8 @@ extern unsigned int __machine_arch_type;
 #define MACH_TYPE_MATRIX518            2879
 #define MACH_TYPE_TINY_GURNARD         2880
 #define MACH_TYPE_SPEAR1310            2881
-#define MACH_TYPE_BIGPHONE	       2882
+//#define MACH_TYPE_BIGPHONE	       2882
+#define MACH_TYPE_BIGPHONE	       2011
 
 #ifdef CONFIG_ARCH_EBSA110
 # ifdef machine_arch_type

@@ -13,7 +13,6 @@
 #define printf(arg...) do{}while(0)
 #endif
 
-#define NAND_DEBUG 1
 
 #define NF_PARA_20M        	0x7ac05      //trwl = 0  trwh = 0
 #define NF_PARA_40M        	0x7ac15      //trwl = 1  trwh = 0
@@ -541,12 +540,14 @@ static unsigned long sprd_nand_wr_oob(struct mtd_info *mtd)
 {
 	unsigned int i;
         nand_copy(io_wr_port, (unsigned char *)NFC_SBUF, mtd->oobsize);
+#ifdef NAND_DEBUG
 	printf("%s\n", __FUNCTION__);
 	for(i=0;i<64;i++) {
 		printf("%x ", io_wr_port[i]);
 		if(i!=0 && i%8==7)
 		  printf("\n");
 	}
+#endif
 	/* write oob area */
 	if (sprd_area_mode == NO_AREA)
 		sprd_area_mode = OOB_AREA;
