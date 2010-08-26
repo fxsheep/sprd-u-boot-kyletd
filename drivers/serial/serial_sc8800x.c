@@ -95,5 +95,8 @@ int serial_init (void)
 	__REG( UART_PHYS + ARM_UART_CTL0 ) = UARTCTL_BL8BITS | UARTCTL_SL1BITS;    
 	__REG( UART_PHYS + ARM_UART_CTL1 ) = 0;
 	__REG( UART_PHYS + ARM_UART_CTL2 ) = 0;  
+	/* clear input buffer */
+	while(SIO_RX_READY( SIO_GET_RX_STATUS( UART_PHYS ) ))
+		SIO_GET_CHAR(UART_PHYS);
 	return 0;
 }
