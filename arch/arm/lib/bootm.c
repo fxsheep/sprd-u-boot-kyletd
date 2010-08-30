@@ -27,6 +27,10 @@
 #include <u-boot/zlib.h>
 #include <asm/byteorder.h>
 
+#ifdef CMDLINE_NEED_CONV
+#include <asm/arch/endian_conv.h>
+#endif
+
 DECLARE_GLOBAL_DATA_PTR;
 
 #if defined (CONFIG_SETUP_MEMORY_TAGS) || \
@@ -180,6 +184,15 @@ static void setup_commandline_tag (bd_t *bd, char *commandline)
 		(sizeof (struct tag_header) + strlen (p) + 1 + 4) >> 2;
 
 	strcpy (params->u.cmdline.cmdline, p);
+#ifdef CMDLINE_NEED_CONV
+	int i = 0, len_temp = 0;
+	len_temp = strlen(p);
+	len_temp = (len_temp +3) >> 2;
+
+	for(i=0;i<len_temp;i++){
+		INT_SWAP((*((uint32_t *)params->u.cmdline.cmdline +i)));
+	}
+#endif
 
 	params = tag_next (params);
 }

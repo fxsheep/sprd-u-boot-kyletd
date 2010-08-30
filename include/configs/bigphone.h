@@ -30,12 +30,17 @@
 #define CONFIG_ARM926EJS			/* arm926ejs CPU core */
 #define CONFIG_SC8800X
 #define CONFIG_BIGPHONE
-/*
-#define CONFIG_MX25
-#define CONFIG_TX25
-#define CONFIG_MX25_CLK32		32000	*/  /* OSC32K frequency */
+
 #define CONFIG_SYS_HZ			1000
 #define CONFIG_SPRD_TIMER_CLK		1000 /*32768*/
+
+#define CONFIG_SYS_HUSH_PARSER
+
+#ifdef CONFIG_SYS_HUSH_PARSER
+#define CONFIG_SYS_PROMPT_HUSH_PS2 "> "
+#endif
+
+#define CMDLINE_NEED_CONV
 
 #define WATCHDOG_LOAD_VALUE	0x4000
 #define CONFIG_SYS_STACK_SIZE	0x400
@@ -213,13 +218,6 @@
 #undef CONFIG_CMD_NFS
 #undef CONFIG_CMD_SETGETDCR
 
-/*
- * Ethernet
- */
-//#define CONFIG_FEC_MXC
-//#define CONFIG_FEC_MXC_PHYADDR		0x1f
-//#define CONFIG_MII
-//#define BOARD_LATE_INIT
 #define CONFIG_ENV_OVERWRITE
 
 #define CONFIG_BOOTDELAY	5
