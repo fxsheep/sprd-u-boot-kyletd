@@ -82,6 +82,9 @@ void general_ctl_cfg(sdram_cfg_t *sdram_cfg)
 
 	//DMEM enable, (CS0)-->DMEM
 	REG32(EXT_MEM_CFG1) |= (BIT_0|BIT_10);    //DMEM enable
+	REG32(EXT_MEM_CFG1) &=~BIT_4;	//kewang add for 128M sdram
+	REG32(EXT_MEM_CFG1) |=BIT_5;// kewang
+
 	REG32(EXT_MEM_CFG1) &= ~(BIT_12);    //Clear smem_only_en
 
 	REG32(EXT_MEM_CFG1) &= ~(BIT_9);     //SDRAM mode

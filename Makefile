@@ -277,6 +277,8 @@ NAND_SPL = nand_spl
 U_BOOT_NAND = $(obj)u-boot-nand.bin
 endif
 
+NAND_FDL = fdl1 fdl2
+
 ifeq ($(CONFIG_ONENAND_U_BOOT),y)
 ONENAND_IPL = onenand_ipl
 U_BOOT_ONENAND = $(obj)u-boot-onenand.bin
@@ -285,6 +287,7 @@ endif
 
 __OBJS := $(subst $(obj),,$(OBJS))
 __LIBS := $(subst $(obj),,$(LIBS)) $(subst $(obj),,$(LIBBOARD))
+export __LIBS
 
 #########################################################################
 #########################################################################
@@ -373,6 +376,9 @@ $(NAND_SPL):	$(TIMESTAMP_FILE) $(VERSION_FILE) $(obj)include/autoconf.mk
 
 $(U_BOOT_NAND):	$(NAND_SPL) $(obj)u-boot.bin
 		cat $(obj)nand_spl/u-boot-spl-16k.bin $(obj)u-boot.bin > $(obj)u-boot-nand.bin
+
+$(NAND_FDL): 
+	$(MAKE) -C nand_fdl $@ 
 
 $(ONENAND_IPL):	$(TIMESTAMP_FILE) $(VERSION_FILE) $(obj)include/autoconf.mk
 		$(MAKE) -C onenand_ipl/board/$(BOARDDIR) all

@@ -62,7 +62,7 @@
 #ifdef CONFIG_NAND_SPL
 #define CONFIG_SYS_SDRAM_BANK_CNT   2
 #define CONFIG_SYS_SDRAM_ROW_CNT    2
-#define CONFIG_SYS_SDRAM_COL_CNT  1
+#define CONFIG_SYS_SDRAM_COL_CNT  2
 #define CONFIG_SYS_SDRAM_DATA_WIDTH    32
 #define CONFIG_SYS_SDRAM_BURST_LENGTH   3
 #define CONFIG_SYS_SDRAM_CAS_LATENCY    3
@@ -231,7 +231,7 @@
 #define MTDIDS_DEFAULT "nand0=sprd-nand"
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),4m(kernel1),6m(kernel2),6m(ramdisk)"
 #define CONFIG_BOOTARGS "mem=128M console=ttyS1,115200n8 initrd=0x3000000,4194304 init=/init root=/dev/ram0 rw"
-#define CONFIG_BOOTCOMMAND ""
+#define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
 #endif /* __CONFIG_H */
