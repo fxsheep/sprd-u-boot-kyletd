@@ -109,7 +109,7 @@ include $(SRCTREE)/rules.mk
 
 sinclude $(obj).depend
 
-	.PHONY
+.PHONY:clean
 clean:
 	rm -f *.bin *.map fdl2 fdl1
 
