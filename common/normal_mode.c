@@ -20,7 +20,7 @@ void normal_mode(void)
 	
 	strcat(buf, "nand read ");
 	cur_len = strlen(buf);
-	sprintf(&buf[cur_len], "%x %s %x\;\0", 0x1000000, "kernel2", 0x300000);
+	sprintf(&buf[cur_len], "%x %s %x\;\0", 0x1000000, "kernel", 0x400000);
 
 
 	cur_len = strlen(buf);

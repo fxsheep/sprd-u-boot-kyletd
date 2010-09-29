@@ -136,7 +136,7 @@ static struct nand_ecclayout nand_oob_128 = {
 };
 
 
-static int nand_get_device(struct nand_chip *chip, struct mtd_info *mtd,
+int nand_get_device(struct nand_chip *chip, struct mtd_info *mtd,
 			   int new_state);
 
 static int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
@@ -176,7 +176,7 @@ static void nand_release_device(struct mtd_info *mtd)
 	spin_unlock(&chip->controller->lock);
 }
 #else
-static void nand_release_device (struct mtd_info *mtd)
+void nand_release_device (struct mtd_info *mtd)
 {
 	struct nand_chip *this = mtd->priv;
 	this->select_chip(mtd, -1);	/* De-select the NAND device */
@@ -819,7 +819,7 @@ nand_get_device(struct nand_chip *chip, struct mtd_info *mtd, int new_state)
 	goto retry;
 }
 #else
-static int nand_get_device (struct nand_chip *this, struct mtd_info *mtd, int new_state)
+int nand_get_device (struct nand_chip *this, struct mtd_info *mtd, int new_state)
 {
 	this->state = new_state;
 	return 0;
@@ -2028,7 +2028,7 @@ static uint8_t *nand_fill_oob(struct nand_chip *chip, uint8_t *oob,
  *
  * NAND write with ECC
  */
-static int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
+int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
 			     struct mtd_oob_ops *ops)
 {
 	int chipnr, realpage, page, blockmask, column;
@@ -2042,6 +2042,9 @@ static int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
 	if (!writelen)
 		return 0;
 
+#ifdef NAND_DEBUG
+	printf("write to 0x%x, write len 0x%x, notalign of to %x, not align of len %x, chip point 0x%x\n", (unsigned int)to, ops->len, NOTALIGNED(to), NOTALIGNED(ops->len), ops);
+#endif
 	/* reject writes, which are not page aligned */
 	if (NOTALIGNED(to) || NOTALIGNED(ops->len)) {
 		printk(KERN_NOTICE "nand_write: "

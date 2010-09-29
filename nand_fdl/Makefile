@@ -41,7 +41,7 @@ COM_COBJS	= dl_engine.o drv_usb.o fdl_crc.o packet.o sio_drv.o usb_boot.o virtua
 COM_OBJS = $(addprefix $(COM_PATH)/src/,$(COM_COBJS))
 
 FDL2_COBJS_LIST = migrate.o dma_drv.o fdl_main.o fdl_nand.o flash_command.o mcu_command.o nand_controller.o readnandbuffer.o
-FDL1_COBJS_LIST = board_init.o chip_init.o fdl_command.o fdl_main.o fdl_stdio.o sdram_init.o
+FDL1_COBJS_LIST = board_init.o chip_init.o fdl_command.o fdl_main.o fdl_stdio.o sdram_init.o sdram_prod.o
 FDL1_COBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_COBJS_LIST))
 FDL1_SOBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_SOBJS_LIST))
 FDL1_OBJS = $(FDL1_COBJS) $(FDL1_SOBJS)
@@ -81,7 +81,7 @@ $(fdlobj)fdl1: $(FDL1_OBJS) $(COM_OBJS) $(UBOOT_LIBS)
 	cd $(LNDIR) && $(LD) $(LDFLAGS) -Ttext $(FDL1_TEXT_BASE) \
 		--start-group $^ --end-group \
 		-Map $(fdlobj)fdl1.map \
-		-o $@ 
+		-o $@ $(PLATFORM_LIBS)
 #-L$(gcclibdir) -lgcc 
 
 $(fdlobj)fdl2: $(FDL2_OBJS) $(COM_OBJS) $(UBOOT_LIBS)
@@ -108,5 +108,9 @@ $(FDL2_SOBJS):%.o:%.s
 include $(SRCTREE)/rules.mk
 
 sinclude $(obj).depend
+
+	.PHONY
+clean:
+	rm -f *.bin *.map fdl2 fdl1
 
 #########################################################################
