@@ -654,14 +654,12 @@ void nand_ecc_trans(unsigned char *pEccIn, unsigned char *pEccOut, unsigned char
 
 static int sprd_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_char *ecc_code)
 {
-	unsigned char ecc_val_in[16];
-	unsigned char ecc_val_out[16];
-        unsigned long *pecc_val;
+	unsigned long *pecc_val;
 	unsigned int i, j;
 
-	if (sprd_ecc_mode == NAND_ECC_WRITE) {
-		pecc_val = (unsigned long *)ecc_val_in;
+	pecc_val=(unsigned long*)ecc_code;
 
+	if (sprd_ecc_mode == NAND_ECC_WRITE) {
 		REG_NFC_ECCEN = 0x1;
 		nand_copy(io_wr_port, (unsigned char *)NFC_MBUF, mtd->writesize);
 		/* large page */
@@ -673,28 +671,9 @@ static int sprd_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_ch
 		for(i = 0; i< 4; i++)
 			printf("write ecc %d is %x\n", i, pecc_val[i]);
 #endif
-		nand_ecc_trans(ecc_val_in, ecc_val_out, 4);
-
-		ecc_code[0] = ecc_val_out[0];
-		ecc_code[1] = ecc_val_out[1];
-		ecc_code[2] = ecc_val_out[2];
-
-		ecc_code[3] = ecc_val_out[4];
-		ecc_code[4] = ecc_val_out[5];
-		ecc_code[5] = ecc_val_out[6];
-
-		ecc_code[6] = ecc_val_out[8];
-		ecc_code[7] = ecc_val_out[9];
-		ecc_code[8] = ecc_val_out[10];
-
-		ecc_code[9] = ecc_val_out[12];
-		ecc_code[10] = ecc_val_out[13];
-		ecc_code[11] = ecc_val_out[14];
-
 		REG_NFC_ECCEN = 0;
 		memset(io_wr_port, 0xff, NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE);	
 	} else if (sprd_ecc_mode == NAND_ECC_READ) {
- 		pecc_val = (unsigned long *)ecc_val_in;
                 /* large page */
                 pecc_val[0] = REG_NFC_PAGEECC0;
                 pecc_val[1] = REG_NFC_PAGEECC1;
@@ -704,30 +683,14 @@ static int sprd_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_ch
 		for(i = 0; i< 4; i++)
 			printf("read ecc %d is %x\n", i, pecc_val[i]);
 #endif
-		nand_ecc_trans(ecc_val_in, ecc_val_out, 4);
 
-		ecc_code[0] = ecc_val_out[0];
-		ecc_code[1] = ecc_val_out[1];
-		ecc_code[2] = ecc_val_out[2];
-
-		ecc_code[3] = ecc_val_out[4];
-		ecc_code[4] = ecc_val_out[5];
-		ecc_code[5] = ecc_val_out[6];
-
-		ecc_code[6] = ecc_val_out[8];
-		ecc_code[7] = ecc_val_out[9];
-		ecc_code[8] = ecc_val_out[10];
-
-		ecc_code[9] = ecc_val_out[12];
-		ecc_code[10] = ecc_val_out[13];
-		ecc_code[11] = ecc_val_out[14];
-
-                memset(io_wr_port, 0xff, NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE);
+		memset(io_wr_port, 0xff, NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE);
 		nand_copy((unsigned char *)NFC_SBUF, io_wr_port, mtd->oobsize);
-#ifdef NAND_DEBUG
+//#ifdef NAND_DEBUG
+#if 0
 		printf("read oob \n");
-		for(i = 0; i<64; i++){
-			printf("%x ", io_wr_port[i]);
+		for(i = 0; i<16; i++){
+			printf("%x ", ecc_code[i]);
 			if(i!=0 && i%8 == 7)
 			  printf("\n");
 		}
@@ -814,7 +777,7 @@ static int sprd_nand_correct_data(struct mtd_info *mtd, uint8_t *dat,
 
 	if (mtd->writesize > 512) {
 		for (i = 0; i < 4; i++) {
-			if (correct(dat + 512 * i, read_ecc + 3 * i, calc_ecc + 3 * i) == -1) {				
+			if (correct(dat + 512 * i, read_ecc + 4*i + 1, calc_ecc + 4*i + 1) == -1) {				
 				retval = -1;
 			}
 		}

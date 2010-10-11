@@ -100,14 +100,18 @@ int nand_start_write(unsigned int addr, unsigned int size)
 	}else 
 	  return NAND_INVALID_ADDR;
 
-	printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
-	printf("current device no: %d erase size: 0x%x write size: 0x%x\n", nand_curr_device, nand->erasesize, nand->writesize);
+	//printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
+	//printf("current device no: %d erase size: 0x%x write size: 0x%x\n", nand_curr_device, nand->erasesize, nand->writesize);
 	nand_write_addr = addr;
 	cur_write_pos = addr;
 	nand_write_size = size;
 	return NAND_SUCCESS;
 }
 int nand_do_write_ops(struct mtd_info *mtd, loff_t to,struct mtd_oob_ops *ops);
+int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
+			     struct mtd_oob_ops *ops);
+int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
+			    struct mtd_oob_ops *ops);
 int nand_write_fdl(unsigned int size, unsigned char *buf)
 {
 	printf("function: %s\n", __FUNCTION__);
@@ -118,7 +122,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 	int ret=0;
 
 	if(!is_system_write){
-		printf("function: %s cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
+		//printf("function: %s cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
 		if(size < nand->writesize)
 		  size = nand->writesize;
 		else if(size > nand->writesize)
@@ -140,10 +144,9 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		ret = nand_write_skip_bad(nand, cur_write_pos, &size, buf);
 		if(0==ret){
 			cur_write_pos += nand->writesize;
-			return NAND_SUCCESS;
 		}
 	}else{ // system write 
-		printf("function: %s system write cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
+		//printf("function: %s system write cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
 		if(size != (nand->writesize + nand->oobsize))
 		  return NAND_INVALID_SIZE;
 
@@ -182,17 +185,39 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		chip->ops.ooboffs = 0;
 #endif
 
-		printf("function: %s system write start to write\n", __FUNCTION__);
-		printf("function: %s chip subpagesize 0x%x write len 0x%x write add 0x%x, write addr point 0x%x, chip point 0x%x\n", __FUNCTION__, chip->subpagesize,chip->ops.len, cur_write_pos, &cur_write_pos, &(chip->ops));
+		//printf("function: %s system write start to write\n", __FUNCTION__);
+		//printf("function: %s chip subpagesize 0x%x write len 0x%x write add 0x%x, write addr point 0x%x, chip point 0x%x\n", __FUNCTION__, chip->subpagesize,chip->ops.len, cur_write_pos, &cur_write_pos, &(chip->ops));
 		ret = nand_do_write_ops(nand, (unsigned long long)cur_write_pos, &(chip->ops));
 		nand_release_device(nand);
 		if(0==ret){
-			printf("function: %s system write write complete\n", __FUNCTION__);
+			//printf("function: %s system write write complete\n", __FUNCTION__);
 			cur_write_pos += nand->writesize;
-			return NAND_SUCCESS;
 		}
 	}
-	return NAND_SYSTEM_ERROR + 2;
+	if(ret == 0){
+		struct mtd_oob_ops ops;
+		uint8_t buf_tmp[2] = { 0, 0 };
+		ops.mode = MTD_OOB_AUTO;
+		ops.len = nand->writesize;
+		ops.datbuf = (uint8_t *)buf;
+		ops.oobbuf = NULL; 
+		ops.ooblen = 0; 
+		ops.ooboffs = 0;
+		ret = nand_do_read_ops(nand,(unsigned long long)(cur_write_pos-nand->writesize),&ops);
+		if(ret<0){
+			ops.len = 2;
+			ops.datbuf = NULL;
+			ops.oobbuf = buf_tmp;
+			ops.ooboffs =0; 
+			ret = nand_do_write_oob(nand, (unsigned long long)((cur_write_pos-nand->writesize)&(~(nand->erasesize - 1))+nand->writesize), &ops);
+			if (ret) {
+				printf("block 0x%08lx NOT marked as bad! \n",cur_write_pos);
+			}
+			return NAND_SYSTEM_ERROR;
+		}
+		return NAND_SUCCESS;
+	}else
+	  return NAND_SYSTEM_ERROR;
 }
 int nand_end_write(void)
 {

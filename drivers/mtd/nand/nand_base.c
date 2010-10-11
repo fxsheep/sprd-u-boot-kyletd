@@ -139,7 +139,7 @@ static struct nand_ecclayout nand_oob_128 = {
 int nand_get_device(struct nand_chip *chip, struct mtd_info *mtd,
 			   int new_state);
 
-static int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
+int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
 			     struct mtd_oob_ops *ops);
 
 static int nand_wait(struct mtd_info *mtd, struct nand_chip *this);
@@ -1125,9 +1125,10 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 	}
 	chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
-#ifdef NAND_DEBUG
+//#ifdef NAND_DEBUG
+#if 0
 	printf("nand_read_page_hwecc next\n");
-	for(i=0;i<64;i++){
+	for(i=40;i<56;i++){
 		printf("%x ", chip->oob_poi[i]);
 		if(i!=0 && i%8==7)
 		  printf("\n");
@@ -1144,8 +1145,10 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		int stat;
 
 		stat = chip->ecc.correct(mtd, p, &ecc_code[i], &ecc_calc[i]);
-		if (stat < 0)
+		if (stat < 0){
 			mtd->ecc_stats.failed++;
+			printk("%s: ecc correct error %d times\n",__FUNCTION__, mtd->ecc_stats.failed);
+		}
 		else
 			mtd->ecc_stats.corrected += stat;
 	}
@@ -1313,7 +1316,7 @@ static uint8_t *nand_transfer_oob(struct nand_chip *chip, uint8_t *oob,
  *
  * Internal function. Called with chip held.
  */
-static int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
+int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 			    struct mtd_oob_ops *ops)
 {
 	int chipnr, page, realpage, col, bytes, aligned;
@@ -2095,8 +2098,10 @@ int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
 			wbuf = chip->buffers->databuf;
 		}
 
-		if (unlikely(oob))
+		if (unlikely(oob)){
+			memset(chip->oob_poi, 0xff, mtd->oobsize);
 			oob = nand_fill_oob(chip, oob, ops);
+		}
 
 		ret = chip->write_page(mtd, chip, wbuf, page, cached,
 				       (ops->mode == MTD_OOB_RAW));
@@ -2171,7 +2176,7 @@ static int nand_write(struct mtd_info *mtd, loff_t to, size_t len,
  *
  * NAND write out-of-band
  */
-static int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
+int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
 			     struct mtd_oob_ops *ops)
 {
 	int chipnr, page, status, len;
