@@ -21,7 +21,7 @@
  * MA 02111-1307 USA
  */
 
-OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
+OUTPUT_FORMAT("elf32-bigarm", "elf32-bigarm", "elf32-bigarm")
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS

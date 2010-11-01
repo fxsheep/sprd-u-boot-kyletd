@@ -1,0 +1,6 @@
+#ifndef _SC8800X_SYSCNT_H_
+#define _SC8800X_SYSCNT_H_
+
+#define SYSCNT_COUNT 0x8700001C
+#define TIMER_MAX_VALUE 0xFFFFFFFF
+#endif

@@ -1,6 +1,17 @@
 /*
- * (C) Copyright 2002-2004
+ * (C) Copyright 2002
+ * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
+ * Marius Groeger <mgroeger@sysgo.de>
+ *
+ * (C) Copyright 2002
+ * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
+ * Alex Zuepke <azu@sysgo.de>
+ *
+ * (C) Copyright 2002
  * Gary Jennejohn, DENX Software Engineering, <gj@denx.de>
+ *
+ * (C) Copyright 2009
+ * Ilya Yanok, Emcraft Systems Ltd, <yanok@emcraft.com>
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -21,36 +32,14 @@
  * MA 02111-1307 USA
  */
 
-OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
-OUTPUT_ARCH(arm)
-ENTRY(_start)
-SECTIONS
+#include <common.h>
+#include <asm/io.h>
+#include <asm/arch/regs_global.h>
+/*
+ * Reset the cpu by setting up the watchdog timer and let it time out
+ */
+void reset_cpu (ulong ignored)
 {
-	. = 0x00000000;
-
-	. = ALIGN(4);
-	.text :
-	{
-		arch/arm/cpu/arm926ejs/start.o	(.text)
-		*(.text)
-	}
-
-	. = ALIGN(4);
-	.rodata : { *(SORT_BY_ALIGNMENT(SORT_BY_NAME(.rodata*))) }
-
-	. = ALIGN(4);
-	.data : { *(.data) }
-
-	. = ALIGN(4);
-	.got : { *(.got) }
-
-	. = .;
-	__u_boot_cmd_start = .;
-	.u_boot_cmd : { *(.u_boot_cmd) }
-	__u_boot_cmd_end = .;
-
-	. = ALIGN(4);
-	__bss_start = .;
-	.bss (NOLOAD) : { *(.bss) . = ALIGN(4); }
-	_end = .;
+	start_watchdog(5);
+	while (1) ;
 }

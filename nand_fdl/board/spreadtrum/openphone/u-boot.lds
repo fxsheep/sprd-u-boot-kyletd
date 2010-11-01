@@ -1,6 +1,6 @@
 /*
- * (C) Copyright 2002-2004
- * Gary Jennejohn, DENX Software Engineering, <gj@denx.de>
+ * (C) Copyright 2009
+ * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -12,7 +12,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -20,7 +20,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
  * MA 02111-1307 USA
  */
-
 OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
 ENTRY(_start)
@@ -31,12 +30,12 @@ SECTIONS
 	. = ALIGN(4);
 	.text :
 	{
-		arch/arm/cpu/arm926ejs/start.o	(.text)
+		init.o (.text)
 		*(.text)
 	}
 
 	. = ALIGN(4);
-	.rodata : { *(SORT_BY_ALIGNMENT(SORT_BY_NAME(.rodata*))) }
+	.rodata : { *(.rodata) }
 
 	. = ALIGN(4);
 	.data : { *(.data) }
@@ -51,6 +50,6 @@ SECTIONS
 
 	. = ALIGN(4);
 	__bss_start = .;
-	.bss (NOLOAD) : { *(.bss) . = ALIGN(4); }
+	.bss : { *(.bss) }
 	_end = .;
 }

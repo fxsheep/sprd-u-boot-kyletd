@@ -1,0 +1,5 @@
+ifdef CONFIG_NAND_SPL
+TEXT_BASE = 0x40000000
+else
+TEXT_BASE = 0x00f00000
+endif

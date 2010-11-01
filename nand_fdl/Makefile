@@ -26,7 +26,8 @@ include $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/config.mk
 gcclibdir := $(shell dirname `$(CC) -print-libgcc-file-name`)
 
 LDSCRIPT= $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/u-boot.lds
-LDFLAGS	= -Bstatic -T $(LDSCRIPT) $(PLATFORM_LDFLAGS)
+FDL1_LDFLAGS	= -Bstatic -T $(fdl1_obj)u-boot.lds $(PLATFORM_LDFLAGS)
+FDL2_LDFLAGS	= -Bstatic -T $(fdl2_obj)u-boot.lds $(PLATFORM_LDFLAGS)
 AFLAGS	+= 
 CFLAGS	+= 
 
@@ -53,16 +54,19 @@ MTD_LIB = $(TOPDIR)/drivers/mtd/libmtd.a
 #ARM_LIB = $(TOPDIR)/arch/arm/lib/libarm.a
 NAND_LIB = $(TOPDIR)/drivers/mtd/nand/libnand.a
 COMMON_LIB = $(TOPDIR)/common/dlmalloc.o 
-CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800x/timer.o
+CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o
 GENERIC_LIB = $(TOPDIR)/lib/libgeneric.a
 UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB)
 
 #ALL_UBOOT_LIBS = $(addprefix $(obj),$(__LIBS))
 #UBOOT_LIBS = $(ALL_UBOOT_LIBS)
 
-LNDIR	:= $(OBJTREE)/nand_fdl
+FDL1_LNDIR	:= $(OBJTREE)/nand_fdl/fdl-1/src
+FDL2_LNDIR	:= $(OBJTREE)/nand_fdl/fdl-2/src
 
 fdlobj	:= $(OBJTREE)/nand_fdl/
+fdl1_obj	:= $(fdlobj)fdl-1/src/
+fdl2_obj	:= $(fdlobj)fdl-2/src/
 
 ALL	= $(fdlobj)fdl2.bin $(fdlobj)fdl1.bin
 
@@ -77,19 +81,23 @@ $(fdlobj)fdl1.bin: $(fdlobj)fdl1
 $(fdlobj)fdl2.bin:	$(fdlobj)fdl2
 	$(OBJCOPY) ${OBJCFLAGS} -O binary $< $@
 
-$(fdlobj)fdl1: $(FDL1_OBJS) $(COM_OBJS) $(UBOOT_LIBS)
-	cd $(LNDIR) && $(LD) $(LDFLAGS) -Ttext $(FDL1_TEXT_BASE) \
-		--start-group $^ --end-group \
+$(fdlobj)fdl1: $(FDL1_OBJS) $(COM_OBJS) $(UBOOT_LIBS) $(fdl1_obj)u-boot.lds
+	cd $(FDL1_LNDIR) && $(LD) $(FDL1_LDFLAGS) -Ttext $(FDL1_TEXT_BASE) \
+		--start-group $(FDL1_COBJS_LIST) $(FDL1_SOBJS_LIST) $(COM_OBJS) \
+			$(UBOOT_LIBS) --end-group \
 		-Map $(fdlobj)fdl1.map \
 		-o $@ $(PLATFORM_LIBS)
 #-L$(gcclibdir) -lgcc 
 
-$(fdlobj)fdl2: $(FDL2_OBJS) $(COM_OBJS) $(UBOOT_LIBS)
-	cd $(LNDIR) && $(LD) $(LDFLAGS) -Ttext $(FDL2_TEXT_BASE) \
-		--start-group $^ --end-group \
+$(fdlobj)fdl2: $(FDL2_OBJS) $(COM_OBJS) $(UBOOT_LIBS) $(fdl2_obj)u-boot.lds
+	cd $(FDL2_LNDIR) && $(LD) $(FDL2_LDFLAGS) -Ttext $(FDL2_TEXT_BASE) \
+		--start-group $(FDL2_COBJS_LIST) $(FDL2_SOBJS_LIST) $(COM_OBJS) \
+			$(UBOOT_LIBS) --end-group \
 		-Map $(fdlobj)fdl2.map \
 		-o $@ $(PLATFORM_LIBS)
 #-L$(gcclibdir) -lgcc 
+$(fdl1_obj)u-boot.lds $(fdl2_obj)u-boot.lds: $(LDSCRIPT)
+	$(CPP) $(CPPFLAGS) $(LDPPFLAGS) -ansi -D__ASSEMBLY__ -P - <$^ >$@
 		
 
 #########################################################################

@@ -150,7 +150,7 @@ else
 ARFLAGS = crv
 endif
 RELFLAGS= $(PLATFORM_RELFLAGS)
-DBGFLAGS= -g -mbig-endian# -DDEBUG
+DBGFLAGS= -g # -DDEBUG
 OPTFLAGS= -Os #-fomit-frame-pointer  
 ifndef LDSCRIPT
 #LDSCRIPT := $(TOPDIR)/board/$(BOARDDIR)/u-boot.lds.debug
@@ -238,7 +238,6 @@ export	HOSTCC HOSTCFLAGS HOSTLDFLAGS PEDCFLAGS HOSTSTRIP CROSS_COMPILE \
 	AS LD CC CPP AR NM STRIP OBJCOPY OBJDUMP MAKE
 export	TEXT_BASE PLATFORM_CPPFLAGS PLATFORM_RELFLAGS CPPFLAGS CFLAGS AFLAGS
 
-export USE_PRIVATE_LIBGCC = yes
 #########################################################################
 
 # Allow boards to use custom optimize flags on a per dir/file basis

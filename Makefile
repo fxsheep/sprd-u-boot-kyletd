@@ -2419,6 +2419,10 @@ espt_config  :   unconfig
 bigphone_config	: unconfig
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs bigphone spreadtrum sc8800x
+
+openphone_config	: unconfig
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm arm926ejs openphone spreadtrum sc8800g
 #########################################################################
 #########################################################################
 
