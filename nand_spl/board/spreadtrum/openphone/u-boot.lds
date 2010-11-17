@@ -33,7 +33,6 @@ SECTIONS
 		start.o			(.text)
 		lowlevel_init.o		(.text)
 		*(.text)
-		. = 16K;
 	}
 
 	. = ALIGN(4);
@@ -49,9 +48,11 @@ SECTIONS
 	__u_boot_cmd_start = .;
 	.u_boot_cmd : { *(.u_boot_cmd) }
 	__u_boot_cmd_end = .;
+	. = 16896B;
 
 	. = ALIGN(4);
 	__bss_start = .;
 	.bss : { *(.bss) }
 	_end = .;
+	. = 30K;
 }

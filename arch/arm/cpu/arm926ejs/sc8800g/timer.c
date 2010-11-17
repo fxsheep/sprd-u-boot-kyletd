@@ -40,9 +40,12 @@
 #include <div64.h>
 #include <asm/io.h>
 #include <linux/types.h>
-#include <asm/arch/regs_global.h>
+#include <asm/arch/chip_drv_config_extern.h>
 #include <asm/arch/bits.h>
-#include <asm/arch/regs_syscnt.h>
+#include "asm/arch/syscnt_drv.h"
+#include "asm/arch/sci_types.h"
+
+#define TIMER_MAX_VALUE 0xFFFFFFFF
 
 
 static unsigned long long timestamp;
@@ -79,16 +82,19 @@ static inline unsigned long long us_to_tick(unsigned long long us)
 
 int timer_init(void)
 {
-	//Enable System Counter device
-	REG32(GR_GEN1) |= GEN1_SYSCLK_EN;
-	
+	REG32(GR_GEN0) |= BIT_19; //make sys cnt writable
+	REG32(GR_GEN0) |= BIT_27; //enable rtc clk input
+
+	//clear any hanging interrupts & disable interrupt
+	REG32 (SYS_CTL) &=~ (BIT_0);
+	REG32 (SYS_CTL) |= (BIT_3);
 	return 0;
 }
 
 void reset_timer(void)
 {
 	//capture current incrementer value time
-	lastinc = readl(SYSCNT_COUNT);
+	lastinc = readl(SYS_CNT0);
 	timestamp = 0;
 }
 void reset_timer_masked(void)
@@ -97,7 +103,7 @@ void reset_timer_masked(void)
 }
 unsigned long long get_ticks(void)
 {
-	ulong now = readl(SYSCNT_COUNT);
+	ulong now = readl(SYS_CNT0);
 	
 	if(now >= lastinc) {
 	/* not roll

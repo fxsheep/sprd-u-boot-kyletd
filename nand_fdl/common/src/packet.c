@@ -1,369 +1,371 @@
+#include "linux/string.h"
 #include "sci_types.h"
-#include "fdl_conf.h"
-#include "fdl_main.h"
 #include "packet.h"
+#include "fdl_stdio.h"
+#include "fdl_main.h"
 #include "fdl_crc.h"
-#include "sio_drv.h"  /* For efficiency, we access UART hardware directly. */
+#include "sio_drv.h"
 #include "usb_boot.h"
-#include "nand_ext.h"
+#include "virtual_com.h"
+#include "fdl_channel.h"
 
-#define HDLC_FLAG               0x7E
-#define HDLC_ESCAPE             0x7D
-#define HDLC_ESCAPE_MASK        0x20
+extern void FDL_SendAckPacket (cmd_pkt_type pkt_type);
 
-typedef enum
+
+struct FDL_ChannelHandler *gFdlUsedChannel;
+
+
+static PACKET_T  packet[ PACKET_MAX_NUM ];
+
+static PACKET_T *packet_free_list;
+static PACKET_T *packet_completed_list;
+static PACKET_T *packet_receiving;
+
+void FDL_PacketInit (void)
 {
-    PKT_NONE = 0,
-    PKT_HEAD,
-    PKT_GATHER,
-    PKT_COMPLETED
-} PKT_STATE; 
+    uint32 i = 0;
 
-#define DATA_SIZE		(sizeof(PKT_HEADER) + MAX_PKT_SIZE + 2)
-typedef struct _UNIT {
-	union {
-		struct {
-    		struct _UNIT * next;    
-    		int state;  /* used by recv handle, ref PKT_STATE. */
-    		int size;
-    	} s;
-    	unsigned long algin;
-    } header;
-    unsigned char data[DATA_SIZE];
-} UNIT, *PUNIT;
+    packet_free_list = &packet[0];
 
-
-static UNIT   g_pool[MAX_UNIT_NUM];
-
-static UNIT * g_freeptr = 0;
-static UNIT * g_completedptr = 0;
-static UNIT * g_currptr = 0;
-
-static void write_packet(const void * buf, int len);
-uint32 system_count_get(void);
-
-/*****************************************************************************/
-//  Description:    
-//	Global resource dependence: 
-//  Author:         Daniel.Ding
-//	Note:           
-/*****************************************************************************/
-__inline unsigned char usb_get_char(void)
-{
-	return VCOM_GetChar();
-}
-
-void packet_init( void )
-{
-	int i;
-	memset(g_pool, 0, sizeof g_pool);
-    
-    g_freeptr = &g_pool[0];
-    g_completedptr = 0;
-    g_currptr = 0;
-    
-    for (i=0; i<MAX_UNIT_NUM - 1; ++i) {/*lint !e681 */
-    	g_pool[i].header.s.next = &g_pool[i+1];
-    }
-    g_pool[MAX_UNIT_NUM - 1].header.s.next = 0;
-}
-
-
-PKT_HEADER * malloc_packet(unsigned long size)
-{
-    if ((size <= MAX_PKT_SIZE) &&(0 != g_freeptr)) {
-        UNIT * p = g_freeptr;
-        g_freeptr = g_freeptr->header.s.next;
-                
-        p->header.s.next = 0;            
-        p->header.s.state = PKT_NONE;
-        p->header.s.size  = 0;
-        
-        return (PKT_HEADER*)p->data;
-    }
-    return 0;
-}
-
-void free_packet(PKT_HEADER * ptr)
-{       
-	UNIT * p = (UNIT*)((unsigned char*)ptr - (unsigned long)&((UNIT*)0)->data);/*lint !e413 */
-    p->header.s.next = g_freeptr;
-    g_freeptr = p;
-}
-
-PKT_HEADER * get_packet(void)
-{
-    UNIT * p;
-    
-    while (0 == g_completedptr)
-        peek_packet();
-    
-    p = g_completedptr;        
-    g_completedptr   = g_completedptr->header.s.next;
-    p->header.s.next = 0;
-    return (PKT_HEADER*)p->data;
-}
-
-void send_packet(PKT_HEADER * p)
-{
-	unsigned short size = p->size + sizeof(PKT_HEADER); 
-    
-    if(fdl_isuartboot())
+    for (i = 0; i < PACKET_MAX_NUM; i++)
     {
-        unsigned short crc = frm_chk((unsigned short*)p, size);
-	    unsigned char * pcrc = (unsigned char*)p + size;
-	    *pcrc++ = (crc >> 8) & 0xFF;
-	    *pcrc = crc & 0xFF;   
+        memset (&packet[i], 0, sizeof (PACKET_T));
+        packet[i].next   = &packet[i+1];
     }
-    else{
-        //do crc check in usb write
-    }
-    write_packet(p, size + sizeof(unsigned short));
+
+    packet[PACKET_MAX_NUM-1].next = PNULL;
+
+    packet_completed_list = NULL;
+    packet_receiving      = NULL;
+
+    gFdlUsedChannel = FDL_ChannelGet();
 }
 
-void send_ack_packet(DLSTATUS status)
+
+PACKET_T *FDL_MallocPacket (void)
 {
-	/* An acknowledge packet just contains three short-wide fields:
-	 * pkt_type, pkt_size, crc
-	 *///total ack length is 8byte -- 7e xx xx xx xx xx xx 7e
-	unsigned short ack_packet[5]; 
-    PKT_HEADER * p = (PKT_HEADER*)ack_packet;
-    p->type = status;
-    p->size = 0;
-    
-    send_packet(p);
+    PACKET_T   *tmp_ptr = NULL;
+
+    if (NULL != packet_free_list)
+    {
+        tmp_ptr = packet_free_list;
+        packet_free_list = tmp_ptr->next;
+
+        // only clear the packet header
+        memset (tmp_ptr, 0, 32);
+
+        tmp_ptr->next       = NULL;
+        tmp_ptr->pkt_state  = PKT_NONE;
+        tmp_ptr->ack_flag   = 0;
+        tmp_ptr->data_size  = 0;
+    }
+
+    return tmp_ptr;
 }
 
-int peek_packet( void )
+void FDL_FreePacket (PACKET_T *ptr)
 {
-    unsigned char c;
-    unsigned char * pdata = 0;
-	UNIT *temptr = NULL;
-	uint32 size = 0;
-	
-    if ( 0 == g_currptr ) {
-        PKT_HEADER * tmp = malloc_packet(MAX_PKT_SIZE);
-        if (0 == tmp)
-        	return 0;
-        /* It looks silly, but we need the UNIT header. */
-        g_currptr = (UNIT*)((unsigned char*)tmp - (unsigned long)&((UNIT*)0)->data);/*lint !e413 */
+    ptr->next        = packet_free_list;
+    packet_free_list = ptr;
+}
+
+PACKET_T   *FDL_GetPacket (void)
+{
+    PACKET_T *ptr;
+
+    // waiting for a packet
+    while (NULL == packet_completed_list)
+    {
+        FDL_PacketDoIdle();
     }
 
-    pdata = g_currptr->data + g_currptr->header.s.size;
-    temptr = g_currptr;
+    // remove from completed list
+    ptr                     = packet_completed_list;
+    packet_completed_list   = ptr->next;
+    ptr->next               = NULL;
+    return ptr;
+}
 
-    //-------------uart boot mode ------------------------//
-   	if(fdl_isuartboot())
-   	{
-   	    while (1) {
-	    	if ((unsigned int)temptr->header.s.size >= DATA_SIZE) {
+void FDL_PacketDoIdle (void)
+{
+    //FDL_BOOT_MODE_E          boot_mode;
+    unsigned char *pdata      = NULL;
+    PACKET_T       *packet_ptr = NULL;
+    PACKET_T       *tmp_ptr    = NULL;
+    uint32          crc;
+    unsigned char   ch;
+    int ch1;
 
-	    		/* An invalid packet whose size has exceeded the pre-defined
-	    		 * maximum size.
-	    		 * Drop it and notify the PC
-	    		 */
-	    		free_packet((PKT_HEADER*)temptr->data);
-	    		g_currptr = 0;
-	        	send_ack_packet(BSL_REP_VERIFY_ERROR);
-	        	return -1;
-	    	}
-	    	
-	    	c = sio_get_char();
+    // try get a packet to handle the receive char
+    packet_ptr = packet_receiving;
 
-	    	switch (temptr->header.s.state) {
-		    	case PKT_NONE:
-		        	if (HDLC_FLAG == c) {
-		            	temptr->header.s.state = PKT_HEAD;
-		            	temptr->header.s.size = 0;
-		        	}
-		       		break;
-		       		
-		    	case PKT_HEAD: /* Skip multiple HDLC_FLAG */
-		        	if (HDLC_FLAG != c) {
-		            	if (HDLC_ESCAPE == c)
-		            	{           
-		                	/* Try to get the "true" data. */
-					    	c = sio_get_char()^ HDLC_ESCAPE_MASK;
-		            	}
-		            	temptr->header.s.state = PKT_GATHER;
-		            	*pdata++ = c;
-		            	++temptr->header.s.size;
-		        	}
-		        	break;
-		        	
-		    	case PKT_GATHER:
-		        	if (HDLC_FLAG == c) {
-		            	/* Compute the crc of the received packet. */
-		            	unsigned short crc = frm_chk((unsigned short *)temptr->data, 
-		            		temptr->header.s.size);
-		            	if (0 != crc) {  
-		                	/* crc error, so this packet is dropped. */
-		                	free_packet((PKT_HEADER*)temptr->data);
-		                	g_currptr = 0;     
-		                	send_ack_packet(BSL_REP_VERIFY_ERROR);
-		                	return -1;
-		            	} else {
-		                	/* A complete packet has been received. Add it to the tail of
-		                	 * the completed list.
-		                	 */
-		                	temptr->header.s.next = 0;
-		                	temptr->header.s.state = PKT_COMPLETED;
-		                	if (0 == g_completedptr) {
-		                    	g_completedptr = temptr;
-		                	} else {
-		                    	UNIT * p = g_completedptr;
-		                    	while (0 != p->header.s.next)
-		                    		p = p->header.s.next;
-		                    	p->header.s.next = temptr;
-		                	}
-		                	g_currptr = 0;
+    if (NULL == packet_ptr)
+    {
+        packet_ptr = FDL_MallocPacket();
 
-		                	return 1;
-		            	}
-		        	} else {
-		            	if (HDLC_ESCAPE == c)
-		            	{   
-					    	c = sio_get_char()^ HDLC_ESCAPE_MASK;
-		            	}
-		            	*pdata++ = c;
-		            	++temptr->header.s.size;
-		        	}
-		        	break;
-		        	
-		    	default:
-		    		break;
-	    	}
-    	}
+        if (NULL != packet_ptr)
+        {
+            packet_receiving    = packet_ptr;
+            packet_ptr->next    = NULL;
+        }
+        else
+        {
+            return ;
+        }
     }
-   	else if(fdl_isusbboot())
-   	{
-	    while (1) {
-	    	if ((unsigned int)temptr->header.s.size >= DATA_SIZE) {
 
-	    		/* An invalid packet whose size has exceeded the pre-defined
-	    		 * maximum size.
-	    		 * Drop it and notify the PC
-	    		 */
-	    		free_packet((PKT_HEADER*)temptr->data);
-	    		g_currptr = 0;
-	        	send_ack_packet(BSL_REP_VERIFY_ERROR);
-	        	return -1;
-	    	}
-	    	
-	        c = usb_get_char();
+    pdata  = (unsigned char *) & (packet_ptr->packet_body);
 
-	    	switch (temptr->header.s.state) {
-		    	case PKT_NONE:
-		        	if (HDLC_FLAG == c) {
-		            	temptr->header.s.state = PKT_HEAD;
-		            	//temptr->header.s.size = 0;
-		            	size = 0;
-		        	}
-		        	        	
-    	       		c = usb_get_char();
-		       		
-		    		/*lint -save -e616 -e825*/	
-		    	case PKT_HEAD: //* Skip multiple HDLC_FLAG */
-		    	       /*lint -restore */
-		        	if (HDLC_FLAG != c) {
-		            	if (HDLC_ESCAPE == c) {           
-		                	/* Try to get the "true" data. */
-				            c = usb_get_char()^HDLC_ESCAPE_MASK;
-		            	}
-		            	temptr->header.s.state = PKT_GATHER;
-		            	*pdata++ = c;
-		            	size++;
-		        	}
-		        	
-		        	c = usb_get_char();
-			/*lint -save -e616 -e825*/
-		    	case PKT_GATHER:
-			/*lint -restore  */
-		    	    //what we got is not the end flag
-		    	    while(HDLC_FLAG != c)
-		    	    {
-		            	if(HDLC_ESCAPE == c)
-		            	{   
-				           c = usb_get_char()^HDLC_ESCAPE_MASK;
-		            	}
-		            	*pdata++ = c;
-		            	size++;
-		            	c = usb_get_char();
-		    	    }
-		    	    
-		    	    //run here, indicated that we got the HDLC FLAG
-		    	    {
-		    	        unsigned short crc;
+    while (1)
+    {
+        /*
+        * here the reason that we don't call GetChar is
+        * that GetChar() isnot exited until got data from
+        * outside,FDL_PacketDoIdle() is called also in norflash write and erase
+        * so we have to exited when no char recieived here,
+        * usb virtual com is the same handle
+        */
+        ch1 = gFdlUsedChannel->GetSingleChar (gFdlUsedChannel);
 
-		    	        temptr->header.s.size = size;
+        if (ch1 == -1)
+        {
+            return;
+        }
 
-		            	/* Compute the crc of the received packet. */
-		            	crc = frm_chk((unsigned short *)temptr->data, 
-		            		temptr->header.s.size);
-		            	
-		            	if (0 != crc) {  
-		                	/* crc error, so this packet is dropped. */
-		                	free_packet((PKT_HEADER*)temptr->data);
-		                	g_currptr = 0;     
-		                	send_ack_packet(BSL_REP_VERIFY_ERROR);
-		                	return -1;
-		            	} else {
-		                	/* A complete packet has been received. Add it to the tail of
-		                	 * the completed list.
-		                	 */
-		                	temptr->header.s.next = 0;
-		                	temptr->header.s.state = PKT_COMPLETED;
+        ch = ch1&0xff;
 
-		                    g_completedptr = temptr;
-		                	g_currptr = 0;
+        if (packet_ptr->data_size > MAX_PKT_SIZE)
+        {
+            packet_receiving = NULL;
+            FDL_FreePacket (packet_ptr);
+            sio_trace ("data_size error");
+            SEND_ERROR_RSP (BSL_REP_VERIFY_ERROR)
+            //return;
+        }
 
-		                	return 1;
-		            	}
-		    	    }
-		
-		        	break;/*lint !e527*/
-		    	default:
-		    		break;
-	    	}
-	    }
-   	}
-   	else
-   	{
-   	}
-   	
-   	return 1;
-   	
+        // try handle this input data
+        switch (packet_ptr->pkt_state)
+        {
+            case PKT_NONE:
+
+                if (HDLC_FLAG == ch)
+                {
+                    packet_ptr->pkt_state = PKT_HEAD;
+                    packet_ptr->data_size = 0;
+                }
+
+                break;
+            case PKT_HEAD:
+
+                if (HDLC_FLAG != ch)
+                {
+                    if (HDLC_ESCAPE == ch)
+                    {
+                        // Try get the "true" data.
+                        //ch = sio_get_char();
+                        ch = gFdlUsedChannel->GetChar (gFdlUsedChannel);
+                        ch = ch ^ HDLC_ESCAPE_MASK;
+                    }
+
+                    packet_ptr->pkt_state = PKT_GATHER;
+                    * (pdata + packet_ptr->data_size)         = ch;
+                    //*(pdata++) = ch;
+                    packet_ptr->data_size += 1;
+
+                }
+
+                break;
+            case PKT_GATHER:
+
+                if (HDLC_FLAG == ch)
+                {
+                    packet_ptr->pkt_state = PKT_RECV;
+
+                    // check the packet. CRC should be 0
+                    crc = frm_chk ( (unsigned short *) &packet_ptr->packet_body, packet_ptr->data_size);
+
+                    if (0 != crc)
+                    {
+                        // Verify error, reject this packet.
+                        FDL_FreePacket (packet_ptr);
+                        packet_receiving = NULL;
+                        // if check result failed, notify PC
+                        SEND_ERROR_RSP (BSL_REP_VERIFY_ERROR)
+                        //sio_trace( "crc failed" );
+                        //return ;
+                    }
+                    else
+                    {
+                        // Check there are free packet?
+                        if ( (NULL != packet_free_list)
+                                && (BSL_CMD_MIDST_DATA == packet_ptr->packet_body.type))
+                        {
+                            // send a ACK
+                        #if defined (NOR_FDL_SC6600L) || defined (NOR_FDL_SC6800H)
+                            packet_ptr->ack_flag = 1;
+                            FDL_SendAckPacket (BSL_REP_ACK);
+                        #endif							 
+                        }
+
+                        // It is a complete packet, move to completed list.
+                        packet_ptr->next = NULL;
+
+                        if (NULL == packet_completed_list)
+                        {
+                            packet_completed_list       = packet_ptr;
+                        }
+                        else
+                        {
+                            // added to the tail
+                            tmp_ptr = packet_completed_list;
+
+                            while (NULL != tmp_ptr->next)
+                            {
+                                tmp_ptr = tmp_ptr->next;
+                            }
+
+                            tmp_ptr->next = packet_ptr;
+                        }
+
+                        //set to null for next transfer
+                        packet_receiving = NULL;
+
+                        return ;
+                    }
+                }
+                else
+                {
+                    if (HDLC_ESCAPE == ch)
+                    {
+                        //ch = sio_get_char();//gFdlUsedChannel->GetChar(gFdlUsedChannel);
+                        ch = gFdlUsedChannel->GetChar (gFdlUsedChannel);
+                        ch = ch ^ HDLC_ESCAPE_MASK;
+                    }
+
+                    * (pdata + packet_ptr->data_size)         = ch;
+                    packet_ptr->data_size += 1;
+                }
+
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 /******************************************************************************
  * write_packet
  ******************************************************************************/
-void write_packet(const void * buf, int len)
+void FDL_WritePacket (const void *buf, int len)
 {
-	const unsigned char * pstart = (const unsigned char*)buf;
-	const unsigned char * pend = pstart + len;
-		
-	if(fdl_isuartboot() )
-	{	
-		sio_put_char(HDLC_FLAG);
-		while (pstart<pend) {
-			if ((HDLC_FLAG == *pstart) || (HDLC_ESCAPE == *pstart)) {
-				sio_put_char(HDLC_ESCAPE);
-				sio_put_char(~HDLC_ESCAPE_MASK & *pstart);
-			} else {
-				sio_put_char(*pstart);
-			}
-			++pstart;
-		}
-		sio_put_char(HDLC_FLAG);
-	}
-	else if(fdl_isusbboot())
-	{
-        usb_write ((char*)buf,len);
-	}
-	else
-	{
-	}
+    gFdlUsedChannel->Write (gFdlUsedChannel, buf, len);
+
 }
 
+uint32  FDL_DataProcess (PACKET_T *packet_ptr_src, PACKET_T *packet_ptr_dest)
+{
+    unsigned short  crc, size;
+    int32           write_len;  /*orginal length*/
+    int32           send_len;   /*length after encode*/
+    int32           i;
+    uint8           curval;
 
+    uint8          *des_ptr = NULL;
+    uint8          *src_ptr = NULL;
+
+    size = packet_ptr_src->packet_body.size;
+    write_len = size + sizeof (unsigned short) + PACKET_HEADER_SIZE;
+    src_ptr = (uint8 *) &packet_ptr_src->packet_body;
+
+    packet_ptr_src->packet_body.size = EndianConv_16 (packet_ptr_src->packet_body.size);
+    packet_ptr_src->packet_body.type = EndianConv_16 (packet_ptr_src->packet_body.type);
+
+    /*src CRC calculation*/
+    crc = frm_chk ( (const unsigned short *) (& (packet_ptr_src->packet_body)), size + PACKET_HEADER_SIZE);
+
+    crc = EndianConv_16 (crc);
+    packet_ptr_src->packet_body.content[ size ] = (crc >> 8) & 0xFF;
+    packet_ptr_src->packet_body.content[ size+1 ] = (crc)    & 0xFF;
+
+    /*******************************************
+    *    des data preparation
+    ********************************************/
+
+    des_ptr = (uint8 *) &packet_ptr_dest->packet_body;
+    /*head flag*/
+    * (des_ptr++) = HDLC_FLAG;
+    send_len = 1;
+
+    /*middle part process*/
+    for (i = 0; i < write_len; i++)
+    {
+        curval = * (src_ptr + i);
+
+        if ( (HDLC_FLAG == curval) || (HDLC_ESCAPE == curval))
+        {
+            * (des_ptr++) = HDLC_ESCAPE;
+            * (des_ptr++) = ~HDLC_ESCAPE_MASK & curval;
+            send_len++;
+        }
+        else
+        {
+            * (des_ptr++) = curval;
+        }
+
+        send_len++;
+    }
+
+    /*end flag*/
+    * (des_ptr++) = HDLC_FLAG;
+    send_len++;
+
+    return send_len;
+}
+/******************************************************************************
+ * FDL_SendPacket
+ ******************************************************************************/
+void FDL_SendPacket (PACKET_T *packet_ptr)
+{
+    int32           send_len;   /*length after encode*/
+    PACKET_T       *tmp_packet_ptr = NULL;
+
+    // send a ACK packet to notify PC that we are ready.
+    tmp_packet_ptr = FDL_MallocPacket();
+
+    if (NULL == tmp_packet_ptr)
+    {
+
+        FDL_FreePacket (packet_receiving);
+        tmp_packet_ptr = FDL_MallocPacket();
+    }
+
+    send_len = FDL_DataProcess (packet_ptr, tmp_packet_ptr);
+
+    FDL_WritePacket ( (char *) (& (tmp_packet_ptr->packet_body)), send_len);
+
+    FDL_FreePacket (tmp_packet_ptr);
+
+}
+
+/******************************************************************************
+ * FDL_SendAckPacket_packet
+ ******************************************************************************/
+void FDL_SendAckPacket (cmd_pkt_type  pkt_type)
+{
+
+    unsigned long ack_packet_src[8];
+    unsigned long ack_packet_dst[8];
+    PACKET_T *packet_ptr = (PACKET_T *) ack_packet_src;
+
+    int32           send_len;   /*length after encode*/
+    PACKET_T       *tmp_packet_ptr = NULL;
+
+    packet_ptr->packet_body.type = pkt_type;
+    packet_ptr->packet_body.size = 0;
+
+    tmp_packet_ptr = (PACKET_T *) ack_packet_dst;
+
+    send_len = FDL_DataProcess (packet_ptr, tmp_packet_ptr);
+    FDL_WritePacket ( (char *) (& (tmp_packet_ptr->packet_body)), send_len);
+
+}

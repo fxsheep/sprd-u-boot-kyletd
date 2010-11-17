@@ -2,6 +2,7 @@
 #define MCU_COMMAND_H
 
 #include "cmd_def.h"
+#include "packet.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,19 +12,19 @@ extern "C" {
 /******************************************************************************
  * mcu_reset_normal
  ******************************************************************************/
-int mcu_reset_normal(PKT_HEADER *packet, void *arg);
+int FDL_McuResetNormal (PACKET_T *packet, void *arg);
 
 /******************************************************************************
  * mcu_reset_boot
- * 
+ *
  * This function is for testing FDL.
  ******************************************************************************/
-int mcu_reset_boot(PKT_HEADER *pakcet, void *arg);
+int FDL_McuResetBoot (PACKET_T *pakcet, void *arg);
 
 /******************************************************************************
  * mcu_read_chip_type
  ******************************************************************************/
-int mcu_read_chip_type(PKT_HEADER *packet, void *arg);
+int FDL_McuReadChipType (PACKET_T *packet, void *arg);
 
 #ifdef __cplusplus
 }

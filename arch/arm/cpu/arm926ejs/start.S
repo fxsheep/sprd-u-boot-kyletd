@@ -50,6 +50,7 @@
  */
 
 
+.globl cpu_spec
 .globl _start
 _start:
 	b	reset
@@ -157,17 +158,21 @@ reset:
 	bic	r0,r0,#0x1f
 	orr	r0,r0,#0xd3
 	msr	cpsr,r0
-/*
-	mov	r1, #0x7fffffff
+
+#if 0
+	ldr	r1, =0x3fffffff
 time:	subs	r1,r1,#0x1
 	bne	time
-*/
+#endif
+
 	/*
 	 * we do sys-critical inits only at reboot,
 	 * not when booting from ram!
 	 */
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
 	@bl	cpu_init_crit
+	bl cpu_spec
+	@bl MMU_Init
 #endif
 
 #ifndef CONFIG_SKIP_RELOCATE_UBOOT
@@ -204,7 +209,6 @@ stack_setup:
 	sub	sp, sp,	#CONFIG_SYS_STACK_SIZE 
 	bic	sp, sp, #7		/* 8-byte alignment for ABI compliance */
 #else
-	ldr 	sp, =0x40007000
 #endif /*CONFIG_NAND_SPL*/
 
 clear_bss:
@@ -217,12 +221,6 @@ clbss_l:str	r2, [r0]		/* clear loop...                    */
 	cmp	r0, r1
 	ble	clbss_l
 
-
-	
-#ifndef CONFIG_SKIP_LOWLEVEL_INIT
-	bl	lowlevel_init	/* go setup pll,mux,memory */
-	ldr	sp, =0x800
-#endif
 	ldr	pc, _start_armboot
 
 _start_armboot:

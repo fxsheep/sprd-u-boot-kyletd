@@ -24,12 +24,23 @@
 
 /*#define NAND_DEBUG 1  */
 /*#define DEBUG*/
+#define SPRD_ENV_TAG 1
 /*
  * SPREADTRUM BIGPHONE board - SoC Configuration
  */
 #define CONFIG_ARM926EJS			/* arm926ejs CPU core */
 #define CONFIG_SC8800G
 #define CONFIG_OPENPHONE
+
+#ifdef CONFIG_SC8800G
+#define PLATFORM_SC8800G
+#define CHIP_VER_8800G2
+#define CHIP_ENDIAN_LITTLE
+#define SC8800S_LITTLE_ENDIAN FALSE
+#define _LITTLE_ENDIAN 1
+#define BB_DRAM_TYPE_64MB_32BIT
+#define  CONFIG_MTD_NAND_SPRD 1
+#endif
 
 #define CONFIG_SYS_HZ			1000
 #define CONFIG_SPRD_TIMER_CLK		1000 /*32768*/
@@ -40,7 +51,7 @@
 #define CONFIG_SYS_PROMPT_HUSH_PS2 "> "
 #endif
 
-#define CMDLINE_NEED_CONV
+/*#define CMDLINE_NEED_CONV */
 
 #define WATCHDOG_LOAD_VALUE	0x4000
 #define CONFIG_SYS_STACK_SIZE	0x400
@@ -220,7 +231,7 @@
 
 #define CONFIG_ENV_OVERWRITE
 
-#define CONFIG_BOOTDELAY	5
+#define CONFIG_BOOTDELAY	1
 
 #define CONFIG_LOADADDR		0x01000000	/* loadaddr env var */
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
@@ -229,8 +240,8 @@
 #define str(s)	#s
 
 #define MTDIDS_DEFAULT "nand0=sprd-nand"
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),70m(userdata),70m(cache)"
-#define CONFIG_BOOTARGS "mem=128M console=ttyS1,115200n8 initrd=0x3000000,4194304 init=/init root=/dev/ram0 rw "MTDPARTS_DEFAULT
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
+#define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 initrd=0x3000000,4194304 init=/init root=/dev/ram0 rw "MTDPARTS_DEFAULT
 #define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 

@@ -7,258 +7,204 @@
  *****************************************************************************/
 /******************************************************************************
  **                   Edit    History                                         *
- **---------------------------------------------------------------------------* 
- ** DATE          NAME            DESCRIPTION                                 * 
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
  ** 3/25/2005     Daniel.Ding     Create.                                     *
  *****************************************************************************/
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "common.h"
-#include "fdl_crc.h"
 #include "usb_boot.h"
 #include "drv_usb.h"
 #include "virtual_com.h"
-#include "fdl_main.h"
+#include "fdl_crc.h"
+#include "fdl_channel.h"
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    extern   "C" 
-    {
+extern   "C"
+{
 #endif
 /*----------------------------------------------------------------------------*
 **                            Mcaro Definitions                               *
 **---------------------------------------------------------------------------*/
+//AHB Register
+#define AHB_CTRL0                           (0x20900200)
+#define USBD_EN                                     BIT_5
+#define AHB_CONTROL_REG3                    (0x2090020c)
+#define CLK_USB_REF_SEL                     BIT_1
+#define USB_S_HBIGENDIAN                    BIT_2
+#define CLK_USB_REF_EN                      BIT_6
+//#define AHB_SOFT_RST                      (0x20900210)
+//#define USBPHY_SOFT_RST                       BIT_7
+//#define AHB_ARM_CLK                           (0x20900224)
+
 #define USB_BUFF_SIZE  0x4000
 /*----------------------------------------------------------------------------*
 **                             Data Structures                                *
 **---------------------------------------------------------------------------*/
 
 /*--------------------------- Local Data ------------------------------------*/
-LOCAL __attribute__((aligned(4))) uint8 s_usb_snd_buff[USB_BUFF_SIZE];
+LOCAL __align (4) uint8 s_usb_snd_buff[USB_BUFF_SIZE];
 /*--------------------------- Global Data -----------------------------------*/
 /*--------------------------- External Data ---------------------------------*/
-extern USB_rx_buf_T 	buf_manager ;
+extern USB_rx_buf_T     buf_manager ;
+//extern int USB_EPxSendData  (char ep_id ,unsigned int * pBuf,int len);
+
 /*----------------------------------------------------------------------------*
 **                         Local Function Prototype                           *
 **---------------------------------------------------------------------------*/
-void usb_write (char *write_buf,int write_len);
-void usb_init(uint32 ext_clk26M);
-/*----------------------------------------------------------------------------*
-**                         Function Definitions                               *
-**---------------------------------------------------------------------------*/
+
+void usb_write (unsigned char *write_buf,  unsigned int write_len);
+void usb_init (unsigned long ext_clk26M);
+
+static void SetPllClock (void)
+{
+    uint32 clk;
+    clk = * (volatile uint32 *) (AHB_ARM_CLK);
+    clk &= ~ ( (3 << 23) | (7 << 4) | (7));
+    clk |= ( (1 << 23) | (1 << 4) | (0));
+
+    * (volatile uint32 *) (AHB_ARM_CLK) = clk;
+}
 
 /*****************************************************************************/
-//  Description:    
-//	Global resource dependence: 
+//  Description:
+//    Global resource dependence:
 //  Author:         Daniel.Ding
-//	Note:           
+//    Note:
+/*****************************************************************************/
+void usb_init (unsigned long ext_clk26M)
+{
+#if (!defined(_LITTLE_ENDIAN) && !defined(CHIP_ENDIAN_LITTLE))
+    *(volatile uint32 *)AHB_CONTROL_REG3 |= USB_S_HBIGENDIAN;    //master AHB interface: Big Endian
+#else
+    *(volatile uint32 *)AHB_CONTROL_REG3 &= ~USB_S_HBIGENDIAN;    //master AHB interface: Little Endian
+#endif
+    
+    *(volatile uint32 *)AHB_CTRL0 |= USBD_EN;  // usbd enable
+	
+    usb_core_init();
+    
+}
+/*****************************************************************************/
+//  Description:
+//    Global resource dependence:
+//  Author:         Daniel.Ding
+//    Note:
 /*****************************************************************************/
 void usb_boot (uint32 ext_clk26M)
 {
-	buf_manager.read 	= 0 ;
-	buf_manager.write 	= 0 ;
 
-	usb_init(ext_clk26M);
+    buf_manager.read     = 0 ;
+    buf_manager.write     = 0 ;
+
+    usb_init (ext_clk26M);
 }
-
-/*****************************************************************************/
-//  Description:    
-//	Global resource dependence: 
-//  Author:         Daniel.Ding
-//	Note:           
-/*****************************************************************************/
 void usb_varinit (void)
 {
-	int i;
+    int i;
 
-	buf_manager.read 	= 0 ;
-	buf_manager.write 	= 0 ;
-
+    buf_manager.read    = 0 ;
+    buf_manager.write   = 0 ;
+    usb_init (0);
 }
-
 /*****************************************************************************/
-//  Description:    
-//	Global resource dependence: 
-//  Author:         Daniel.Ding
-//	Note:           
+//  Description:
+//    Global resource dependence:
+//  Author:
+//    Note:
 /*****************************************************************************/
-void usb_init(uint32 ext_clk26M)
+PUBLIC void usb_ldo_enable (BOOLEAN is_usb_ldo_enabled)
 {
-	int i;
-    USB_DEV_REG_T 		* ctl_usb = (USB_DEV_REG_T *) USB_REG_BASE ;
+    volatile unsigned long usb_ldo = 0;
 
-#if defined (NAND_FDL_SC6600I)
-    if (ext_clk26M){
-		//Do nothing;    
-    }
-    else{
-	    //PLL change enable ;
-	    *(volatile unsigned long *) 0x8b000018 |= 1<<9;
-		//Set PLL is 144M ;
-		*(volatile unsigned long *) 0x8b000024 = 0x0090000D;
-	    //PLL change disable ;
-	    *(volatile unsigned long *) 0x8b000018 &= ~(1<<9);
+    // usb_ldo  = *(volatile unsigned long *)(GLOBAL_CTL_LDO);
 
-        *(volatile uint32 *)0x8b00000c = 0x11;     // mcu_clk set to 72mhz
-
-		//Wait for a moment;
-		system_delay(20);
-	}
-
-	//Close USB_LDO and pulldown 1.5K resister ; 
-	//in this version, it's forbided,we don't want usb disconnect is detected by host
-
-	//Enable USB AHB CLK ;
-	*(volatile uint32 * )(0x20000100) |= 1<<2;
-#elif defined (NAND_FDL_SC6800D)
-    if (ext_clk26M){
-		//Do nothing;    
-    }
-    else{
-	    //PLL change enable ;
-	    *(volatile unsigned long *) 0x8b000018 |= 1<<20;
-		//Set PLL is 144M ;
-		*(volatile unsigned long *) 0x8b000068 = 0x0090000D;
-
-		//Wait for a moment;
-		system_delay(20);
-	}
-
-	//Close USB_LDO and pulldown 1.5K resister ; 
-	//in this version, it's forbided,we don't want usb disconnect is detected by host
-
-	//Enable USB CLK ;
-	*(volatile uint32 * )(0x20900200) |= 1<<5;
-#elif defined (NAND_FDL_SC8800H)
-       *(volatile uint32 * )(0x20900200) |= 1<<5;
-#endif
-	
-	//Enable USB device ;
-	ctl_usb->ctrl.mBits.en 	= ENABLE;
-
-	USB_EP0Config ();
-	USB_EP1Config ();
-	USB_EP2Config ();
-	USB_EP3Config ();
-	
-	//Open USB_LDO and pullup 1.5K resister;
-    //handled in entry of init.s
-}
-
-/*****************************************************************************/
-//  Description:    
-//	Global resource dependence: 
-//  Author:         Daniel.Ding
-//	Note:           
-/*****************************************************************************/
-void usb_write (char *write_buf,int write_len)
-{
-	unsigned short crc;
-	int i;
-	int send_len;
-	unsigned char curval;
-	uint8 * usb_buff_ptr = NULL;
-
-    // @Richard
-    // NOTE(Important):
-    // We do not do mask because the message including crc do not have mask word!
-    // So if there is mask word, we have to modify below codes.
-    // 
-    crc = frm_chk((const unsigned short*)write_buf, write_len - 2);
-    *(write_buf + write_len - 2) = (crc >> 8) & 0x0FF;
-    *(write_buf + write_len - 1) = crc & 0x0FF;
-
-    send_len = 1;
-    usb_buff_ptr = &s_usb_snd_buff[1];
-        
-    for (i = 0; i < write_len; i++)
+    if (is_usb_ldo_enabled)
     {
-        curval = *(write_buf + i);
-		if ((HDLC_FLAG == curval) || (HDLC_ESCAPE == curval)) {
-			*(usb_buff_ptr++) = HDLC_ESCAPE;
-			*(usb_buff_ptr++) = ~HDLC_ESCAPE_MASK & curval;
-			send_len++;
-		} else {
-			*(usb_buff_ptr++) = curval;
-		}
-		send_len++;
+        usb_ldo &= ~ (BIT_10);
+        usb_ldo |= (BIT_11);
     }
-    
-    s_usb_snd_buff[0] = HDLC_FLAG ;
-    s_usb_snd_buff[send_len++] = HDLC_FLAG;
-    
-    if(send_len == 0)
-        return;
-        
-	//Ep3 max pack size is 64 bytes .
-    if ((send_len >> 6) > 0){
-    	for (i=0; i<(send_len >> 6); i++){
-	    	USB_EPxSendData  (USB_EP3 ,(unsigned int * )(s_usb_snd_buff + (i<<6)),64);
-    	}
-    	if(send_len%0x40)
-    	{
-    	    USB_EPxSendData  (USB_EP3 ,(unsigned int * )(s_usb_snd_buff + (i<<6)),(send_len - (i<<6)));
-    	}
+    else
+    {
+        usb_ldo |= (BIT_10);
+        usb_ldo &= ~ (BIT_11);
     }
-    else{
-	    USB_EPxSendData  (USB_EP3 ,(unsigned int * )s_usb_snd_buff,send_len);
-    } 
 
+    //*(volatile unsigned long *)(GLOBAL_CTL_LDO) = usb_ldo;
+
+    return;
+}
+/*****************************************************************************/
+//  Description:
+//    Global resource dependence:
+//  Author:         Daniel.Ding
+//    Note:
+/*****************************************************************************/
+void usb_write (unsigned char *write_buf,unsigned int write_len)
+{
+    memcpy (s_usb_snd_buff, write_buf, write_len);
+    USB_EPxSendData (USB_EP5 , (unsigned int *) s_usb_snd_buff,write_len);
+}
+extern char VCOM_GetChar (void);
+extern int VCOM_GetSingleChar (void);
+static int FDL_UsbOpen (struct FDL_ChannelHandler  *channel, unsigned int baudrate)
+{
+    return 0;
+}
+static int FDL_UsbRead (struct FDL_ChannelHandler  *channel, const unsigned char *buf, unsigned int len)
+{
+    return -1;
+}
+static char FDL_UsbGetChar (struct FDL_ChannelHandler  *channel)
+{
+    return VCOM_GetChar();
+}
+static int FDL_UsbGetSingleChar (struct FDL_ChannelHandler  *channel)
+{
+    return VCOM_GetSingleChar();
+}
+static int FDL_UsbWrite (struct FDL_ChannelHandler  *channel, const unsigned char *buf, unsigned int len)
+{
+    usb_write ( (unsigned char *) buf, len);
+    return 0;
 }
 
-/*****************************************************************************/
-//  Description:    turn off usb ldo 
-//	Global resource dependence: 
-//  Author:         weihua.wang
-//	Note:           
-/*****************************************************************************/
-uint8 usb_ldo_off(void)
+static int FDL_UsbPutChar (struct FDL_ChannelHandler  *channel, const unsigned char ch)
 {
-	*(volatile unsigned long *) 0x8b00003C |= 1<<13;
-	*(volatile unsigned long *) 0x8b00003C &= ~(1<<12);
-	
-	return TRUE;
+    s_usb_snd_buff[0] = ch;
+    //int data = ch;
+    USB_EPxSendData (USB_EP3 , (unsigned int *) &s_usb_snd_buff, 1);
+    return 0;
 }
-//Add for USB 
-void usb_irq (void)
+
+static int FDL_UsbSetBaudrate (struct FDL_ChannelHandler  *channel,  unsigned int baudrate)
 {
-    INT_CTRL_T * int_ctl_ptr = (INT_CTRL_T *)INT_REG_BASE;       
-	USB_DEV_REG_T * ctl = (USB_DEV_REG_T *)USB_REG_BASE;
-	USB_DEV_INT_STS_U status ;
-	
-	if( int_ctl_ptr->raw.dwValue  & (1<<25)){
-		status.dwValue = ctl->int_sts.dwValue ;
-		//dispatch handler message according to usb int status ;
-		if (status.dwValue  & USB_INT_EPx_MASK )
-		{
-			if (status.mBits.ep2 )
-			{
-				USB_Ep2_handler();
-			}
-			if (status.mBits.ep3 )
-			{
-				USB_Ep3_handler();
-			}
-			if (status.mBits.ep0 )
-			{
-				USB_Ep0_handler();
-			}
-			if (status.mBits.ep1 )
-			{
-				USB_Ep1_handler();
-			}	
-		}
-		//clear usb interrupt ;
-		ctl->int_clr.dwValue = USB_INT_DEV_MASK ;
-	}
+    return 0;
 }
+static int FDL_UsbClose (struct FDL_ChannelHandler  *channel)
+{
+    return 0;
+}
+struct FDL_ChannelHandler gUSBChannel =
+{
+    FDL_UsbOpen,
+    FDL_UsbRead,
+    FDL_UsbGetChar,
+    FDL_UsbGetSingleChar,
+    FDL_UsbWrite,
+    FDL_UsbPutChar,
+    FDL_UsbSetBaudrate,
+    FDL_UsbClose,
+    0
+};
+
 /**---------------------------------------------------------------------------*
 **                         Compiler Flag                                      *
 **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
-    }
+}
 #endif
-// End 
-
+// End

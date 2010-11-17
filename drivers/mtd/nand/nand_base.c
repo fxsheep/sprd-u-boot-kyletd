@@ -79,7 +79,6 @@
 #include <jffs2/jffs2.h>
 #endif
 
-#define CONFIG_MTD_NAND_SC8800S 1
 /*
  * CONFIG_SYS_NAND_RESET_CNT is used as a timeout mechanism when resetting
  * a flash.  NAND flash is initialized prior to interrupts so standard timers
@@ -206,7 +205,7 @@ static uint8_t nand_read_byte16(struct mtd_info *mtd)
 {
 	struct nand_chip *chip = mtd->priv;
 
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	return (uint8_t)readl(chip->IO_ADDR_R);
 #else
 	return (uint8_t) cpu_to_le16(readw(chip->IO_ADDR_R));
@@ -262,7 +261,7 @@ static void nand_write_buf(struct mtd_info *mtd, const uint8_t *buf, int len)
 	int i;
 	struct nand_chip *chip = mtd->priv;
 
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	memcpy(chip->IO_ADDR_W, buf, len);
 #else
 	for (i = 0; i < len; i++)
@@ -283,8 +282,12 @@ static void nand_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)
 	int i;
 	struct nand_chip *chip = mtd->priv;
 
+#ifdef CONFIG_MTD_NAND_SPRD
+	memcpy(buf, chip->IO_ADDR_R, len);
+#else
 	for (i = 0; i < len; i++)
 		buf[i] = readb(chip->IO_ADDR_R);
+#endif
 }
 
 /**
@@ -319,7 +322,7 @@ static void nand_write_buf16(struct mtd_info *mtd, const uint8_t *buf, int len)
 	int i;
 	struct nand_chip *chip = mtd->priv;
 
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	memcpy(chip->IO_ADDR_W, buf, len);
 #else
 	u16 *p = (u16 *) buf;
@@ -343,7 +346,7 @@ static void nand_read_buf16(struct mtd_info *mtd, uint8_t *buf, int len)
 	int i;
 	struct nand_chip *chip = mtd->priv;
 
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	memcpy(buf, chip->IO_ADDR_R, len);
 #else
 	u16 *p = (u16 *) buf;
@@ -682,7 +685,7 @@ static void nand_command_lp(struct mtd_info *mtd, unsigned int command,
 			/* Adjust columns for 16 bit buswidth */
 			if (chip->options & NAND_BUSWIDTH_16)
 				column >>= 1;
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 			chip->cmd_ctrl(mtd, column, ctrl);
 #else
 			chip->cmd_ctrl(mtd, column, ctrl);
@@ -691,7 +694,7 @@ static void nand_command_lp(struct mtd_info *mtd, unsigned int command,
 #endif
 		}
 		if (page_addr != -1) {
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 			chip->cmd_ctrl(mtd, page_addr, ctrl);
 #else
 			chip->cmd_ctrl(mtd, page_addr, ctrl);
@@ -1125,8 +1128,7 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 	}
 	chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
-//#ifdef NAND_DEBUG
-#if 0
+#ifdef NAND_DEBUG
 	printf("nand_read_page_hwecc next\n");
 	for(i=40;i<56;i++){
 		printf("%x ", chip->oob_poi[i]);
@@ -1148,6 +1150,11 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		if (stat < 0){
 			mtd->ecc_stats.failed++;
 			printk("%s: ecc correct error %d times\n",__FUNCTION__, mtd->ecc_stats.failed);
+//#ifdef NAND_DEBUG
+#if 0 
+			while(1)
+			  ;
+#endif
 		}
 		else
 			mtd->ecc_stats.corrected += stat;
@@ -1867,7 +1874,7 @@ static void nand_write_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->oob_poi[eccpos[i]] = ecc_calc[i];
 
 	chip->write_buf(mtd, chip->oob_poi, mtd->oobsize);
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	chip->nfc_wr_oob(mtd);
 #endif
 }
@@ -2657,7 +2664,7 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	int i, dev_id, maf_idx;
 	int tmp_id, tmp_manf;
 
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	unsigned long flash_id = 0;
 #endif
 	/* Select the device */
@@ -2672,7 +2679,7 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 #endif
 
 	/* Send the command for reading device ID */
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	chip->cmdfunc(mtd, NAND_CMD_READID, -1, -1);
 	flash_id = chip->nfc_readid(mtd);
 
@@ -2693,7 +2700,7 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	 * not match, ignore the device completely.
 	 */
 
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	chip->cmdfunc(mtd, NAND_CMD_READID, -1, -1);
 	flash_id = chip->nfc_readid(mtd);
 
@@ -2735,7 +2742,7 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	/* Newer devices have all the information in additional id bytes */
 	if (!type->pagesize) {
 		int extid;
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 		/* The 3rd id byte holds MLC / multichip data */
 		chip->cellinfo = (flash_id >> 16) & 0xff;
 		/* The 4th id byte is the important one */

@@ -29,26 +29,25 @@
 
 unsigned long sprd_get_armclk(void)
 {
-	return lldiv(CONFIG_SYS_PLL_MHZ,CONFIG_SYS_ARM_DIV);
+	//return lldiv(CONFIG_SYS_PLL_MHZ,CONFIG_SYS_ARM_DIV);
+	return 0;
 }
 
 unsigned long sprd_get_ahbclk(void)
 {
-	return lldiv(CONFIG_SYS_PLL_MHZ,CONFIG_SYS_AHB_DIV);
+	//return lldiv(CONFIG_SYS_PLL_MHZ,CONFIG_SYS_AHB_DIV);
+	return 0;
 }
 
 unsigned long sprd_get_emcclk(void)
 {
-	return lldiv(CONFIG_SYS_PLL_MHZ,CONFIG_SYS_EMC_DIV);
+	//return lldiv(CONFIG_SYS_PLL_MHZ,CONFIG_SYS_EMC_DIV);
+	return 0;
 }
 
 #if defined(CONFIG_DISPLAY_CPUINFO)
 int print_cpuinfo (void)
 {
-	char buf[32];
-
-	printf ("CPU:  spreadtrum sc8800x at %d MHz\n\n",
-		sprd_get_armclk ());
 	return 0;
 }
 #endif

@@ -28,8 +28,8 @@ gcclibdir := $(shell dirname `$(CC) -print-libgcc-file-name`)
 LDSCRIPT= $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/u-boot.lds
 FDL1_LDFLAGS	= -Bstatic -T $(fdl1_obj)u-boot.lds $(PLATFORM_LDFLAGS)
 FDL2_LDFLAGS	= -Bstatic -T $(fdl2_obj)u-boot.lds $(PLATFORM_LDFLAGS)
-AFLAGS	+= 
-CFLAGS	+= 
+AFLAGS	+= -I $(TOPDIR)/include/asm/arch
+CFLAGS	+= -I $(TOPDIR)/include/asm/arch
 
 FDL2_PATH = $(TOPDIR)/nand_fdl/fdl-2
 FDL1_PATH = $(TOPDIR)/nand_fdl/fdl-1
@@ -38,10 +38,10 @@ COM_PATH = $(TOPDIR)/nand_fdl/common
 FDL2_SOBJS_LIST = init.o
 FDL1_SOBJS_LIST = init.o
 
-COM_COBJS	= dl_engine.o drv_usb.o fdl_crc.o packet.o sio_drv.o usb_boot.o virtual_com.o 
+COM_COBJS	= dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o mcu_command.o usb_boot.o drv_usb.o virtual_com.o chip_cfg.o 
 COM_OBJS = $(addprefix $(COM_PATH)/src/,$(COM_COBJS))
 
-FDL2_COBJS_LIST = migrate.o dma_drv.o fdl_main.o fdl_nand.o flash_command.o mcu_command.o nand_controller.o readnandbuffer.o
+FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o
 FDL1_COBJS_LIST = board_init.o chip_init.o fdl_command.o fdl_main.o fdl_stdio.o sdram_init.o sdram_prod.o
 FDL1_COBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_COBJS_LIST))
 FDL1_SOBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_SOBJS_LIST))
@@ -54,9 +54,10 @@ MTD_LIB = $(TOPDIR)/drivers/mtd/libmtd.a
 #ARM_LIB = $(TOPDIR)/arch/arm/lib/libarm.a
 NAND_LIB = $(TOPDIR)/drivers/mtd/nand/libnand.a
 COMMON_LIB = $(TOPDIR)/common/dlmalloc.o 
+DRIVERS_LIB = $(TOPDIR)/drivers/serial/serial_sc8800x.o
 CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o
 GENERIC_LIB = $(TOPDIR)/lib/libgeneric.a
-UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB)
+UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB)
 
 #ALL_UBOOT_LIBS = $(addprefix $(obj),$(__LIBS))
 #UBOOT_LIBS = $(ALL_UBOOT_LIBS)
@@ -98,6 +99,17 @@ $(fdlobj)fdl2: $(FDL2_OBJS) $(COM_OBJS) $(UBOOT_LIBS) $(fdl2_obj)u-boot.lds
 #-L$(gcclibdir) -lgcc 
 $(fdl1_obj)u-boot.lds $(fdl2_obj)u-boot.lds: $(LDSCRIPT)
 	$(CPP) $(CPPFLAGS) $(LDPPFLAGS) -ansi -D__ASSEMBLY__ -P - <$^ >$@
+
+.PHONY:test
+test:
+	@echo $(TOPDIR)
+	@echo ---------------------------------------
+	@echo $(CFLAGS)
+	@echo ---------------------------------------
+	@echo $(AFLAGS)
+	@echo ---------------------------------------
+	
+	
 		
 
 #########################################################################
@@ -106,12 +118,12 @@ $(COM_OBJS):%.o:%.c
 	$(CC) $(CFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 $(FDL1_COBJS):%.o:%.c
 	$(CC) $(CFLAGS) -I $(FDL1_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
-$(FDL1_SOBJS):%.o:%.s
-	$(CC) $(SFLAGS) -I $(FDL1_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
+$(FDL1_SOBJS):%.o:%.S
+	$(CC) $(AFLAGS) -I $(FDL1_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 $(FDL2_COBJS):%.o:%.c
 	$(CC) $(CFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
-$(FDL2_SOBJS):%.o:%.s
-	$(CC) $(SFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
+$(FDL2_SOBJS):%.o:%.S
+	$(CC) $(AFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 # defines $(obj).depend target
 include $(SRCTREE)/rules.mk
 

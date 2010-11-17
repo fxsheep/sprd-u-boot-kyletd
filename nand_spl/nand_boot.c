@@ -18,11 +18,11 @@
  * MA 02111-1307 USA
  */
 
+#include <config.h>
 #include <common.h>
 #include <nand.h>
 #include <asm/io.h>
 
-#define CONFIG_MTD_NAND_SC8800S 1
 
 #define CONFIG_SYS_NAND_READ_DELAY \
 	{ volatile int dummy; int i; for (i=0; i<10000; i++) dummy = i; }
@@ -96,15 +96,16 @@ static int nand_command(struct mtd_info *mtd, int block, int page, int offs, u8 
 	this->cmd_ctrl(mtd, cmd, NAND_CTRL_CLE | NAND_CTRL_CHANGE);
 	/* Set ALE and clear CLE to start address cycle */
 	/* Column address */
-#ifdef CONFIG_MTD_NAND_SC8800S
-	this->cmd_ctrl(mtd, offs>>1, NAND_CTRL_ALE | NAND_CTRL_CHANGE);
+#ifdef CONFIG_MTD_NAND_SPRD
+	this->cmd_ctrl(mtd, offs, NAND_CTRL_ALE | NAND_CTRL_CHANGE);
+	//this->cmd_ctrl(mtd, offs>>1, NAND_CTRL_ALE | NAND_CTRL_CHANGE);
 #else
 	this->cmd_ctrl(mtd, offs & 0xff,
 		       NAND_CTRL_ALE | NAND_CTRL_CHANGE); /* A[7:0] */
 	this->cmd_ctrl(mtd, (offs >> 8) & 0xff, NAND_CTRL_ALE); /* A[11:9] */
 #endif
 	/* Row address */
-#ifdef CONFIG_MTD_NAND_SC8800S
+#ifdef CONFIG_MTD_NAND_SPRD
 	this->cmd_ctrl(mtd, page_addr, NAND_CTRL_ALE); /* A[19:12] */
 #else
 	this->cmd_ctrl(mtd, (page_addr & 0xff), NAND_CTRL_ALE); /* A[19:12] */
@@ -251,10 +252,8 @@ void nand_boot(void)
 	 * Init board specific nand support
 	 */
 	nand_info.priv = &nand_chip;
-	nand_chip.IO_ADDR_R = nand_chip.IO_ADDR_W = (void  __iomem *)CONFIG_SYS_NAND_BASE;
 	nand_chip.dev_ready = NULL;	/* preset to NULL */
 	board_nand_init(&nand_chip);
-
 	if (nand_chip.select_chip)
 		nand_chip.select_chip(&nand_info, 0);
 

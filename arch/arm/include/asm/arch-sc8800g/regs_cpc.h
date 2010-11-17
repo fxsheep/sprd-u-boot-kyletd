@@ -1,14 +1,24 @@
+/*
+ * arch/arm/mach-sc8800s/include/mach/regs_cpc.h
+ *
+ * Chip Pin Control registers Definitions
+ *
+ * Copyright (C) 2010 Spreadtrum International Ltd.
+ *
+ * 2010-03-05: yingchun li <yingchun.li@spreadtrum.com>
+ *            initial version
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 2 as
+ *  published by the Free Software Foundation.
+ */
+
 #ifndef _SC8800H_REG_CPC_H_
-    #define _SC8800H_REG_CPC_H_
+#define _SC8800H_REG_CPC_H_
+#include <asm/arch/chip_drv_config_extern.h>
 
-#ifdef   __cplusplus
-    extern   "C" 
-    {
-#endif
 
-#define PIN_CTL_BASE            		0x8C000000
-
-#define CPC_SIMCLK0_REG                 (PIN_CTL_BASE + 0x0000)
+#define CPC_SIMCLK0_REG                 	(PIN_CTL_BASE + 0x0000)
 #define CPC_SIMDA0_REG             		(PIN_CTL_BASE + 0x0004)
 #define CPC_SIMRST0_REG            		(PIN_CTL_BASE + 0x0008)
 #define CPC_SIMCLK1_REG            		(PIN_CTL_BASE + 0x000C)
@@ -31,14 +41,14 @@
 #define CPC_KEYOUT0_REG           		(PIN_CTL_BASE + 0x0048)
 #define CPC_KEYOUT1_REG           		(PIN_CTL_BASE + 0x004C)
 #define CPC_KEYOUT2_REG           		(PIN_CTL_BASE + 0x0050)
-#define CPC_KEYOUT3_REG                 (PIN_CTL_BASE + 0x0054)
-#define CPC_KEYOUT4_REG                 (PIN_CTL_BASE + 0x0058)
+#define CPC_KEYOUT3_REG                 	(PIN_CTL_BASE + 0x0054)
+#define CPC_KEYOUT4_REG                 	(PIN_CTL_BASE + 0x0058)
 #define CPC_KEYOUT5_REG            		(PIN_CTL_BASE + 0x005C)
 #define CPC_KEYIN0_REG           		(PIN_CTL_BASE + 0x0060)
 #define CPC_KEYIN1_REG           		(PIN_CTL_BASE + 0x0064)
 #define CPC_KEYIN2_REG           		(PIN_CTL_BASE + 0x0068)
 #define CPC_KEYIN3_REG           		(PIN_CTL_BASE + 0x006C)
-#define CPC_KEYIN4_REG                  (PIN_CTL_BASE + 0x0070)
+#define CPC_KEYIN4_REG                  	(PIN_CTL_BASE + 0x0070)
 
 #define CPC_XTLEN_REG           		(PIN_CTL_BASE + 0x0074)
 
@@ -59,6 +69,9 @@
 #define CPC_U1TXD_REG           		(PIN_CTL_BASE + 0x00A0)
 #define CPC_U1RXD_REG           		(PIN_CTL_BASE + 0x00A4)
 
+//#define CPC_REV_REG           		(PIN_CTL_BASE + 0x00A8)
+//#define CPC_REV_REG           		(PIN_CTL_BASE + 0x00AC)
+
 #define CPC_IISDI0_REG           		(PIN_CTL_BASE + 0x00B0)
 #define CPC_IISDO0_REG            		(PIN_CTL_BASE + 0x00B4)
 #define CPC_IISCLK0_REG            		(PIN_CTL_BASE + 0x00B8)
@@ -71,6 +84,11 @@
 #define CPC_IISMCK1_REG            		(PIN_CTL_BASE + 0x00D4)
 
 #define CPC_PBINT_REG            		(PIN_CTL_BASE + 0x00D8)
+
+//#define CPC_REV_REG           		(PIN_CTL_BASE + 0x00DC)
+//#define CPC_REV_REG           		(PIN_CTL_BASE + 0x00E0)
+//#define CPC_REV_REG           		(PIN_CTL_BASE + 0x00E4)
+//#define CPC_REV_REG           		(PIN_CTL_BASE + 0x00E8)
 
 #define CPC_EMA0_REG            		(PIN_CTL_BASE + 0x00EC)
 #define CPC_EMA1_REG             		(PIN_CTL_BASE + 0x00F0)
@@ -139,24 +157,31 @@
 #define CPC_EMD14_REG            		(PIN_CTL_BASE + 0x01EC)
 #define CPC_EMD15_REG                   (PIN_CTL_BASE + 0x01F0)
 
-#define CPC_NFWPN_REG            		(PIN_CTL_BASE + 0x01F4)
+#define CPC_NFWPN_REG            		(PIN_CTL_BASE + 0x0140)
 #define CPC_LCMRSTN_REG            		(PIN_CTL_BASE + 0x01F8)
-#define CPC_NFRB_REG            		(PIN_CTL_BASE + 0x01FC)
+#define CPC_NFRB_REG            		(PIN_CTL_BASE + 0x0144)
 #define CPC_LCMCD_REG             		(PIN_CTL_BASE + 0x0200)
-#define CPC_NFCLE_REG            		(PIN_CTL_BASE + 0x0204)
-#define CPC_NFALE_REG            		(PIN_CTL_BASE + 0x0208)
-#define CPC_NFCEN_REG            		(PIN_CTL_BASE + 0x020C)
-#define CPC_NFWEN_REG            		(PIN_CTL_BASE + 0x0210)
-#define CPC_NFREN_REG            		(PIN_CTL_BASE + 0x0214)
-#define CPC_NFD0_REG            		(PIN_CTL_BASE + 0x0218)
-#define CPC_NFD1_REG            		(PIN_CTL_BASE + 0x021C)
-#define CPC_NFD2_REG            		(PIN_CTL_BASE + 0x0220)
-#define CPC_NFD3_REG            		(PIN_CTL_BASE + 0x0224)
-#define CPC_NFD4_REG            		(PIN_CTL_BASE + 0x0228)
-#define CPC_NFD5_REG            		(PIN_CTL_BASE + 0x022C)
-#define CPC_NFD6_REG            		(PIN_CTL_BASE + 0x0230)
-#define CPC_NFD7_REG            		(PIN_CTL_BASE + 0x0234)
-#define CPC_NFD8_REG            		(PIN_CTL_BASE + 0x0238)
+#define CPC_NFCLE_REG            		(PIN_CTL_BASE + 0x0148)
+#define CPC_NFALE_REG            		(PIN_CTL_BASE + 0x014c)
+#define CPC_NFCEN_REG            		(PIN_CTL_BASE + 0x0150)
+#define CPC_NFWEN_REG            		(PIN_CTL_BASE + 0x0154)
+#define CPC_NFREN_REG            		(PIN_CTL_BASE + 0x0158)
+#define CPC_NFD0_REG            		(PIN_CTL_BASE + 0x015c)
+#define CPC_NFD1_REG            		(PIN_CTL_BASE + 0x0160)
+#define CPC_NFD2_REG            		(PIN_CTL_BASE + 0x0164)
+#define CPC_NFD3_REG            		(PIN_CTL_BASE + 0x0168)
+#define CPC_NFD4_REG            		(PIN_CTL_BASE + 0x016c)
+#define CPC_NFD5_REG            		(PIN_CTL_BASE + 0x0170)
+#define CPC_NFD6_REG            		(PIN_CTL_BASE + 0x0174)
+#define CPC_NFD7_REG            		(PIN_CTL_BASE + 0x0178)
+#define CPC_NFD8_REG            		(PIN_CTL_BASE + 0x017c)
+#define CPC_NFD9_REG            		(PIN_CTL_BASE + 0x0180)
+#define CPC_NFD10_REG            		(PIN_CTL_BASE + 0x0184)
+#define CPC_NFD11_REG            		(PIN_CTL_BASE + 0x0188)
+#define CPC_NFD12_REG            		(PIN_CTL_BASE + 0x018c)
+#define CPC_NFD13_REG            		(PIN_CTL_BASE + 0x0190)
+#define CPC_NFD14_REG            		(PIN_CTL_BASE + 0x0194)
+#define CPC_NFD15_REG            		(PIN_CTL_BASE + 0x0198)
 
 #define CPC_LCMCSN0_REG            		(PIN_CTL_BASE + 0x023C)
 #define CPC_LCMCSN1_REG            		(PIN_CTL_BASE + 0x0240)
@@ -174,6 +199,9 @@
 #define CPC_LCD_HS_REG            	    (PIN_CTL_BASE + 0x0270)
 #define CPC_LCD_VS_REG            		(PIN_CTL_BASE + 0x0274)
 #define CPC_CLK_LCD_REG            		(PIN_CTL_BASE + 0x0278)
+
+
+//#define CPC_RSV_REG            		(PIN_CTL_BASE + 0x027C)
 
 #define CPC_CCIRCK_REG            		(PIN_CTL_BASE + 0x0280)
 #define CPC_CCIRHS_REG           		(PIN_CTL_BASE + 0x0284)
@@ -225,6 +253,9 @@
 #define CPC_KEYOUT6_REG            		(PIN_CTL_BASE + 0x0328)
 #define CPC_KEYOUT7_REG            		(PIN_CTL_BASE + 0x032C)
 
+//#define CPC_RSV_REG            		(PIN_CTL_BASE + 0x0330)
+//#define CPC_RSV_REG            		(PIN_CTL_BASE + 0x0334)
+
 #define CPC_LCD_D9_REG            		(PIN_CTL_BASE + 0x0338)
 #define CPC_LCD_D10_REG            		(PIN_CTL_BASE + 0x033C)
 #define CPC_LCD_D11_REG            		(PIN_CTL_BASE + 0x0340)
@@ -239,17 +270,5 @@
 #define CPC_SD1_D6_REG             	    (PIN_CTL_BASE + 0x0364)
 #define CPC_SD1_D7_REG            		(PIN_CTL_BASE + 0x0368)
 
-#define CPC_NFD9_REG CPC_LCD_D9_REG 
-#define CPC_NFD10_REG CPC_LCD_D10_REG
-#define CPC_NFD11_REG CPC_LCD_D11_REG
-#define CPC_NFD12_REG CPC_LCD_D12_REG
-#define CPC_NFD13_REG CPC_LCD_D13_REG
-#define CPC_NFD14_REG CPC_LCD_D14_REG
-#define CPC_NFD15_REG CPC_LCD_D15_REG
-
-#ifdef   __cplusplus
-}
 #endif
-#endif
-
 

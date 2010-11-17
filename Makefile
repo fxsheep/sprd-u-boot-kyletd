@@ -277,7 +277,7 @@ NAND_SPL = nand_spl
 U_BOOT_NAND = $(obj)u-boot-nand.bin
 endif
 
-NAND_FDL = fdl1 fdl2
+NAND_FDL = fdl1 fdl2 test
 
 ifeq ($(CONFIG_ONENAND_U_BOOT),y)
 ONENAND_IPL = onenand_ipl

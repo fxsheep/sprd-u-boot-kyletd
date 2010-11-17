@@ -34,7 +34,8 @@
 
 #include <common.h>
 #include <asm/io.h>
-#include <asm/arch/regs_global.h>
+#include <asm/arch/sci_types.h>
+#include <asm/arch/chip_drv_config_extern.h>
 /*
  * Reset the cpu by setting up the watchdog timer and let it time out
  */
