@@ -154,10 +154,18 @@ reset:
 	/*
 	 * set the cpu to SVC32 mode
 	 */
+#ifndef CONFIG_SKIP_LOWLEVEL_INIT
+#ifdef SPRD_EVM_TAG_ON
+	ldr r0,=SPRD_EVM_ADDR_START
+	ldr r1,=0x87003004
+	ldr r2,[r1]
+	str r2,[r0]
+#endif
 	mrs	r0,cpsr
 	bic	r0,r0,#0x1f
 	orr	r0,r0,#0xd3
 	msr	cpsr,r0
+#endif
 
 #if 0
 	ldr	r1, =0x3fffffff

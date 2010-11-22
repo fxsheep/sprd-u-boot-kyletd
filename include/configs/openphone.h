@@ -24,7 +24,12 @@
 
 /*#define NAND_DEBUG 1  */
 /*#define DEBUG*/
-#define SPRD_ENV_TAG 1
+#define U_BOOT_SRPD_VER 1
+#define SPRD_EVM_TAG_ON 1
+#ifdef SPRD_EVM_TAG_ON
+#define SPRD_EVM_ADDR_START 0x40006000
+#define SPRD_EVM_TAG(_x) (*(((unsigned long *)SPRD_EVM_ADDR_START)+_x) = *(volatile unsigned long *)0x87003004)
+#endif
 /*
  * SPREADTRUM BIGPHONE board - SoC Configuration
  */
@@ -231,7 +236,7 @@
 
 #define CONFIG_ENV_OVERWRITE
 
-#define CONFIG_BOOTDELAY	1
+#define CONFIG_BOOTDELAY	0
 
 #define CONFIG_LOADADDR		0x01000000	/* loadaddr env var */
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
@@ -242,7 +247,7 @@
 #define MTDIDS_DEFAULT "nand0=sprd-nand"
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 initrd=0x3000000,4194304 init=/init root=/dev/ram0 rw "MTDPARTS_DEFAULT
-#define CONFIG_BOOTCOMMAND "cboot normal"
+#define CONFIG_BOOTCOMMAND "cboot recovery"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
 #endif /* __CONFIG_H */

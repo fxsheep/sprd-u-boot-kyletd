@@ -498,7 +498,13 @@ static int nand_block_checkbad(struct mtd_info *mtd, loff_t ofs, int getchip,
 
 	if (!(chip->options & NAND_BBT_SCANNED)) {
 		chip->options |= NAND_BBT_SCANNED;
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(8);
+#endif
 		chip->scan_bbt(mtd);
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(9);
+#endif
 	}
 
 	if (!chip->bbt)

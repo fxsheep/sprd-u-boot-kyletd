@@ -1189,11 +1189,11 @@ int board_nand_init(struct nand_chip *this)
 		this->options |= NAND_BUSWIDTH_16;
 		buswidth = 1;
 		addr_cycle = 5;
-		printk(" 16 Bit");	
+		printk("16 Bit");	
 	} else {
 		buswidth = 0;
 		addr_cycle = 4;
-		printk(" 8 Bit");
+		printk("8 Bit ");
 	}
 
 

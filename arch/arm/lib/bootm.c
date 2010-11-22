@@ -118,6 +118,28 @@ int do_bootm_linux(int flag, int argc, char * const argv[], bootm_headers_t *ima
 
 	cleanup_before_linux ();
 
+#ifdef SPRD_EVM_TAG_ON
+	SPRD_EVM_TAG(17);
+	int ijk = 0;
+	int last = 0, now;
+	printf("boot steps evalution:\n");
+	for(ijk=0;ijk<18;ijk++){
+		now = *((unsigned long *)SPRD_EVM_ADDR_START+ ijk);
+		printf("%03d\taddr %x\t%lu\t%u\n", ijk,(unsigned long *)SPRD_EVM_ADDR_START+ ijk,now ,now-last);
+		last = now;
+	}
+#if 0
+	unsigned int temp_cnt;
+	for(ijk=0;ijk<0xffffff;ijk++){
+		temp_cnt = *(volatile unsigned long *)0x87003004;
+		udelay(1000);
+(*(((unsigned long *)0x2000000)+ijk) = *(volatile unsigned long *)0x87003004);
+		printf(" the cnt is %x\n", temp_cnt);
+		printf(" [0x%08x] 0x%08x\n", ((unsigned int *)0x2000000)+ijk,*(((unsigned int *)0x2000000)+ijk));
+	}
+#endif
+	while(1);
+#endif
 	theKernel (0, machid, bd->bi_boot_params);
 	/* does not return */
 

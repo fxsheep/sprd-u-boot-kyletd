@@ -315,7 +315,11 @@ static int bootm_start(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 #endif
 	}
 
+#ifndef U_BOOT_SPRD_VER
 	images.os.start = (ulong)os_hdr;
+#else
+	images.os.start = (ulong)os_hdr + sizeof(image_header_t);
+#endif
 	images.state = BOOTM_STATE_START;
 
 	return 0;
@@ -612,6 +616,9 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			return do_bootm_subcommand(cmdtp, flag, argc, argv);
 	}
 
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(14);
+#endif
 	if (bootm_start(cmdtp, flag, argc, argv))
 		return 1;
 
@@ -635,7 +642,13 @@ int do_bootm (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	usb_stop();
 #endif
 
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(15);
+#endif
 	ret = bootm_load_os(images.os, &load_end, 1);
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(16);
+#endif
 
 	if (ret < 0) {
 		if (ret == BOOTM_ERR_RESET)

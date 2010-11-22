@@ -295,9 +295,15 @@ void start_armboot (void)
 		}
 	}
 
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(4);
+#endif
 	/* armboot_start is defined in the board-specific linker script */
 	mem_malloc_init (_armboot_start - CONFIG_SYS_MALLOC_LEN,
 			CONFIG_SYS_MALLOC_LEN);
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(5);
+#endif
 
 #ifndef CONFIG_SYS_NO_FLASH
 	/* configure available FLASH banks */
@@ -336,6 +342,9 @@ void start_armboot (void)
 #if defined(CONFIG_CMD_NAND)
 	puts ("NAND:  ");
 	nand_init();		/* go init the NAND */
+#endif
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(6);
 #endif
 
 #if defined(CONFIG_CMD_ONENAND)
@@ -436,6 +445,9 @@ extern void davinci_eth_set_mac_addr (const u_int8_t *addr);
 	debug ("Reset Ethernet PHY\n");
 	reset_phy();
 #endif
+#endif
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(11);
 #endif
 	/* main_loop() can return to retry autoboot, if so just run it again. */
 	for (;;) {

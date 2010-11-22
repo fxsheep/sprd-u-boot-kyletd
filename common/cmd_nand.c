@@ -378,9 +378,16 @@ int do_nand(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 		s = strchr(cmd, '.');
 		if (!s || !strcmp(s, ".jffs2") ||
 		    !strcmp(s, ".e") || !strcmp(s, ".i")) {
-			if (read)
+			if (read){
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(12);
+#endif
 				ret = nand_read_skip_bad(nand, off, &size,
 							 (u_char *)addr);
+#ifdef SPRD_EVM_TAG_ON
+		SPRD_EVM_TAG(13);
+#endif
+		}
 			else
 				ret = nand_write_skip_bad(nand, off, &size,
 							  (u_char *)addr);

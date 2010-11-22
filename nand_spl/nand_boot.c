@@ -251,6 +251,16 @@ void nand_boot(void)
 	/*
 	 * Init board specific nand support
 	 */
+#ifdef SPRD_EVM_TAG_ON
+#if 0
+	unsigned long int * ptr = (unsigned long int*)SPRD_EVM_ADDR_START-8;
+	int ijk = 0;
+	for(ijk =0;ijk<28;ijk++){
+		*(ptr++)=0x55555555;
+	}
+#endif
+	SPRD_EVM_TAG(1);
+#endif
 	nand_info.priv = &nand_chip;
 	nand_chip.dev_ready = NULL;	/* preset to NULL */
 	board_nand_init(&nand_chip);
@@ -264,6 +274,9 @@ void nand_boot(void)
 	nand_info.writesize = 2048;
 	nand_info.oobsize = 64;
 	//nand_command(&nand_info, -1,-1,-1,NAND_CMD_RESET);
+#ifdef SPRD_EVM_TAG_ON
+	SPRD_EVM_TAG(2);
+#endif
 	nand_chip.cmd_ctrl(&nand_info, NAND_CMD_RESET, NAND_NCE|NAND_CLE|NAND_CTRL_CHANGE);
 	nand_chip.cmd_ctrl(&nand_info, NAND_CMD_NONE, NAND_NCE|NAND_CTRL_CHANGE);
 	ret = nand_load(&nand_info, CONFIG_SYS_NAND_U_BOOT_OFFS, CONFIG_SYS_NAND_U_BOOT_SIZE,
@@ -285,6 +298,9 @@ void nand_boot(void)
 	/*
 	 * Jump to U-Boot image
 	 */
+#ifdef SPRD_EVM_TAG_ON
+	SPRD_EVM_TAG(3);
+#endif
 	uboot = (void *)CONFIG_SYS_NAND_U_BOOT_START;
 	(*uboot)();
 }
