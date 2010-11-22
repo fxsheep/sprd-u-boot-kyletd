@@ -25,7 +25,7 @@
 /*#define NAND_DEBUG 1  */
 /*#define DEBUG*/
 #define U_BOOT_SRPD_VER 1
-#define SPRD_EVM_TAG_ON 1
+/*#define SPRD_EVM_TAG_ON 1*/
 #ifdef SPRD_EVM_TAG_ON
 #define SPRD_EVM_ADDR_START 0x40006000
 #define SPRD_EVM_TAG(_x) (*(((unsigned long *)SPRD_EVM_ADDR_START)+_x) = *(volatile unsigned long *)0x87003004)
@@ -236,7 +236,11 @@
 
 #define CONFIG_ENV_OVERWRITE
 
+#ifdef SPRD_EVM_TAG_ON
 #define CONFIG_BOOTDELAY	0
+#else
+#define CONFIG_BOOTDELAY	5
+#endif
 
 #define CONFIG_LOADADDR		0x01000000	/* loadaddr env var */
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
