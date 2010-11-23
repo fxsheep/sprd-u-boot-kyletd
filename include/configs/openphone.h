@@ -24,7 +24,7 @@
 
 /*#define NAND_DEBUG 1  */
 /*#define DEBUG*/
-#define U_BOOT_SRPD_VER 1
+#define U_BOOT_SPRD_VER 1
 /*#define SPRD_EVM_TAG_ON 1*/
 #ifdef SPRD_EVM_TAG_ON
 #define SPRD_EVM_ADDR_START 0x40006000
@@ -239,7 +239,7 @@
 #ifdef SPRD_EVM_TAG_ON
 #define CONFIG_BOOTDELAY	0
 #else
-#define CONFIG_BOOTDELAY	5
+#define CONFIG_BOOTDELAY	2
 #endif
 
 #define CONFIG_LOADADDR		0x01000000	/* loadaddr env var */
