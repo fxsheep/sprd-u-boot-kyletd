@@ -982,6 +982,28 @@ PUBLIC BLOCK_ID SCI_IdentifyThread(void);   // If the thread is created by
                                             // user, return thread id; else 
                                             // return SCI_INVALID_BLOCK_ID.
 
+
+/*****************************************************************************/
+//  Description:    The function returns the specify thread exist, or not. 
+//	Global resource dependence: 
+//  Author:         Richard.Yang
+//	Note:           If thread exist, return SCI_SUCCESS, or return SCI_ERROR
+/*****************************************************************************/
+PUBLIC uint32 SCI_IsThreadExist(BLOCK_ID  thread_id);   
+
+
+
+/*****************************************************************************/
+//  Description:    The function returns the specify thread queue aviable, or not. 
+//	Global resource dependence: 
+//  Author:         Richard.Yang
+//	Note:           If thread queue avilable, return SCI_SUCCESS, or return 
+//                  SCI_ERROR/SCI_QUEUE_FULL
+/*****************************************************************************/
+PUBLIC uint32 SCI_IsThreadQueueAvilable(BLOCK_ID  thread_id); 
+
+
+
 /*****************************************************************************/
 //  Description:    This function changes the priority of the specified thread. 
 //                  Valid priorities range from 0 through 31, where 0 

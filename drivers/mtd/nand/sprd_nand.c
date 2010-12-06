@@ -418,17 +418,21 @@ static int sprd_nand_inithw(struct sprd_nand_info *info, struct platform_device 
 	return 0;
 }
 
-static void memset(unsigned char * s, unsigned char c, unsigned long len)
+
+#ifndef CONFIG_SKIP_LOWLEVEL_INIT
+void * memset(void * s, int c, size_t len)
 {
 	unsigned long i = 0;
+	char *xs = (char *)s;
 	if(len < 1)
 		return;
 	for(i = 0; i<len; i++)
 	{
-		*(s+i) = c;
+		*(xs+i) = c;
 	}
+	return s;
 }
-
+#endif
 static void sprd_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 				   unsigned int ctrl)
 {

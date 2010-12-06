@@ -13,11 +13,12 @@
 #include "usb200_fdl.h"
 #include "drv_usb20.h"
 #include "virtual_com.h"
-
+PUBLIC void Dcache_InvalRegion(void *addr, unsigned int length);
+static __inline void usb_handler (void);
 /**---------------------------------------------------------------------------*
  **                         Compiler Flag                                     *
  **---------------------------------------------------------------------------*/
-#define MAX_RECV_LENGTH     (0x100)
+#define MAX_RECV_LENGTH     (64*64)//640*64 0xa000
 #define USB_TIMEOUT             (1000)
 
 /**---------------------------------------------------------------------------*
@@ -26,13 +27,11 @@
 LOCAL uint32    s_setup_packet[8] = {0};
 LOCAL uint32    enum_speed = 0;
 LOCAL uint32    recv_length = 0;
-LOCAL __align (4) const unsigned char usb_out_endpoint_buf [MAX_RECV_LENGTH];
-PUBLIC USB_rx_buf_T     buf_manager ;
-LOCAL uint32  free_buffer_length=USB_RECV_LIMIT;
-LOCAL uint32  data_received_buf_base = 0x30300000;
-LOCAL uint32  data_recv_length=0;
+LOCAL uint32 nIndex = 0;
+LOCAL uint32 readIndex = 0;
 
-
+PUBLIC __align (32)  unsigned char usb_out_endpoint_buf[2] [MAX_RECV_LENGTH];
+ 
 /*****************************************************************************/
 //  Description:   configure out endpoint0 to receive setup message.
 //  Global resource dependence:
@@ -144,7 +143,7 @@ LOCAL void usb_start_transfer (USB_EP_NUM_E ep_num, BOOLEAN dir, uint32 transfer
         }
 
         doeptsiz_ptr->mBits.transfer_size = MAX_RECV_LENGTH;    // transfer size
-        doeptsiz_ptr->mBits.packet_count = 0x1;                 // packet count
+        doeptsiz_ptr->mBits.packet_count = 64;
         * (volatile uint32 *) USB_DOEPCTL (ep_num) |= (unsigned int) BIT_26; // clear nak
         * (volatile uint32 *) USB_DOEPCTL (ep_num) |= (unsigned int) BIT_31; // endpoint enable
     }
@@ -156,7 +155,7 @@ LOCAL void usb_start_transfer (USB_EP_NUM_E ep_num, BOOLEAN dir, uint32 transfer
         if (is_dma)
         {
             * (volatile uint32 *) USB_DIEPDMA (ep_num) = (uint32) buffer;
-        }
+        } 
 
         dieptsiz_ptr->mBits.transfer_size = transfer_size;                  // transfer size
         packet_count = (transfer_size+diepctl_ptr->mBits.mps-1) /diepctl_ptr->mBits.mps;
@@ -270,7 +269,6 @@ LOCAL void usb_setup_handle (void)
 
                         usb_EPActive (USB_EP5, USB_EP_DIR_IN);
                         usb_EPActive (USB_EP6, USB_EP_DIR_OUT);
-
                     }
 
                     EPI0_config (0, 1, FALSE, NULL);
@@ -383,13 +381,13 @@ void usb_enumeration_done (void)
 //  Author:        jiayong.yang
 //  Note:
 /*****************************************************************************/
-
+static int currentDmaBufferIndex = 0;
 LOCAL void usb_EP6_handle (void)
 {
     volatile USB_DOEPINT_U *doepint_ptr = (USB_DOEPINT_U *) USB_DOEPINT (USB_EP6);
     volatile USB_DOEPINT_U  doepint;
     volatile USB_DOEPTSIZ_U *doeptsiz_ptr = (USB_DOEPTSIZ_U *) USB_DOEPTSIZ (USB_EP6);
-    uint32  mask;
+    volatile uint32  mask;
 
     mask = * (volatile uint32 *) USB_DOEPMSK;
     doepint.dwValue = doepint_ptr->dwValue;
@@ -398,31 +396,20 @@ LOCAL void usb_EP6_handle (void)
 
     if (doepint.mBits.transfer_com)
     {
-        int i;
-
-        doepint_ptr->mBits.transfer_com = 0x1;
-
+        doepint_ptr->mBits.transfer_com = 1;
         recv_length = MAX_RECV_LENGTH - doeptsiz_ptr->mBits.transfer_size;
-
-        for (i=0; ( (unsigned int) i) < recv_length; i++)
-        {
-            buf_manager.usb_rx_buf[buf_manager.write++] = usb_out_endpoint_buf[i];
-
-            if (buf_manager.write >= USB_RECV_LIMIT)
-            {
-                buf_manager.write = 0;
-            }
-
-            free_buffer_length--;
-        }
 
         * (volatile uint32 *) USB_DOEPMSK |= (unsigned int) BIT_13;
         * (volatile uint32 *) USB_DOEPMSK |= (unsigned int) BIT_4;
         * (volatile uint32 *) USB_DOEPMSK &= (unsigned int) (~BIT_0);
+#ifdef FDL2_MODULE
+        Dcache_InvalRegion(usb_out_endpoint_buf[currentDmaBufferIndex],  MAX_RECV_LENGTH);
+#endif
+		
     }
     else if (doepint.mBits.nak)
     {
-        usb_start_transfer (USB_EP6, USB_EP_DIR_OUT, 1, TRUE, (uint32 *) usb_out_endpoint_buf);
+        usb_start_transfer (USB_EP6, USB_EP_DIR_OUT, 1, TRUE, (uint32 *) usb_out_endpoint_buf[currentDmaBufferIndex]);
         * (volatile uint32 *) USB_DOEPMSK &= (unsigned int) (~BIT_13);
         * (volatile uint32 *) USB_DOEPMSK |= (unsigned int) BIT_0;
         doepint_ptr->mBits.nak = 0x1;
@@ -529,9 +516,8 @@ LOCAL void usb_EP_in_handle (void)
 //  Author:        jiayong.yang
 //  Note:
 /*****************************************************************************/
-PUBLIC void usb_handler (void)
+static __inline void usb_handler (void)
 {
-
     volatile USB_INTSTS_U *usb_int_ptr = (USB_INTSTS_U *) USB_GINTSTS;
     volatile USB_INTSTS_U  usb_int;
 
@@ -573,94 +559,68 @@ PUBLIC int USB_EPxSendData (char ep_id ,unsigned int *pBuf,int len)
     usb_start_transfer ( (USB_EP_NUM_E) ep_id, USB_EP_DIR_IN, len, TRUE, (uint32 *) pBuf);
     return 0;
 }
+
 /*****************************************************************************/
 //  Description:   initialize the usb core.
 //  Global resource dependence:
 //  Author:        jiayong.yang
 //  Note:
 /*****************************************************************************/
-
 PUBLIC void usb_core_init (void)
 {
-    //uint32 hw_config1, hw_config2, hw_config3, hw_config4;
-    free_buffer_length = USB_RECV_LIMIT;
-    data_recv_length = 0;
+    readIndex = 0;
+    recv_length = 0;
     return;
 }
 
+
 char VCOM_GetChar (void)
 {
-    volatile unsigned char ch = 0;
-    int condition ;
 
-    condition = TRUE ;
-
-    do
-    {
-        if (free_buffer_length > 64)
+    if (readIndex == recv_length)
+    {	  
+        readIndex = 0;
+        recv_length = 0;
+REGET:
+        usb_handler();
+		
+        if (recv_length > 0)
         {
-            usb_handler();
+            nIndex = currentDmaBufferIndex;
+            currentDmaBufferIndex ^= 0x1;
         }
-
-        if (buf_manager.read != buf_manager.write)
+        else
         {
-            ch = buf_manager.usb_rx_buf[buf_manager.read];
-            buf_manager.read++;
-            free_buffer_length++;
-
-            if (buf_manager.read >= USB_RECV_LIMIT)
-            {
-                buf_manager.read = 0;
-            }
-
-            condition = FALSE ;
+            goto REGET;
         }
+        
     }
-    while (condition);
-
-
-
-    return (char) ch ;
+     return usb_out_endpoint_buf[nIndex][readIndex++];
 }
-/*****************************************************************************/
-//  Description:
-//  Global resource dependence:
-//  Author:         Daniel.Ding
-//  Note:
-/*****************************************************************************/
+
 int VCOM_GetSingleChar (void)
-{
-    volatile unsigned char ch = 0;
-    int condition ;
-
-    condition = TRUE ;
-
-    do
+{ 
+    if (readIndex == recv_length)
     {
-        if (free_buffer_length > 64)
+        readIndex = 0;
+        recv_length = 0;
+	
+        usb_handler();
+
+        if (recv_length > 0)
         {
-            usb_handler();
-        }
-
-        if (buf_manager.read != buf_manager.write)
-        {
-            ch = buf_manager.usb_rx_buf[buf_manager.read];
-            buf_manager.read++;
-            free_buffer_length++;
-
-            if (buf_manager.read >= USB_RECV_LIMIT)
-            {
-                buf_manager.read = 0;
-            }
-
-            condition = FALSE ;
+            nIndex = currentDmaBufferIndex;
+	     currentDmaBufferIndex ^= 0x1;
         }
         else
         {
             return -1;
         }
+    
     }
-    while (condition);
-
-    return (char) ch ;
+        
+    return (int)usb_out_endpoint_buf[nIndex][readIndex++];
 }
+
+
+

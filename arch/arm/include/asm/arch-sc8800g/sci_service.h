@@ -38,8 +38,9 @@ typedef enum
 	FILE_SERVICE = 1,				// File service, Reserved
     AUDIO_SERVICE,					// Audio service
     KEYPAD_SERVICE,					// Keypad service
-    UPM_SERVICE,					// Udisk service
-    CHR_SERVICE,					// Charge service
+    USB_SERVICE,	 				// Udisk service
+    UPM_SERVICE=USB_SERVICE,
+	CHR_SERVICE,					// Charge service
     TIME_SERVICE,					// RTC service
     
     INTERNAL_USER_SERVICE = 7,		// For MN and such service
@@ -295,11 +296,10 @@ typedef enum
 	MAX_SERVICE = 256
 } SRV_ID_E;
 
-#define UDISK_SERVICE UPM_SERVICE   // UPM manager service.It has the same SERVICE ID with Udisk.
+#define UDISK_SERVICE USB_SERVICE   // UPM manager service.It has the same SERVICE ID with Udisk.
                                     // UDISK_SERVICE is used in D platform.
                                     // UPM_SERVICE is used in M platform.
                                     // BUT this is forbidden and External User will defined its own service seperately
-                                    
 #define MN_APP_PHONE_SERVICE  (INTERNAL_USER_SERVICE)
 #define MN_APP_CALL_SERVICE   (INTERNAL_USER_SERVICE+1)
 #define MN_APP_GPRS_SERVICE   (INTERNAL_USER_SERVICE+2)
@@ -468,3 +468,4 @@ PUBLIC BOOLEAN SCI_IsClientRegisted( // Return FALSE if the server is not exist
 #endif
 
 #endif // End _SCI_SERVICE_H
+

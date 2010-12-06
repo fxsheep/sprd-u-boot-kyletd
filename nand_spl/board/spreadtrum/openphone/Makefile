@@ -29,7 +29,7 @@ LDFLAGS	= -Bstatic -T $(nandobj)u-boot.lds -Ttext $(TEXT_BASE) $(PLATFORM_LDFLAG
 AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL -g
 
-SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o cpu_spec.o mmu_asm.o debug.o debug-macro.o
+SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o cpu_spec.o mmu_asm.o 
 COBJS	= nand_boot.o nand_ecc.o sprd_nand.o lowlevel_init.o div0.o sdram.o mmu.o sdram_prod.o chip_cfg.o serial_sc8800x.o
 
 SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c

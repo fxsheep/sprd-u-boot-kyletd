@@ -29,7 +29,7 @@ typedef struct
 
 typedef enum
 {
-   ISR_DONED = 0x0,
+   ISR_DONE = 0x0,
    CALL_HISR = 0x5a5
 
 }ISR_EXE_T;

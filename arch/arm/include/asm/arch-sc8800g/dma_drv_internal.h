@@ -321,6 +321,30 @@ PUBLIC DMA_ERR_TYPE_E DMA_HAL_SubmitInitLinkList (DMA_LINKLIST_HANDLE linklistha
 /*****************************************************************************/
 PUBLIC void DMA_HAL_FreeLinkList (DMA_LINKLIST_HANDLE linklisthandle);
 
+/*****************************************************************************/
+// Description :    This function is used to enable or disable dma pause function.
+//  Global resource dependence : s_dma_pause_disable_cnt
+//  Author :
+//  Note : is_enable :   TURE: enable dma pause function; FALSE: disable dma pause function
+/*****************************************************************************/
+PUBLIC void DMA_HAL_EnableDMAPause (BOOLEAN is_enable);
+
+/*****************************************************************************/
+// Description :    This function is used to get the function status of dma pause
+// Global resource dependence : s_dma_pause_disable_cnt
+// Author :
+// Note : TURE: dma pause function is enabled; FALSE: dma pause function is disabled
+/*****************************************************************************/
+PUBLIC BOOLEAN DMA_HAL_IsEnableDMAPause (void);
+
+/*****************************************************************************/
+// Description :    This function is used to get the dma pause status
+// Global resource dependence : s_is_dma_pause
+// Author :
+// Note : TURE: dma pause function is enabled; FALSE: dma pause function is disabled
+/*****************************************************************************/
+PUBLIC BOOLEAN DMA_HAL_IsDMAPause (void);
+//
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **
 **----------------------------------------------------------------------------*/

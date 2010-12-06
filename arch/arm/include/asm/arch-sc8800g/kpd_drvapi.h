@@ -33,6 +33,8 @@ extern   "C"
 {
 #endif
 
+#include "sci_types.h"
+
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *
  **---------------------------------------------------------------------------*/
@@ -41,6 +43,43 @@ extern   "C"
  **                         Data Structures                                   *
  **---------------------------------------------------------------------------*/
 extern const uint16    keymap[];
+
+//For keypad sync read mode using
+typedef struct
+{
+     int key;
+     int status;
+}KPD_SYNC_T;
+
+typedef enum
+{
+    KPD_NORMAL_INTERRUPT,
+    KPD_SYNC_READ,
+}KpdReadMode;
+
+/*****************************************************************************/
+//  Description:    This function loopthrough, if these is interruption, put it in the buffer, and then
+//                       determine whether the key is ture, if it is true, sent to the callback function for
+//                       further processing.
+//  Author:          steve.zhan
+//  Note:           Get some keystatus using polling method 
+/*****************************************************************************/
+PUBLIC uint32 KPD_SyncGetKey(void);
+/*****************************************************************************/
+//  Description:    This function set the current read mode:Sync mode, Or async mode.
+//  Author:           steve.zhan
+//  Note:              Default value is normal mode(using interrupt is async mode)
+/*****************************************************************************/
+PUBLIC uint32 KPD_SetKpdReadMode(KpdReadMode mode);
+
+/*****************************************************************************/
+//  Description:    This function return  the current read mode:Sync mode, Or async mode.
+//  Author:           steve.zhan
+//  Note:
+/*****************************************************************************/
+PUBLIC KpdReadMode KPD_GetKpdReadMode(void);
+
+//end sync read mode .
 
 /**---------------------------------------------------------------------------*
  **                         Function Prototypes                               *
@@ -80,6 +119,15 @@ uint32 CheckPowerButtonState (void);
 /*****************************************************************************/
 uint32  IsPowerButtonReleased (void);
 
+
+/*****************************************************************************/
+//  Description:    Disable interrupt for system, and read keypad status using sync. mode
+//  Global resource dependence:
+//  Author:         steve.zhan
+//  Note:           return the count result key, 
+/*****************************************************************************/
+PUBLIC uint32 KPD_Sync_ReadKey(int  count, KPD_SYNC_T buf[], int delayCnt);
+
 /**---------------------------------------------------------------------------*
  **                         Compiler Flag                                     *
  **---------------------------------------------------------------------------*/
@@ -88,3 +136,4 @@ uint32  IsPowerButtonReleased (void);
 #endif
 
 #endif // _KPD_DRVAPI_H_
+

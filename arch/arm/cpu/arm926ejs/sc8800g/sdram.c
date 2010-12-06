@@ -20,8 +20,156 @@ SC6800     -gtp -cpu ARM926EJ-S -D_REF_SC6800_ -D_BL_NF_SC6800_
 #define  SDRAM_EXT_INVALID     0xffffffff       //@David.Jia 2008.1.7
 
 uint32 g_ahb_clk;
+unsigned int g_emc_clk;
 
 extern SYS_CLK_CFG_INFO *Get_system_clk_cfg (void);
+
+#ifdef CHIP_VER_8800G2
+#define INTERFACE_CLK_MAX   ARM_CLK_200M
+typedef struct ARM_EMC_AHB_CLK_TAG 
+{
+    uint32 mcu_clk;
+    uint32 arm_clk;
+    uint32 emc_clk;
+    uint32 ahb_clk;
+}
+ARM_EMC_AHB_CLK_T;
+
+typedef enum MCU_CLK_TYPE_TAG
+{
+    ARM400_EMC200_AHB100 = 0,   //SC8800G2
+    ARM256_EMC200_AHB64,        //SC8801G2
+    ARM192_EMC200_AHB96,        //SC8802G2
+    ARM256_EMC192_AHB64,
+    ARM256_EMC128_AHB64,
+    ARM192_EMC192_AHB96,
+
+    MCU_CLK_TYPE_MAX   
+}
+MCU_CLK_TYPE_E;
+
+LOCAL CONST ARM_EMC_AHB_CLK_T s_arm_emc_ahb_clk[] = 
+{
+//     mcu_clk       arm_clk        emc_clk       ahb_clk
+    {ARM_CLK_400M, ARM_CLK_400M, ARM_CLK_200M, ARM_CLK_100M},   //SC8800G2
+    {ARM_CLK_256M, ARM_CLK_256M, ARM_CLK_200M, ARM_CLK_64M},    //SC8801G2
+    {ARM_CLK_192M, ARM_CLK_192M, ARM_CLK_200M, ARM_CLK_96M},    //SC8802G2
+    {ARM_CLK_512M, ARM_CLK_256M, ARM_CLK_192M, ARM_CLK_64M},
+    {ARM_CLK_512M, ARM_CLK_256M, ARM_CLK_128M, ARM_CLK_64M},
+    {ARM_CLK_384M, ARM_CLK_192M, ARM_CLK_192M, ARM_CLK_96M},
+};
+
+uint32 CHIP_GetMPllClk (void)
+{
+    return ( ARM_CLK_26M
+               / ( (REG32(GR_MPLL_MN) & 0x003F0000) >>16)
+               * (REG32(GR_MPLL_MN) & 0x00000FFF) );
+}
+
+void CHIP_SetMPllClk (uint32 clk)
+{
+    uint32 M, N, tmp_mn;
+
+    M = 13; // M: fix to 13
+    N = clk/2/1000000;
+    
+    tmp_mn  = (REG32(GR_MPLL_MN) & (~0x3FFFFF));
+    tmp_mn |= (M << 16) | N;  
+              
+    REG32(GR_GEN1) |= BIT_9;        // MPLL Write En
+    REG32(GR_MPLL_MN) = tmp_mn;
+    REG32(GR_GEN1) &= ~BIT_9;       // MPLL Write Dis
+}
+
+void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
+{
+    uint32 tmp_clk, mcuclk, armclk;
+    uint32 mcu_div, if_div;
+    BOOLEAN is_mpll, is_async;
+    MCU_CLK_TYPE_E clk_type = ARM400_EMC200_AHB100;
+
+    ///*
+    clk_type = (0 == (REG32(GR_GEN3) & 0x3)) ?      
+               (ARM400_EMC200_AHB100) :             // 8800G2
+               ((1 == (REG32(GR_GEN3) & 0x3)) ?     
+               (ARM256_EMC200_AHB64) :              // 8801G1
+               (ARM192_EMC200_AHB96));              // 8802G1 
+    //*/         
+    
+    mcuclk   = s_arm_emc_ahb_clk[clk_type].mcu_clk;
+    armclk   = s_arm_emc_ahb_clk[clk_type].arm_clk;
+    *emcclk  = s_arm_emc_ahb_clk[clk_type].emc_clk;
+    *ahbclk  = s_arm_emc_ahb_clk[clk_type].ahb_clk;
+    
+    is_mpll  = ((0 == (REG32(GR_GEN3) & 0x3)) ? (SCI_TRUE) : (SCI_FALSE));
+    is_async = ((0 == (armclk%(*emcclk)))     ? (SCI_FALSE) : (SCI_TRUE));  
+
+    mcu_div = 0;    
+    if(is_mpll)
+    {
+        if(CHIP_GetMPllClk() != mcuclk)
+        {
+            CHIP_SetMPllClk(mcuclk);
+        }
+        if(armclk != mcuclk)
+        {
+            mcu_div = 1;
+        }
+    }
+
+    if_div = 0;
+    if(armclk > INTERFACE_CLK_MAX)
+    {
+        if_div = 1;
+    }
+    
+    // step 1: config emc clk in dsp side in async mode
+    if(is_async) 
+    {
+        REG32(AHB_DSP_BOOT_EN)  |= BIT_2;
+        REG32(AHB_CTL1)         &= ~BIT_16;
+        REG32(0x10130010)       |= BIT_28;
+
+        REG32(0x1013000C)       |= (2<<10); //bit[11:10], DSP SIDE: 1:200M, 2:192M 3:26M
+        
+        REG32(0x10130010)       &= ~BIT_28;
+        REG32(AHB_CTL1)         |= BIT_16;
+        REG32(AHB_DSP_BOOT_EN)  &= ~BIT_2;
+    }
+    
+    // step 2: first config divider 
+    //         ifdiv / mcudiv /  ahbdiv
+    //         MCU_26M / sync_mode / emc-async-sel
+    tmp_clk = (BIT_23|BIT_24);
+    tmp_clk |= (if_div  << 31)  |   // bit[31],    interface-div
+               (mcu_div << 30)  |   // bit[30],    mcu-div
+                                    // bit[29:25], read only
+                                    // bit[24:23], mcu-sel, should config at step 2
+                                    // bit[22:17], reserved
+               (0 << 14)        |   // bit[16:14], emc-sync-div: 2^n
+               (1 << 12)        |   // bit[13:12], emc-async-sel: 0:reserved, 1:200M, 2:192M 3:26M
+               (0 << 8)         |   // bit[11:8],  emc-async-div: (n+1)
+                                    // bit[7],     ARM_384M_SEL:0
+               (1 << 4)         |   // bit[6:4],   ahb-div: (n+1)
+               (1 << 3)  ;          // bit[3],     emc sync:1, async:0
+                                    // bit[2:0],   arm-div, only for G1
+               
+    REG32(AHB_ARM_CLK) = tmp_clk;
+
+    // step 3: config mcu-sel 
+    tmp_clk &= ~(BIT_23|BIT_24); // mcu-sel: 26*N/M, this bit must be set after divider
+    REG32(AHB_ARM_CLK) = tmp_clk;
+
+    //step 4: switch to async mode at last
+    if(is_async)
+    {
+        tmp_clk &= ~BIT_3;
+        REG32(AHB_ARM_CLK) = tmp_clk;  
+    }
+
+    return;
+}
+#endif
 
 #if defined(PLATFORM_SC8800H)
 
@@ -438,7 +586,8 @@ void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     }
     else if (DDR_SDRAM == DRAM_TYPE)
     {
-        REG32 (EXT_MEM_CFG0) |= (BIT_1|BIT_3|BIT_6|BIT_9|BIT_10|BIT_11); //software address mapping
+        //REG32 (EXT_MEM_CFG0) |= (BIT_1|BIT_3|BIT_6|BIT_9|BIT_10|BIT_11); //software address mapping
+        REG32(EXT_MEM_CFG0) |= (BIT_0|BIT_1|BIT_6|BIT_9|BIT_10|BIT_11); //software address mapping, 64M memory.
         REG32 (EXT_MEM_CFG0) |= (BIT_5);
         REG32 (EXT_MEM_CFG1) = 0x01080000; //EMC phy set
         REG32 (EXT_MEM_CFG0_CS0) = ( (0x1<<12) | (dburst_wlength<<8) | (dburst_rlength<<4) | (0x3)); //0x1113;
@@ -520,9 +669,13 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     {
         row_number = 13;
     }
+    else if(row_mode == ROW_MODE_14)
+    {
+        row_number = 14;
+    }
     else
     {
-        row_number = 13;
+        while (1);
     }
 
 
@@ -538,18 +691,6 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     {
         while (1);
     }
-
-    //initialize dmem timing parameters
-    t_ref = sdram_parameters->row_ref_max/ (1000/6); // t_ref*(1/6.5MHz)*8192 <= tREF
-    t_rfc = sdram_parameters->rfc_min    /sdram_cycle_ns-1;
-    t_rp  = sdram_parameters->row_pre_min/sdram_cycle_ns;
-    t_rcd = sdram_parameters->rcd_min    /sdram_cycle_ns;
-    t_rrd = 20/sdram_cycle_ns;//sdram_parameters->rrd_min    /sdram_cycle_ns;
-    t_wr  = sdram_parameters->wr_min     /sdram_cycle_ns;
-    t_xsr = sdram_parameters->xsr_min    /sdram_cycle_ns-1;
-    t_ras = sdram_parameters->ras_min    /sdram_cycle_ns;
-    t_wtr = 0;//sdram_parameters->wtr_min;
-    t_mrd = sdram_parameters->mrd_min;
 
     //set row_hit,clk_out,clk_sel,mode0_en,mode1_en,auto_ref_en,auto_allcs_en
     REG32 (EXT_MEM_DCFG0) = 0x0000FE00;
@@ -569,25 +710,36 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     //set precharge bit
     REG32 (EXT_MEM_DCFG0) &= ~ (BIT_2|BIT_3); //A[10]
 
-    //set t_rfc and t_ref
-    REG32 (EXT_MEM_DCFG0) |= ( (t_rfc<<16) | (t_ref<<20)); /*lint !e737*/
-
-    //set other timing parameters
-    REG32 (EXT_MEM_DCFG1) = ( (t_rp <<0) |
-                              (t_rcd<<2) |
-                              (t_rrd<<4) |
-                              (t_wr <<8) |
-                              (t_xsr<<12) |
-                              (t_ras<<16) |
-                              (t_rtw<<20) |
-                              (t_wtr<<24) |
-                              (t_rtr<<28) |
-                              (t_mrd<<30)
-                            );
-
-
-    if (SDR_SDRAM == DRAM_TYPE)
+    #if (SDR_SDRAM == DRAM_TYPE)
     {
+        //initialize dmem timing parameters
+        t_ref = sdram_parameters->row_ref_max/ (1000/6); // t_ref*(1/6.5MHz)*8192 <= tREF
+        t_rfc = sdram_parameters->rfc_min    /sdram_cycle_ns-1;
+        t_rp  = sdram_parameters->row_pre_min/sdram_cycle_ns;
+        t_rcd = sdram_parameters->rcd_min    /sdram_cycle_ns;
+        t_rrd = 20/sdram_cycle_ns;//sdram_parameters->rrd_min    /sdram_cycle_ns;
+        t_wr  = sdram_parameters->wr_min     /sdram_cycle_ns;
+        t_xsr = sdram_parameters->xsr_min    /sdram_cycle_ns-1;
+        t_ras = sdram_parameters->ras_min    /sdram_cycle_ns;
+        t_wtr = 0;//sdram_parameters->wtr_min;
+        t_mrd = sdram_parameters->mrd_min;
+
+        //set t_rfc and t_ref
+        REG32 (EXT_MEM_DCFG0) |= ( (t_rfc<<16) | (t_ref<<20)); /*lint !e737*/
+
+        //set other timing parameters
+        REG32 (EXT_MEM_DCFG1) = ( (t_rp <<0) |
+                                  (t_rcd<<2) |
+                                  (t_rrd<<4) |
+                                  (t_wr <<8) |
+                                  (t_xsr<<12) |
+                                  (t_ras<<16) |
+                                  (t_rtw<<20) |
+                                  (t_wtr<<24) |
+                                  (t_rtr<<28) |
+                                  (t_mrd<<30)
+                                );
+
         //read data and write data timing
         if (cas_latency == 3)
         {
@@ -604,12 +756,37 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
             while (1);
         }
     }
-    else if (DDR_SDRAM == DRAM_TYPE)
+    #elif (DDR_SDRAM == DRAM_TYPE)
     {
+        t_ras = sdram_parameters->ras_min/sdram_cycle_ns+1;//sdram_parameters[T_RAS_MIN]/sdram_cycle_ns ;
+        t_xsr = sdram_parameters->xsr_min/sdram_cycle_ns+1;
+        t_rfc = sdram_parameters->rfc_min/sdram_cycle_ns+1;
+        t_wr  = sdram_parameters->wr_min/sdram_cycle_ns+1+2; //note: twr should add 2 for ddr
+        t_rcd = (sdram_parameters->rcd_min/sdram_cycle_ns+1)>3 ? 3:(sdram_parameters->rcd_min/sdram_cycle_ns+1);
+        t_rp  = (sdram_parameters->row_pre_min/sdram_cycle_ns+1)>3 ? 3:(sdram_parameters->row_pre_min/sdram_cycle_ns+1);
+        t_rrd = (sdram_parameters->rrd_min/sdram_cycle_ns+1) >3 ? 3:(sdram_parameters->rrd_min/sdram_cycle_ns+1);
+        t_mrd = (sdram_parameters->mrd_min+1) > 3 ? 3:(sdram_parameters->mrd_min+1);
+        t_wtr = sdram_parameters->wtr_min+1;
+        t_ref = sdram_parameters->row_ref_max*13/2*1000/(1<<row_number) - 1; // t_ref*(1/6.5MHz)*8192 <= tREF
+
+        //set t_rfc and t_ref
+        REG32 (EXT_MEM_DCFG0) |= ( (t_rfc<<16) | (t_ref<<20)); /*lint !e737*/
+
+        REG32(EXT_MEM_DCFG1) = (    (t_rp <<0) |        \
+                                    (t_rcd<<2) |        \
+                                    (t_rrd<<4) |        \
+                                    (t_wr <<8) |        \
+                                    (t_xsr<<12)|        \
+                                    (t_ras<<16)|        \
+                                    (t_rtw<<20)|        \
+                                    (t_wtr<<24)|        \
+                                    (t_mrd<<30)         \
+                                );
+        
         //read data and write data timing
         if (cas_latency == 3)
         {
-            REG32 (EXT_MEM_DCFG4) = 0x00622728;
+            REG32 (EXT_MEM_DCFG4) = 0x00622729;
             REG32 (EXT_MEM_DCFG5) = 0x00200010;
             REG32 (EXT_MEM_DCFG6) = 0x00F0000E;
             REG32 (EXT_MEM_DCFG7) = 0x00F0000E;
@@ -635,23 +812,24 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
         REG32 (EXT_MEM_DL5)  = 0;
         REG32 (EXT_MEM_DL6)  = 0;
         REG32 (EXT_MEM_DL7)  = 0x6;
-        REG32 (EXT_MEM_DL16) = 0x2;
-        REG32 (EXT_MEM_DL17) = 0x2;
-        REG32 (EXT_MEM_DL18) = 0x2;
-        REG32 (EXT_MEM_DL19) = 0x2;
-        REG32 (EXT_MEM_DL20) = 0x2;
-        REG32 (EXT_MEM_DL21) = 0x2;
-        REG32 (EXT_MEM_DL22) = 0x2;
-        REG32 (EXT_MEM_DL23) = 0x2;
+        REG32 (EXT_MEM_DL16) = 0x4;
+        REG32 (EXT_MEM_DL17) = 0x4;
+        REG32 (EXT_MEM_DL18) = 0x4;
+        REG32 (EXT_MEM_DL19) = 0x4;
+        REG32 (EXT_MEM_DL20) = 0x4;
+        REG32 (EXT_MEM_DL21) = 0x4;
+        REG32 (EXT_MEM_DL22) = 0x4;
+        REG32 (EXT_MEM_DL23) = 0x4;
         REG32 (EXT_MEM_DL24) = 0x6;
         REG32 (EXT_MEM_DL25) = 0x6;
         REG32 (EXT_MEM_DL26) = 0x6;
         REG32 (EXT_MEM_DL27) = 0x6;
     }
-    else
+    #else
     {
-        while (1);
+        #error sdram type err
     }
+    #endif
 
     return;
 }
@@ -834,16 +1012,12 @@ void SDRAM_PinDrv_Set (void)
         REG32 (i) = 0x31;       //sdram_mode
     }
 
-    // If use SDRAM/DDR, EMBA[1]'S default function is NOR-FLASH'S reset£¬so we should change it
+    // If use SDRAM/DDR, EMBA[1]'S default function is NOR-FLASH'S resetÂ£Â¬so we should change it
     REG32 (0x8C0001A0) |= BIT_6;
 
 #endif
 #if defined(PLATFORM_SC8800G)
     * (volatile uint32 *) PIN_CTL_REG = 0X1FFF00; //set nf_rb keyin[0-7] wpus
-    #ifdef CHIP_VER_8800G2
-    for(i = 0x8c0001dc; i<=0x8c000270 ;i += 4)
-        REG32(i) = 0x000;
-    #endif
 #endif
 }
 
@@ -994,17 +1168,7 @@ uint32 Chip_ConfigClk (SYS_CLK_CFG_INFO *p_system_clk_cfg)
     arm_ahb_clk = ARM_CLK_96M;
     
     #elif defined(CHIP_VER_8800G2)
-    arm_ahb_clk = (* (volatile uint32 *) (0x20900224));
-    arm_ahb_clk &= (BIT_23|BIT_24);
-    
-    //        interface-div  EMC-SYNC-DIV   AHB-DIV     EMC-SYNC
-    arm_ahb_clk |= (BIT_31) | (0 << 14)    | (1 << 4) | (BIT_3);
-    (* (volatile uint32 *) (0x20900224)) = arm_ahb_clk;
-    
-    arm_ahb_clk &= ~(BIT_23|BIT_24); // mcu-sel: 400M, this bit must be set at last step
-    (* (volatile uint32 *) (0x20900224)) = arm_ahb_clk;
-    
-    arm_ahb_clk = ARM_CLK_100M;
+    __ClkConfig(&g_emc_clk, &arm_ahb_clk);
     #endif
 #endif
 
@@ -1045,18 +1209,13 @@ void Chip_Init (void)
     //step2, config AHB CLK and PLL clk
     pSysClkCfg = Get_system_clk_cfg();
     g_ahb_clk = Chip_ConfigClk (pSysClkCfg);
-    
+
     //step3, initialize SDRAM init
     #ifdef CHIP_VER_8800G2
-    SDRAM_Init (ARM_CLK_100M);
+    SDRAM_Init (g_emc_clk/2);
     #else
     SDRAM_Init (g_ahb_clk);
     #endif
-    for (i=5000; i>0; i--);
 
-    //step4, initialize mmu
-    //MMU_Init();
-
-    //Delay some time
-   // for (i=10000; i>0; i--);
+    for (i=0; i<5000; i++);
 }

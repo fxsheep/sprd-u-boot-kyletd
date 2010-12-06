@@ -119,6 +119,7 @@ extern "C" {
 #define SIO_GET_TX_STATUS(p)        ( ( ( REG( ( p ) + ARM_UART_STS1 ) ) >> 8 ) && 0xFF )
 #define SIO_TX_READY(s)             ( 0 == ( s ) )
 #define SIO_PUT_CHAR(p,c)           ( REG( ( p ) + ARM_UART_TXD ) = ( unsigned int )( ( c ) & 0xFF ) )
+#define SIO_TRANS_OVER(p)			( REG( ( p ) + ARM_UART_STS0 ) & BIT_15)
 
 #define COM1_DEBUG  (1)
 #define COM0_USER   (0)
@@ -129,7 +130,7 @@ extern "C" {
 #define MSB(p)      ((p >> 4) & 0x0F)
 #define LSB(p)      ((p) & 0x0F)
 
-
+#define UART_SET_BAUDRATE_TIMEOUT	(0x10000)
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

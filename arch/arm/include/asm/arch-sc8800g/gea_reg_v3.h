@@ -29,17 +29,6 @@ extern   "C"
 **---------------------------------------------------------------------------*/
 
 /*----------GEA Interface Control Registers----------*/         ///mingweiflag? not check
-#define GEA_KST_START                   (GEA_BASE + 0x0000)
-#define GEA_MODE                        (GEA_BASE + 0x0C80)
-#define GEA_WORD_LEN                    (GEA_BASE + 0x0C84)
-#define GEA_KC0                         (GEA_BASE + 0x0C88)
-#define GEA_KC1                         (GEA_BASE + 0x0C8C)
-#define GEA_KC2                         (GEA_BASE + 0x0C90)
-#define GEA_KC3                         (GEA_BASE + 0x0C94)
-#define GEA_INPUT0                      (GEA_BASE + 0x0C98)
-#define GEA_INPUT1                      (GEA_BASE + 0x0C9C)
-#define GEA_START                       (GEA_BASE + 0x0CA0)
-#define GEA_POLL                        (GEA_BASE + 0x0CA4)
 
 #ifdef   __cplusplus
 }

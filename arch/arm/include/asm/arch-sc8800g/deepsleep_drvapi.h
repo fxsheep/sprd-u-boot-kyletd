@@ -19,7 +19,6 @@
 /**---------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **---------------------------------------------------------------------------*/
-#include "pwm_drvapi.h"
 
 /**---------------------------------------------------------------------------*
  **                         Compiler Flag                                     *
@@ -81,6 +80,13 @@ PUBLIC void SCI_AUD_EnableDeepSleep (uint32 mode);
 PUBLIC void DSP_FiqHandler (
     uint32 fiq_num      // fiq number
 );
+
+uint32 SLEEP_GetAHBModuleStatus (void);
+uint32 SLEEP_GetAPBModuleStatus (void);
+
+
+PUBLIC void SCI_TPC_EnableDeepSleep (uint32 mode);
+
 // Enable MMI deep sleep
 
 #if defined(PLATFORM_SC6600L) || defined(PLATFORM_SC6800H)
@@ -119,14 +125,13 @@ PUBLIC void deep_sleep_delay (uint32 count);
 PUBLIC void SCI_PCM_EnableDeepSleep (uint32 mode);
 
 PUBLIC void SCI_BTCLK_EnableDeepSleep (uint32 mode);
-PUBLIC void SCI_BT_EnableDeepSleep (uint32 mode);
-PUBLIC void SCI_TPC_EnableDeepSleep (uint32 mode);
 
 PUBLIC void SCI_DCAM_EnableDeepSleep (uint32 mode);
 
 PUBLIC void SCI_Calibration_EnableDeepSleep (uint32 mode);
 
 PUBLIC void SCI_SDIO_EnableDeepSleep (uint32 mode);
+PUBLIC void SCI_UPM_EnableDeepSleep (uint32 mode);
 /*****************************************************************************/
 //  Description:    This function is used to config the apb clk request of pwm.
 //  Author:         Younger.Yang
@@ -222,7 +227,6 @@ PUBLIC void deep_sleep_delay (uint32 count);
 PUBLIC void SCI_PCM_EnableDeepSleep (uint32 mode);
 
 PUBLIC void SCI_BTCLK_EnableDeepSleep (uint32 mode);
-PUBLIC void SCI_BT_EnableDeepSleep (uint32 mode);
 
 PUBLIC void SCI_AP_EnableDeepSleep (uint32 mode);
 
@@ -324,6 +328,7 @@ PUBLIC void DPSLP_XTLOpenInSleep (
     BOOLEAN is_open                         //indicated if xtl need open in deepsleep,
     //SCI_TRUE: need open xtl in deepsleep; SCI_FALSE: can close xtl in deepsleep
 );
+PUBLIC void SCI_Deep_Sleep_Test (void);
 #endif
 
 /**---------------------------------------------------------------------------*

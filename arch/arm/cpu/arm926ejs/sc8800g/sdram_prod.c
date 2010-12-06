@@ -69,11 +69,23 @@
 #define SDRAM_DATA_WIDTH	DATA_WIDTH_32
 #define SDRAM_SIZE			SDRAM_64M
 
+#elif defined(BB_DRAM_TYPE_128MB_16BIT)
+#define SDRAM_ROW_MODE		ROW_MODE_14
+#define SDRAM_COL_MODE		COL_MODE_10
+#define SDRAM_DATA_WIDTH	DATA_WIDTH_16
+#define SDRAM_SIZE			SDRAM_128M
+
 #elif defined(BB_DRAM_TYPE_128MB_32BIT)
 #define SDRAM_ROW_MODE		ROW_MODE_13
 #define SDRAM_COL_MODE		COL_MODE_10
 #define SDRAM_DATA_WIDTH	DATA_WIDTH_32
 #define SDRAM_SIZE			SDRAM_128M
+
+#elif defined(BB_DRAM_TYPE_256MB_32BIT)
+#define SDRAM_ROW_MODE		ROW_MODE_14
+#define SDRAM_COL_MODE		COL_MODE_10
+#define SDRAM_DATA_WIDTH	DATA_WIDTH_32
+#define SDRAM_SIZE			SDRAM_256M
 
 #else
 #error do not select size and bit width for SDRAM
@@ -103,6 +115,7 @@
 //   sdram_parameters[] is used to config SDRAM controller according to variable
 //sdram. The unit is ns. The end of array is marked with 0xffffffff at the last element. 
 /*******************************************************************************/
+#if (DRAM_TYPE == SDR_SDRAM)
 LOCAL const SDRAM_TIMING_PARA_T s_sdram_timing_param =
 {
 	7800,            //ROW_REFRESH_TIME,Refresh interval time , ns, tREF-max = 7800 ns
@@ -115,6 +128,14 @@ LOCAL const SDRAM_TIMING_PARA_T s_sdram_timing_param =
     150,             //T_XSR  , ns, tXSR-min = 120 ns.
     90               //T_RAS_MIN , row active time, ns, tRAS-min = 50ns
 };
+#else
+LOCAL CONST SDRAM_TIMING_PARA_T s_sdram_timing_param =
+//  ms    ns   ns    ns            ns    ns       ns    ns  clk   clk
+//  //  tREF, tRP, tRCD, tWR/tRDL/tDPL,tRFC,tXSR,     tRAS,tRRD,tMRD, tWTR(wtr is only for ddr)
+      {64,   30,  30,   15,          110, 140,      50,  15,  2,    2   };
+
+#endif
+//
 /*******************************************************************************/
 //   sdram_cofig_info is used to config sdram controller when to init sdram
 /*******************************************************************************/

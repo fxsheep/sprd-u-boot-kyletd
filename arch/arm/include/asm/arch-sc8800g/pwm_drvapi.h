@@ -27,8 +27,16 @@ typedef enum
     PWM_MAX
 } PWM_PORT_ID_E;
 
+typedef enum
+{
+	    XTL_E = 0,
+		RTC_E
+}PWM_CLK_SOURCE_E;
+
 #define PWM_CTL_S_ONOFF 0x30 /*Set PWM ON/OFF*/
 #define PWM_CTL_S_CLKSRC 0x31 /*Set CLK sorce*/
+#define PWM_CTL_G_CLKSRC 0x32 /*Get CLK sorce*/
+
 
 void PWM_Config (int pwm_num,  uint32  freq,  uint16  duty_cycle);
 uint32 PWM_Ioctl (uint32 pwm_num, uint32 cmd, uint32 *arg);

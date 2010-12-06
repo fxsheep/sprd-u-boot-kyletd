@@ -1,26 +1,25 @@
 /******************************************************************************
- ** File Name:      sc8800g_freq_cfg.h                                                 *
- ** Author:         Yuhua.Shi                                                   *
- ** DATE:           08/17/2010                                                *
+ ** File Name:      watchdog_phy.h                                                 *
+ ** Author:         Jie Dai                                                   *
+ ** DATE:           08/02/2010                                                *
  ** Copyright:      2010 Spreatrum, Incoporated. All Rights Reserved.         *
- ** Description:    This file define the config of frequency.      *
+ ** Description:    This file define the physical layer of I2C device.      *
  ******************************************************************************
 
  ******************************************************************************
  **                        Edit History                                       *
  ** ------------------------------------------------------------------------- *
  ** DATE           NAME             DESCRIPTION                               *
- ** 08/17/2010     Yuhua.Shi     Create.                                   *
+ ** 08/02/2010     Jie Dai            Create.                                 *
  ******************************************************************************/
 
-#ifndef _SC8800G_FREQ_CFG_H_
-#define _SC8800G_FREQ_CFG_H_
+#ifndef __WATCHDOG_PHY_H__
+#define __WATCHDOG_PHY_H__
+
 /*----------------------------------------------------------------------------*
- **                         Dependencies                                      *
+ **                             Dependencies                                  *
  **------------------------------------------------------------------------- */
 
-#include "sci_types.h"
-#include "chng_freq.h"
 
 /**---------------------------------------------------------------------------*
  **                             Compiler Flag                                 *
@@ -29,59 +28,54 @@
 extern   "C"
 {
 #endif
+
 /**---------------------------------------------------------------------------*
 **                               Macro Define                                **
 **---------------------------------------------------------------------------*/
+#define     WDG_RESULT_OK       (int32)(0x00000000)
+#define     WDG_RESULT_ERR      (int32)(0xFFFFFFFF)
 
-/**---------------------------------------------------------------------------*
- **                         TYPE AND STRUCT                                 *
- **---------------------------------------------------------------------------*/
-//define the arm/ahb/emc clk
-typedef struct freq_clk_LVL_tag
+typedef enum
 {
-    uint32 arm_clk;
-    uint32 ahb_clk;
-    uint32 emc_clk;
-} FREQ_CLK_LVL_T, *FREQ_CLK_LVL_PTR;
+    WDG_TIMER_STATE_STOP    = 0,    //Stop Watch Dog Timer
+    WDG_TIMER_STATE_START,          //Start Watch Dog Timer
+    WDG_TIMER_STATE_KEEP            //Don't change Watch Dog Timer State
+}
+WDG_TIMER_STATE;
 
-//define the control infomation for change frequency
-typedef struct freq_control_tag
+typedef enum
 {
-    uint32             min_clk_lvl;
-    uint32             max_clk_lvl;
-    BOOLEAN        is_chng_freq_enable;
-	BOOLEAN        is_ahbmaster_event_enable; 
-} FREQ_CONTROL_T, *FREQ_CONTROL_PTR;
+    WDG_TIMEOUT_MODE_RESET = 0,     //Set Watch Dog to Reset Mode
+    WDG_TIMEOUT_MODE_INT,           //Set Watch Dog to Interrupt Mode
+    WDG_TIMEOUT_MODE_KEEP           //Don't change Watch Dog Mode
+} WDG_TIMEOUT_MODE;
 
-//define the frequency levle of application
-typedef struct freq_app_clk_LVL_tag
+typedef struct
 {
-    CHNG_FREQ_INDEX_E freq_index;
-    uint32 clk_lvl;
-} FREQ_APP_CLK_LVL_T, *FREQ_APP_CLK_LVL_PTR;
-
-//define the config info for change frequency
-typedef struct chng_freq_config_tag
-{
-    FREQ_CLK_LVL_PTR                clk_lvl_table_ptr;
-    uint32                                  *clk_div_table_ptr;
-    FREQ_APP_CLK_LVL_PTR        app_clk_lvl_table_ptr;
-    FREQ_CONTROL_PTR              freq_control_info_ptr;
-} CHNG_FREQ_CONFIG_T, *CHNG_FREQ_CONFIG_PTR;
-
+    WDG_TIMER_STATE state;
+    WDG_TIMEOUT_MODE mode;
+    uint32  val;                    //Set the Timer start val
+} WDG_CONFIG_T;
 
 /**----------------------------------------------------------------------------*
 **                           Function Prototype                               **
 **----------------------------------------------------------------------------*/
 /*****************************************************************************/
-// Description :    This function is used to get the config info about change frequency
-// Global resource dependence :
-// Author :
-// Note :
+//  Description:    This function config the watch dog module.
+//  Dependency:     No
+//  Author:         Jie.Dai
+//  Note:
 /*****************************************************************************/
-PUBLIC CHNG_FREQ_CONFIG_PTR FREQ_GetFreqCfg (
-    void
-);
+PUBLIC int32 WDG_PHY_CONFIG (WDG_CONFIG_T *cfg);
+
+
+/*****************************************************************************/
+//  Description:    This function clear the watch dog interrupt
+//  Dependency:     No
+//  Author:         Jie.Dai
+//  Note:
+/*****************************************************************************/
+PUBLIC int32 WDG_PHY_INT_CLR (void);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **
@@ -92,3 +86,5 @@ PUBLIC CHNG_FREQ_CONFIG_PTR FREQ_GetFreqCfg (
 /**---------------------------------------------------------------------------*/
 #endif
 // End
+
+

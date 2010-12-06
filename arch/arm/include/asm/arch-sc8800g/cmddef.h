@@ -292,10 +292,11 @@ typedef enum
     TD_CALIBRATION_POST_MODE            = 15,
     TD_CALIBRATION_MODE                 = 16,
     TD_CALIBRATION_POST_NO_LCM_MODE     = 17,
+    AUTO_TEST_MODE       		= 18,
     
     MODE_MAX_TYPE,
 
-    MODE_MAX_MASK                       = 0x7f	
+    MODE_MAX_MASK                       = 0x1f	
     
 } MCU_MODE_E;
 

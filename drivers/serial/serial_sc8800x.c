@@ -80,13 +80,21 @@ LOCAL void SIO_HwOpen (struct FDL_ChannelHandler *channel, unsigned int divider)
     * (volatile unsigned int *) (port->regBase + ARM_UART_CTL2) = 0;
 }
 
-char ddddd[4] = {0x12, 0x34, 0x56, 0x78};
 LOCAL int SIO_Open (struct FDL_ChannelHandler  *channel, unsigned int baudrate)
 {
     unsigned int divider;
-    unsigned int i;
+    unsigned int i = 0;
 
-    for (i = 0; i < 0x1000; i++); //wait for the data send complete
+	UartPort_T *port  = (UartPort_T *) channel->priv;
+	
+    while(!SIO_TRANS_OVER(port->regBase))  /* Wait until all characters are sent out */
+    {
+    	i++;
+    	if(i >= UART_SET_BAUDRATE_TIMEOUT)
+    	{
+    		return -1;
+    	}
+    }
 
     divider = SIO_GetHwDivider (baudrate);
 

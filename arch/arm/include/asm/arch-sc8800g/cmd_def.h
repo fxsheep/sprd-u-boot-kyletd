@@ -1,5 +1,6 @@
 #ifndef CMD_DEFINE_H
 #define CMD_DEFINE_H
+#include "cmddef.h"
 
 typedef enum _CMD_TYPE
 {

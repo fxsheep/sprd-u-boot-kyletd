@@ -79,7 +79,7 @@ static __inline uint32 GpioCfg_GetBaseAddr (uint32 gpio_id)
     return (gpio_id>>4) * 0x80 + (uint32) GPIO_BASE;
 }
 
-static __inline uint32 GpioCfg_GetBitNum (gpio_id)
+static __inline uint32 GpioCfg_GetBitNum (uint32 gpio_id)
 {
     return (gpio_id & 0xF);
 }

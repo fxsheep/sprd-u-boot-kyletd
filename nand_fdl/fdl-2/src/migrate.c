@@ -72,7 +72,7 @@ void hw_watchdog_reset(void)
 {
 }
 
-unsigned int SCI_GetTickCount (void)
+uint32 SCI_GetTickCount(void)
 {
 	volatile uint32 tmp_tick1;
 	volatile uint32 tmp_tick2;

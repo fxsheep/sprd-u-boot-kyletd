@@ -1,5 +1,5 @@
 
-#include "asm/arch/sci_types.h"
+#include <asm/arch/sci_types.h>
 extern void MMU_EnableIDCM (void);
 /**********************************************************************
   Section Descriptor:
@@ -34,7 +34,16 @@ C/B:    Cacheable/Bufferable,
 #define MMU_B_BIT       0x00000004
 
 //MMU table start address can be configed by specific project! it is in mem_cfg_xxx.c.
-const uint32 const_MMUTableStartAddr       = 0x01600000 - 16*1024;//remap = 0,sdram from 0x0
+/*
+modify from 0x1600000 to 0x3f0000, to avoid memory corruption in RW region 
+when watchdog reset happen
+in 8800x series, 0x3f0000--0x400000 is empty
+in 6800 serirs, maybe has little problem, have risk to overlap the memory!!!!
+Now, change to 0x008f0000, in reserved region.
+*/
+
+const uint32 const_MMUTableStartAddr       = 0x008f0000 ;//remap = 0,sdram from 0x0
+
 const uint32 const_MMUTableStartAddrRemap1 = 0x31600000 - 16*1024;//remap = 1,sdram from 0x3000,0000
 
 //MMU_TABLE_ADDR must be aligned by 16K-Byte.
@@ -64,7 +73,6 @@ void MMU_Init (void)
     {
         g_mmu_page_table = (unsigned int *) MMU_TABLE_ADDR;
     }
-
     // 15Mb physical addr for page table
     page_table = g_mmu_page_table;
 
@@ -87,7 +95,7 @@ void MMU_Init (void)
         //else if ((i >= 0x100) && (i < 0x200))
         //  page_table[i] = 0x00000C1E + (i << 20);
         // Internal RAM Memeory: CB
-        else if ( (i >= 0x300) && (i < 0x400))
+        else if (( (i >= 0x300) && (i <= 0x400)) )//  || (mustSetIramCached == TRUE && i == 0x400) )
         {
             page_table[i] = (MMU_SD_CONST|MMU_AP_B11|MMU_C_BIT|MMU_B_BIT) + (i << 20);
         }
@@ -104,8 +112,10 @@ void MMU_Init (void)
         }
     }
 
+    MMU_InvalideICACHEALL();//steve.zhan add.
     MMU_EnableIDCM();
-
-    //MMU_DisableIDCM();
+	
+    //Delay some time
+    for (i=0; i<1000; i++);
 }
 

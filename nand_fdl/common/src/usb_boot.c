@@ -49,9 +49,6 @@ extern   "C"
 LOCAL __align (4) uint8 s_usb_snd_buff[USB_BUFF_SIZE];
 /*--------------------------- Global Data -----------------------------------*/
 /*--------------------------- External Data ---------------------------------*/
-extern USB_rx_buf_T     buf_manager ;
-//extern int USB_EPxSendData  (char ep_id ,unsigned int * pBuf,int len);
-
 /*----------------------------------------------------------------------------*
 **                         Local Function Prototype                           *
 **---------------------------------------------------------------------------*/
@@ -96,18 +93,10 @@ void usb_init (unsigned long ext_clk26M)
 /*****************************************************************************/
 void usb_boot (uint32 ext_clk26M)
 {
-
-    buf_manager.read     = 0 ;
-    buf_manager.write     = 0 ;
-
     usb_init (ext_clk26M);
 }
 void usb_varinit (void)
 {
-    int i;
-
-    buf_manager.read    = 0 ;
-    buf_manager.write   = 0 ;
     usb_init (0);
 }
 /*****************************************************************************/
@@ -207,4 +196,3 @@ struct FDL_ChannelHandler gUSBChannel =
 #ifdef   __cplusplus
 }
 #endif
-// End

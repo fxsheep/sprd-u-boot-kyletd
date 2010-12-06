@@ -122,7 +122,8 @@ PUBLIC BOOLEAN VM_IsDPSection (uint32 addr);
 //  Author:         Liangwen.zhen
 //  Note:
 /*****************************************************************************/
-PUBLIC void MMU_InAssertMode (void);
+PUBLIC void MMU_AlignFaultDisable (void);
+PUBLIC void MMU_AlignFaultEnable (void);
 
 
 typedef BOOLEAN (* MMU_FAULT_CALLBACK) (uint32, void *);
@@ -203,6 +204,15 @@ PUBLIC void MMU_CacheOn (uint32 i, uint32 d);
 PUBLIC void MMU_CacheOff (uint32 i, uint32 d);
 PUBLIC void MMU_InvalideDCACHE (void);
 PUBLIC void MMU_EnableICacheOnly(void);
+
+/*****************************************************************************/
+// Description :    This function delay some ticks .
+// // Global resource dependence :
+// // Author :         Daniel.ding
+// // Note :
+// /*****************************************************************************/
+PUBLIC void MMU_InvalideDCACHE (void);
+
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

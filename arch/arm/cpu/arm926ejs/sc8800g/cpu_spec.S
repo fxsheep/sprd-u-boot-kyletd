@@ -27,11 +27,13 @@ cpu_spec:
 	BIC r0,r0,#0x80
 #endif
 
+#ifdef _LITTLE_ENDIAN
 	BIC r0,r0,#1 /*disable MMU*/
 	LDR r1,=0x1004
 	BIC r0,r0,r1  /*disable cache*/
 	LDR r1,=0x1000
 	ORR r0,r0,r1
+#endif
 	MCR p15,0,r0,c1,c0,0
 
 	/*Set Endian Regs of SC8800G*/
@@ -68,11 +70,12 @@ cpu_spec:
 
 	STMDB sp!,{lr} 
 	bl lowlevel_init
+	@bl MMU_Init
 	/*Re-set up stack
 	  The sp here must be in the reserved region
 	  */
 	LDMIA sp!, {lr}
-	LDR     sp, =0x00900000 
+	LDR     sp, =0x008f0000 
 
 	mov	pc,lr
 /*end of function cpu_spec*/

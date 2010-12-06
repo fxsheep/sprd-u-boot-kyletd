@@ -25,6 +25,7 @@
 #include "chip.h"
 #ifndef WIN32
 #include "tx_api_thumb.h"
+#include "pwm_drvapi.h"
 #include "deepsleep_drvapi.h"
 #endif //WIN32
 #endif // _DEEP_SLEEP_H_

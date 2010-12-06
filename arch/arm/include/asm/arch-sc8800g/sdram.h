@@ -125,9 +125,6 @@
 #define EX_MODE_REG_DS_FULL           (0)
 #define EX_MODE_REG_DS_HALF           (1)
 
-#define SDR_SDRAM 0
-#define DDR_SDRAM 1
-#define DRAM_TYPE SDR_SDRAM
 
 #define DCFG2_CNT_DONE                  (BIT_14)
 #define DCFG2_REF_CNT_RST               (BIT_15)

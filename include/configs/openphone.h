@@ -22,7 +22,7 @@
 #define __CONFIG_H
 
 
-/*#define NAND_DEBUG 1  */
+//#define NAND_DEBUG 1  
 /*#define DEBUG*/
 #define U_BOOT_SPRD_VER 1
 /*#define SPRD_EVM_TAG_ON 1*/
@@ -43,7 +43,8 @@
 #define CHIP_ENDIAN_LITTLE
 #define SC8800S_LITTLE_ENDIAN FALSE
 #define _LITTLE_ENDIAN 1
-#define BB_DRAM_TYPE_64MB_32BIT
+#define BB_DRAM_TYPE_256MB_32BIT
+#define EXT_MEM_TYPE_DDR 1
 #define  CONFIG_MTD_NAND_SPRD 1
 #endif
 
@@ -250,7 +251,7 @@
 
 #define MTDIDS_DEFAULT "nand0=sprd-nand"
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
-#define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 initrd=0x3000000,4194304 init=/init root=/dev/ram0 rw "MTDPARTS_DEFAULT
+#define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #define CONFIG_BOOTCOMMAND "cboot recovery"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 

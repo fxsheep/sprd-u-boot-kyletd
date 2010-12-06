@@ -58,6 +58,9 @@ extern   "C"
 #define   ANA_INT_DEBUG         (ANA_REG_BASE + 0x54)
 #define   ANA_LDO_PD_RST        (ANA_REG_BASE + 0x58)
 #define   ANA_MCU_PROT          (ANA_REG_BASE + 0x5C)
+#define   ANA_DCDC_CTRL_DS      (ANA_REG_BASE + 0x60)
+#define   ANA_ADIE_CHIP_ID      (ANA_REG_BASE + 0x64)
+
 /*
   the AGEN register bit
 */
@@ -99,7 +102,7 @@ extern   "C"
 #define CHGR_USB_CHG_SHIFT              4
 #define CHGR_USB_CHG_MSK                (3 << CHGR_USB_CHG_SHIFT)
 #define CHGR_ADAPTER_CHG_SHIFT          6
-#define CHGR_ADAPTER_CHG_MSK            (3 << CHGR_USB_CHG_SHIFT)
+#define CHGR_ADAPTER_CHG_MSK            (3 << CHGR_ADAPTER_CHG_SHIFT)
 #define CHGR_PD_BIT                     BIT_8
 #define CHGR_RECHG_BIT                  BIT_11
 #define CHGR_ADATPER_EN_BIT             BIT_0
@@ -128,6 +131,11 @@ extern   "C"
 ///ANA_PA_CTL
 #define LDO_PA_SET              BIT_6
 #define LDO_PA_RST              BIT_7
+
+///ANA_ADIE_CHIP_ID
+#define ANA_G1_CHIP_ID          ((uint16)0)
+#define ANA_G2_CHIP_ID          ((uint16)1)
+
 
 
 /**----------------------------------------------------------------------------*

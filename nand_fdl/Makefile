@@ -38,7 +38,7 @@ COM_PATH = $(TOPDIR)/nand_fdl/common
 FDL2_SOBJS_LIST = init.o
 FDL1_SOBJS_LIST = init.o
 
-COM_COBJS	= dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o mcu_command.o usb_boot.o drv_usb.o virtual_com.o chip_cfg.o 
+COM_COBJS	= dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o mcu_command.o usb_boot.o drv_usb.o virtual_com.o 
 COM_OBJS = $(addprefix $(COM_PATH)/src/,$(COM_COBJS))
 
 FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o
@@ -55,7 +55,8 @@ MTD_LIB = $(TOPDIR)/drivers/mtd/libmtd.a
 NAND_LIB = $(TOPDIR)/drivers/mtd/nand/libnand.a
 COMMON_LIB = $(TOPDIR)/common/dlmalloc.o 
 DRIVERS_LIB = $(TOPDIR)/drivers/serial/serial_sc8800x.o
-CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o
+CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_cfg.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/boot_mode.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_hal.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/adi_phy_v3.o
+
 GENERIC_LIB = $(TOPDIR)/lib/libgeneric.a
 UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB)
 

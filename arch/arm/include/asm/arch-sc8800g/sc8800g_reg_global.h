@@ -195,46 +195,8 @@ extern   "C"
 #define CLK_PWM2_SEL                        BIT_27
 #define CLK_PWM3_SEL                        BIT_28
 
-/*need to check and delete */   ////mingweiflag?
-///temporary code
-#define GR_LDO_VCFG0                    (GREG_BASE + 0x0028)    ///a die    
-#define GR_CLK_CFG0                     (GREG_BASE + 0x0014)    ///this register is right? GR_CLK_DLY?
-#define GR_VB_CTL                       GR_BUSCLK    ///GR_BUSCLK_ALM?
-
-#if 0
-#define GEN0_WDG_EN                     BIT_0
-#define GEN0_RTC_RTC_EN                 BIT_7
-#define GEN0_RTC_EN                     BIT_7
-#define GEN0_EPT_EN                     BIT_15
-
-#define GEN1_I2C_EN                     GEN0_I2C_EN
-#define GEN1_IIS_EN                     GEN0_I2S_EN
-#define GEN1_SPI_EN                     GEN0_SPI_EN
-
-#define GEN1_PWM0_EN                    CLK_PWM0_EN     ////mingweiflag CLK_PWM0_EN?
-#define GEN1_PWM1_EN                    CLK_PWM1_EN
-#define GEN1_PWM2_EN                    CLK_PWM2_EN
-#define GEN1_PWM3_EN                    CLK_PWM3_EN
-#define GEN1_PWM4_EN                    BIT_14
-#define GEN0_PWMA                   CLK_PWM0_EN     ////mingwei0526
-#define GEN0_PWMB                   CLK_PWM1_EN
-#define GEN0_PWMC                   CLK_PWM2_EN
-#define GEN0_PWMD                   CLK_PWM3_EN
-#define GEN0_PWME                   GEN1_PWM4_EN
-
-#define GR_VPLL_MN                      (GREG_BASE + 0x0068)
-#define GR_APLL_MN                      (GREG_BASE + 0x0064)
-
-#define GR_GLB_GEN4             GR_GEN4
-#define GEN1_SYSCLK_EN      GEN0_SYST_EN
-
-#define GEN1_SIM0_EN                    GEN0_SIM0_EN
-#define GEN1_SIM1_EN                    GEN0_SIM1_EN
-
-#endif
-
-///end temporary code
-
+// POWER CTL1
+#define POWCTL1_CONFIG                  0x7FFFF91E  // isolation number 1ms:30cycles
 
 
 /**----------------------------------------------------------------------------*
@@ -451,4 +413,5 @@ typedef union _gr_glb_gen4_reg_tag
 /**---------------------------------------------------------------------------*/
 #endif //_SC8800G_REG_GLOBAL_H_
 // End
+
 

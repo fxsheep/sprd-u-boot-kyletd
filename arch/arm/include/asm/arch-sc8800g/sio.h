@@ -149,7 +149,7 @@ typedef struct
     uint8   *sio_buf_ptr;      // Sio buffer address.
 } SIO_BUF_S;
 
-struct sio_operation_st
+typedef struct 
 {
     uint32 (*init) (uint32 port_num, UART_INIT_PARA_T * ,
                     UartCallback callback);                /* drv com creat   */
@@ -172,7 +172,7 @@ struct sio_operation_st
 
     void (*flush) (uint32 phy_port);                             /* only useful for usb virtual com     */
     /* flush data from local buffer to fifo*/
-};
+} sio_operation_st;
 
 typedef struct
 {
@@ -192,7 +192,8 @@ typedef struct
     volatile uint32         last_tx;    // Last time for tx
     struct   com_line      *p_line;     /* ptr to comline driver structure
                                            no use for debug port, just for user port */
-    struct  sio_operation_st sio_op;  /* sio operation for COM_DEBUG/COM_DATA */
+	sio_operation_st sio_op;  /* sio operation for COM_DEBUG/COM_DATA */
+
 
 } SIO_INFO_S;
 
@@ -548,7 +549,8 @@ PUBLIC int32 SIO_GetRxBufMaxSize (uint32 port);
 /*****************************************************************************/
 PUBLIC void SIO_RegisterOpsToTab (uint32                  port,
                                   uint32                  phy_port,
-                                  struct sio_operation_st ops);
+                                  sio_operation_st ops);
+
 
 PUBLIC uint32 SIO_PhyPortfromIndex (uint32 index);
 
