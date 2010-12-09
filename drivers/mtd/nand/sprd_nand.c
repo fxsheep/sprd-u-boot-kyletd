@@ -206,11 +206,11 @@ static struct sprd_nand_address sprd_colrow_addr = {0, 0, 0, 0};
 static __attribute__((aligned(4))) unsigned char io_wr_port[NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE];
 static nand_ecc_modes_t sprd_ecc_mode = NAND_ECC_NONE;
 #ifdef CONFIG_SC8800G
-static unsigned long buswidth = 0; /* 0: X8 bus width 1: X16 bus width */
-static unsigned long addr_cycle = 4; /* advance 0 : can be set 3 or 4; advance 1: can be set 4 or 5 */
+static unsigned long g_buswidth = 0; /* 0: X8 bus width 1: X16 bus width */
+static unsigned long g_addr_cycle = 4; /* advance 0 : can be set 3 or 4; advance 1: can be set 4 or 5 */
 #else
-static unsigned long buswidth = 1; /* 0: X8 bus width 1: X16 bus width */
-static unsigned long addr_cycle = 5; /* advance 0 : can be set 3 or 4; advance 1: can be set 4 or 5 */
+static unsigned long g_buswidth = 1; /* 0: X8 bus width 1: X16 bus width */
+static unsigned long g_addr_cycle = 5; /* advance 0 : can be set 3 or 4; advance 1: can be set 4 or 5 */
 #endif
 
 #define NF_RESET                0xFF
@@ -443,6 +443,8 @@ static void sprd_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 	unsigned long pagetype; /* 0: small page; 1: large page*/
 //	unsigned long buswidth = 1; /* 0: X8 bus width 1: X16 bus width */
 	unsigned long chipsel = 0;
+	unsigned long buswidth = g_buswidth;
+	unsigned long addr_cycle = g_addr_cycle;
 	//static unsigned long readaaa = 0;
 	struct nand_chip *this = (struct nand_chip *)(mtd->priv);
 	if (cmd == NAND_CMD_NONE)
@@ -547,7 +549,7 @@ if (sprd_area_mode == DATA_AREA)
 						nfc_wait_command_finish();
 						nand_copy((unsigned char *)NFC_MBUF, io_wr_port, mtd->writesize);
 					} else if (sprd_colrow_addr.column == DATA_AREA) {
-						g_cmdsetting = (addr_cycle << 24) | (advance << 23) | (buswidth << 19) | (pagetype << 18) | (0 << 16) | (0x1 << 31);
+						g_cmdsetting = (chipsel << 26) | (addr_cycle << 24) | (advance << 23) | (buswidth << 19) | (pagetype << 18) | (0 << 16) | (0x1 << 31);
 						REG_NFC_CMD = g_cmdsetting | NAND_CMD_READ0;
 						nfc_wait_command_finish();
 			
@@ -557,7 +559,7 @@ if (sprd_area_mode == DATA_AREA)
 				printf("Operation !!! area.  %s  %s  %d\n", __FILE__, __FUNCTION__, __LINE__);
 				} else {  //if (buswidth == 1)
 					if (sprd_colrow_addr.column == mtd->writesize) {
-        					g_cmdsetting = (addr_cycle << 24) | (advance << 23) | (buswidth << 19) | \
+        					g_cmdsetting = (chipsel << 26) | (addr_cycle << 24) | (advance << 23) | (buswidth << 19) | \
 								(pagetype << 18) | (0 << 16) | (0x1 << 31);
         					REG_NFC_CMD = g_cmdsetting | NAND_CMD_READ0;
         					nfc_wait_command_finish();
@@ -572,7 +574,7 @@ if (sprd_area_mode == DATA_AREA)
 						if (sprd_area_mode == DATA_OOB_AREA) {
                                                 	/* read data and spare area, modify address */
                                                 	REG_NFC_END0 = 0xffffffff;
-                                                	g_cmdsetting = (addr_cycle << 24) | (advance << 23) | \
+                                                	g_cmdsetting = (chipsel << 26) | (addr_cycle << 24) | (advance << 23) | \
 									(1 << 21) | (buswidth << 19) | (pagetype << 18) | \
 									(0 << 16) | (0x1 << 31);
 
@@ -596,7 +598,7 @@ if (sprd_area_mode == DATA_AREA)
 #endif
 
                                         	} else if (sprd_colrow_addr.column == DATA_AREA) {
-        						g_cmdsetting = (addr_cycle << 24) | (advance << 23) | \
+        						g_cmdsetting = (chipsel << 26) | (addr_cycle << 24) | (advance << 23) | \
 									(buswidth << 19) | (pagetype << 18) | \
 									(0 << 16) | (0x1 << 31);
         						REG_NFC_CMD = g_cmdsetting | NAND_CMD_READ0;
@@ -1063,6 +1065,10 @@ static int ECC_CompM(unsigned char *pEcc1, unsigned char *pEcc2, unsigned char *
 
 static int correct(u_char *dat, u_char *read_ecc, u_char *calc_ecc)
 {
+#ifdef CONFIG_SC8800G
+	ecc_trans(read_ecc);
+	ecc_trans(calc_ecc);
+#endif
 	return ECC_CompM(read_ecc, calc_ecc, dat, 1);
 }
 
@@ -1191,12 +1197,12 @@ int board_nand_init(struct nand_chip *this)
 
 	if (type == 1) {
 		this->options |= NAND_BUSWIDTH_16;
-		buswidth = 1;
-		addr_cycle = 5;
+		g_buswidth = 1;
+		g_addr_cycle = 5;
 		printk("16 Bit");	
 	} else {
-		buswidth = 0;
-		addr_cycle = 4;
+		g_buswidth = 0;
+		g_addr_cycle = 4;
 		printk("8 Bit ");
 	}
 

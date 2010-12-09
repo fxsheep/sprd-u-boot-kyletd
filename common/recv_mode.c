@@ -19,7 +19,7 @@ void recovery_mode(void)
 	strcat(buf, "nand read ");
 	cur_len = strlen(buf);
 	kernel_dest = 0x8000 - sizeof(image_header_t);
-	sprintf(&buf[cur_len], "%x %s %x\;\0", kernel_dest, "kernel", 0x400000);
+	sprintf(&buf[cur_len], "%x %s %x\;\0", kernel_dest, "kernel", 0x440000);
 
 
 	cur_len = strlen(buf);

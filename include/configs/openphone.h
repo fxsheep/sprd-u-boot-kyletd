@@ -250,8 +250,13 @@
 #define str(s)	#s
 
 #define MTDIDS_DEFAULT "nand0=sprd-nand"
+#ifdef CONFIG_G2PHONE
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
+#elif defined CONFIG_OPENPHONE
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),100m(system),100m(userdata),20m(cache),-(misc)"
+#define CONFIG_BOOTARGS "mem=256M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
+#endif
 #define CONFIG_BOOTCOMMAND "cboot recovery"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 

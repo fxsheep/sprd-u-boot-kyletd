@@ -2864,7 +2864,8 @@ extern unsigned int __machine_arch_type;
 #define MACH_TYPE_SPEAR1310            2881
 //#define MACH_TYPE_BIGPHONE	       2882
 #define MACH_TYPE_BIGPHONE	       2011
-#define MACH_TYPE_OPENPHONE		2012
+#define MACH_TYPE_G2PHONE		2012
+#define MACH_TYPE_OPENPHONE		2013
 
 #ifdef CONFIG_ARCH_EBSA110
 # ifdef machine_arch_type
@@ -37076,6 +37077,18 @@ extern unsigned int __machine_arch_type;
 # define machine_is_bigphone()	(machine_arch_type == MACH_TYPE_BIGPHONE)
 #else
 # define machine_is_bigphone()	(0)
+#endif
+
+#ifdef CONFIG_G2PHONE
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_G2PHONE
+# endif
+# define machine_is_openphone()	(machine_arch_type == MACH_TYPE_G2PHONE)
+#else
+# define machine_is_openphone()	(0)
 #endif
 
 #ifdef CONFIG_OPENPHONE
