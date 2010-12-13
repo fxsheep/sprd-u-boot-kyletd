@@ -54,6 +54,7 @@ COBJS-y += recv_mode.o
 COBJS-y += fastboot_mode.o
 COBJS-y += charge_mode.o
 COBJS-y += dloader_mode.o
+COBJS-y += android_boot.o
 
 # environment
 COBJS-y += env_common.o

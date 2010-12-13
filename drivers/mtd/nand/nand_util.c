@@ -605,3 +605,76 @@ int nand_read_skip_bad(nand_info_t *nand, loff_t offset, size_t *length,
 
 	return 0;
 }
+/**
+ * nand_read_offset_ret:
+ *
+ * Read image from NAND flash.
+ * Blocks that are marked bad are skipped and the next block is readen
+ * instead as long as the image is short enough to fit even after skipping the
+ * bad blocks.
+ *
+ * @param nand NAND device
+ * @param offset offset in flash
+ * @param length buffer length, on return holds remaining bytes to read
+ * @param buffer buffer to write to
+ * @offset_ret readend offset of this read
+ * @return 0 in case of success
+ */
+int nand_read_offset_ret(nand_info_t *nand, loff_t offset, size_t *length,
+		       u_char *buffer, loff_t * offset_ret)
+{
+	int rval;
+	size_t left_to_read = *length;
+	size_t len_incl_bad;
+	u_char *p_buffer = buffer;
+
+	len_incl_bad = get_len_incl_bad (nand, offset, *length);
+
+	if ((offset + len_incl_bad) > nand->size) {
+		printf ("Attempt to read outside the flash area\n");
+		return -EINVAL;
+	}
+
+	if (len_incl_bad == *length) {
+		rval = nand_read (nand, offset, length, buffer);
+		if (!rval || rval == -EUCLEAN)
+			return 0;
+		printf ("NAND read from offset %llx failed %d\n",
+			offset, rval);
+		return rval;
+	}
+
+	while (left_to_read > 0) {
+		size_t block_offset = offset & (nand->erasesize - 1);
+		size_t read_length;
+
+		WATCHDOG_RESET ();
+
+		if (nand_block_isbad (nand, offset & ~(nand->erasesize - 1))) {
+			printf ("Skipping bad block 0x%08llx\n",
+				offset & ~(nand->erasesize - 1));
+			offset += nand->erasesize - block_offset;
+			continue;
+		}
+
+		if (left_to_read < (nand->erasesize - block_offset))
+			read_length = left_to_read;
+		else
+			read_length = nand->erasesize - block_offset;
+
+		rval = nand_read (nand, offset, &read_length, p_buffer);
+		if (rval && rval != -EUCLEAN) {
+			printf ("NAND read from offset %llx failed %d\n",
+				offset, rval);
+			*length -= left_to_read;
+			return rval;
+		}
+
+		left_to_read -= read_length;
+		offset       += read_length;
+		p_buffer     += read_length;
+	}
+	*offset_ret = offset;
+
+	return 0;
+}
