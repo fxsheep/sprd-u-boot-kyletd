@@ -48,15 +48,16 @@
 #define CHIP_ENDIAN_LITTLE
 #define SC8800S_LITTLE_ENDIAN FALSE
 #define _LITTLE_ENDIAN 1
-#define BB_DRAM_TYPE_256MB_32BIT
 #define EXT_MEM_TYPE_DDR 1
-#define  CONFIG_MTD_NAND_SPRD 1
 #endif
+
+#define BB_DRAM_TYPE_256MB_32BIT
+#define  CONFIG_MTD_NAND_SPRD 1
 
 #define CONFIG_SYS_HZ			1000
 #define CONFIG_SPRD_TIMER_CLK		1000 /*32768*/
 
-#define CONFIG_SYS_HUSH_PARSER
+//#define CONFIG_SYS_HUSH_PARSER
 
 #ifdef CONFIG_SYS_HUSH_PARSER
 #define CONFIG_SYS_PROMPT_HUSH_PS2 "> "
@@ -66,43 +67,6 @@
 
 #define WATCHDOG_LOAD_VALUE	0x4000
 #define CONFIG_SYS_STACK_SIZE	0x400
-
-/*system clock config, it should be in range hardware support */
-#define CONFIG_SYS_PLL_MHZ	328	
-/* F(AHB)= F(PLL)/AHB_DIV */
-#define CONFIG_SYS_AHB_DIV      4
-/* F(ARM) = F(PLL)/ARM_DIV */
-#define CONFIG_SYS_ARM_DIV	2
-/* F(EMC) = F(PLL)/EMC_DIV */
-#define CONFIG_SYS_EMC_DIV	2
-
-
-#ifdef CONFIG_NAND_SPL
-#define CONFIG_PRELOADER
-#endif
-
-#ifdef CONFIG_NAND_SPL
-#define CONFIG_SYS_SDRAM_BANK_CNT   2
-#define CONFIG_SYS_SDRAM_ROW_CNT    2
-#define CONFIG_SYS_SDRAM_COL_CNT  2
-#define CONFIG_SYS_SDRAM_DATA_WIDTH    32
-#define CONFIG_SYS_SDRAM_BURST_LENGTH   3
-#define CONFIG_SYS_SDRAM_CAS_LATENCY    3
-#define CONFIG_SYS_SDRAM_EXT_MODE   0xffffffff
-#define CONFIG_SYS_SDRAM_SIZE_M    64
-#define CONFIG_SYS_SDRAM_CLK_DELAY   0x2120
- 
-#define CONFIG_SYS_SDRAM_ROW_REFRESH_MAX 7800
-#define CONFIG_SYS_SDRAM_ROW_PRECHARGE_MIN  30
-#define CONFIG_SYS_SDRAM_ROW_CYCLE_MIN  69
-#define CONFIG_SYS_SDRAM_TRCD_MIN  30
-#define CONFIG_SYS_SDRAM_TWR_MIN  30
-#define CONFIG_SYS_SDRAM_TMRD_MIN  2
-#define CONFIG_SYS_SDRAM_TRFC_MIN  110
-#define CONFIG_SYS_SDRAM_TXSR_MIN  150
-#define CONFIG_SYS_SDRAM_TRAS_MIN  90
-#endif
-
 
 //#define	CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* 256 kB for U-Boot */
 
@@ -117,7 +81,9 @@
 #define CONFIG_SYS_NAND_U_BOOT_DST	0x00f00000
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_NAND_U_BOOT_DST
 
-#define CONFIG_SYS_SDRAM_BASE 0x00
+#define CONFIG_SYS_SDRAM_BASE 0x00000000
+#define CONFIG_SYS_INIT_SP_ADDR     \
+	(CONFIG_SYS_SDRAM_BASE + 0x4000)
 
 #define CONFIG_SYS_NAND_SPARE_SIZE	64
 #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
@@ -125,8 +91,12 @@
 #define CONFIG_SYS_NAND_SIZE		(128 * 1024 * 1024)
 #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0
 #else
+
+#define CONFIG_SYS_SDRAM_BASE 0x00000000
+#define CONFIG_SYS_INIT_SP_ADDR     \
+	(CONFIG_SYS_SDRAM_BASE + 0x1000 - GENERATED_GBL_DATA_SIZE)
+
 #define CONFIG_SKIP_LOWLEVEL_INIT
-#define CONFIG_SKIP_RELOCATE_UBOOT
 #endif
 
 #define CONFIG_SYS_NAND_PAGE_SIZE	2048
@@ -159,8 +129,6 @@
  */
 /* malloc() len */
 #define CONFIG_SYS_MALLOC_LEN		(1 << 20)	/* 1 MiB */
-/* reserved for initial data */
-#define CONFIG_SYS_GBL_DATA_SIZE	128
 /*
  * Board has 2 32MB banks of DRAM but there is a bug when using
  * both so only the first is configured
@@ -260,7 +228,7 @@
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #elif defined CONFIG_OPENPHONE
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),256k(params),256k(pt),10m(boot),10m(recovery),120m(system),60m(sps),10m(factory),2m(cache),256k(misc),20m(fota),20m(cp),-(userdata)"
-#define CONFIG_BOOTARGS "mem=256M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
+#define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #endif
 
 #define CONFIG_BOOTCOMMAND "cboot normal"

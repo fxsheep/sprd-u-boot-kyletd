@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 Freescale Semiconductor, Inc.
+ * Copyright 2009-2010 Freescale Semiconductor, Inc.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -30,33 +30,46 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#ifdef CONFIG_MK_P1011RDB
+#ifdef CONFIG_P1011RDB
 #define CONFIG_P1011
 #endif
-#ifdef CONFIG_MK_P1020RDB
+#ifdef CONFIG_P1020RDB
 #define CONFIG_P1020
 #endif
-#ifdef CONFIG_MK_P2010RDB
+#ifdef CONFIG_P2010RDB
 #define CONFIG_P2010
 #endif
-#ifdef CONFIG_MK_P2020RDB
+#ifdef CONFIG_P2020RDB
 #define CONFIG_P2020
 #endif
 
-#ifdef CONFIG_MK_NAND
+#ifdef CONFIG_NAND
 #define CONFIG_NAND_U_BOOT		1
 #define CONFIG_RAMBOOT_NAND		1
-#define CONFIG_RAMBOOT_TEXT_BASE	0xf8f82000
+#ifdef CONFIG_NAND_SPL
+#define CONFIG_SYS_TEXT_BASE_SPL 0xfff00000
+#define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_TEXT_BASE_SPL /* start of monitor */
+#else
+#define CONFIG_SYS_TEXT_BASE		0xf8f82000
+#endif /* CONFIG_NAND_SPL */
 #endif
 
-#ifdef CONFIG_MK_SDCARD
+#ifdef CONFIG_SDCARD
 #define CONFIG_RAMBOOT_SDCARD		1
-#define CONFIG_RAMBOOT_TEXT_BASE	0xf8f80000
+#define CONFIG_SYS_TEXT_BASE		0xf8f80000
 #endif
 
-#ifdef CONFIG_MK_SPIFLASH
+#ifdef CONFIG_SPIFLASH
 #define CONFIG_RAMBOOT_SPIFLASH		1
-#define CONFIG_RAMBOOT_TEXT_BASE	0xf8f80000
+#define CONFIG_SYS_TEXT_BASE		0xf8f80000
+#endif
+
+#ifndef CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_TEXT_BASE		0xeff80000
+#endif
+
+#ifndef CONFIG_SYS_MONITOR_BASE
+#define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_TEXT_BASE	/* start of monitor */
 #endif
 
 /* High Level Configuration Options */
@@ -74,6 +87,7 @@
 #define CONFIG_TSEC_ENET		/* tsec ethernet support */
 #define CONFIG_ENV_OVERWRITE
 
+#define CONFIG_E1000		1	/*  E1000 pci Ethernet card*/
 #ifndef __ASSEMBLY__
 extern unsigned long get_board_sys_clk(unsigned long dummy);
 #endif
@@ -83,6 +97,8 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #if defined(CONFIG_P2020) || defined(CONFIG_P1020)
 #define CONFIG_MP
 #endif
+
+#define CONFIG_HWCONFIG
 
 /*
  * These can be toggled for performance analysis, otherwise use default.
@@ -125,9 +141,6 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #else
 #define CONFIG_SYS_CCSRBAR_DEFAULT	0xff700000      /* CCSRBAR Default */
 #endif
-
-#define CONFIG_SYS_PCIE2_ADDR		(CONFIG_SYS_CCSRBAR+0x9000)
-#define CONFIG_SYS_PCIE1_ADDR		(CONFIG_SYS_CCSRBAR+0xa000)
 
 /* DDR Setup */
 #define CONFIG_FSL_DDR2
@@ -188,11 +201,10 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #define CONFIG_SYS_FLASH_ERASE_TOUT	60000	/* Flash Erase Timeout (ms) */
 #define CONFIG_SYS_FLASH_WRITE_TOUT	500	/* Flash Write Timeout (ms) */
 
-#define CONFIG_SYS_MONITOR_BASE	TEXT_BASE	/* start of monitor */
-
-#if defined(CONFIG_SYS_SPL) || defined(CONFIG_RAMBOOT_NAND) \
-	|| defined(CONFIG_RAMBOOT_SDCARD) || defined(CONFIG_RAMBOOT_SPIFLASH)
+#if defined(CONFIG_RAMBOOT_NAND) || defined(CONFIG_RAMBOOT_SDCARD) || \
+    defined(CONFIG_RAMBOOT_SPIFLASH)
 #define CONFIG_SYS_RAMBOOT
+#define CONFIG_SYS_EXTRA_ENV_RELOC
 #else
 #undef CONFIG_SYS_RAMBOOT
 #endif
@@ -207,11 +219,10 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 
 #define CONFIG_SYS_INIT_RAM_LOCK	1
 #define CONFIG_SYS_INIT_RAM_ADDR      0xffd00000	/* stack in RAM */
-#define CONFIG_SYS_INIT_RAM_END	0x00004000	/* End of used area in RAM */
+#define CONFIG_SYS_INIT_RAM_SIZE	0x00004000	/* Size of used area in RAM */
 
-#define CONFIG_SYS_GBL_DATA_SIZE	128	/* num bytes initial data */
-#define CONFIG_SYS_GBL_DATA_OFFSET	(CONFIG_SYS_INIT_RAM_END \
-						- CONFIG_SYS_GBL_DATA_SIZE)
+#define CONFIG_SYS_GBL_DATA_OFFSET	(CONFIG_SYS_INIT_RAM_SIZE \
+						- GENERATED_GBL_DATA_SIZE)
 #define CONFIG_SYS_INIT_SP_OFFSET	CONFIG_SYS_GBL_DATA_OFFSET
 
 #define CONFIG_SYS_MONITOR_LEN		(256 * 1024) /* Reserve 256 kB for Mon*/
@@ -281,7 +292,6 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
  * shorted - index 1
  */
 #define CONFIG_CONS_INDEX	1
-#undef	CONFIG_SERIAL_SOFTWARE_FIFO
 #define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
@@ -341,6 +351,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #define CONFIG_SYS_EEPROM_BUS_NUM	1
 
 #define CONFIG_RTC_DS1337
+#define CONFIG_SYS_RTC_DS1337_NOOSC
 #define CONFIG_SYS_I2C_RTC_ADDR                0x68
 /*
  * General PCI
@@ -426,14 +437,6 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 
 #define CONFIG_PHY_GIGE		1	/* Include GbE speed/duplex detection */
 
-/* TBI PHY configuration for SGMII mode */
-#define CONFIG_TSEC_TBICR_SETTINGS ( \
-		TBICR_PHY_RESET \
-		| TBICR_ANEG_ENABLE \
-		| TBICR_FULL_DUPLEX \
-		| TBICR_SPEED1_SET \
-		)
-
 #endif	/* CONFIG_TSEC_ENET */
 
 /*
@@ -475,6 +478,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_SETEXPR
+#define CONFIG_CMD_REGINFO
 
 #if defined(CONFIG_PCI)
 #define CONFIG_CMD_NET
@@ -517,6 +521,7 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
  */
 #define CONFIG_SYS_LONGHELP			/* undef to save memory	*/
 #define CONFIG_CMDLINE_EDITING			/* Command-line editing */
+#define CONFIG_AUTO_COMPLETE			/* add autocompletion support */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
 #define CONFIG_SYS_PROMPT	"=> "		/* Monitor Command Prompt */
 #if defined(CONFIG_CMD_KGDB)
@@ -536,14 +541,6 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
  * the maximum mapped by the Linux kernel during initialization.
  */
 #define CONFIG_SYS_BOOTMAPSZ	(16 << 20)/* Initial Memory map for Linux*/
-
-/*
- * Internal Definitions
- *
- * Boot Flags
- */
-#define BOOTFLAG_COLD	0x01		/* Normal Power-On: Boot from FLASH */
-#define BOOTFLAG_WARM	0x02		/* Software reboot */
 
 #if defined(CONFIG_CMD_KGDB)
 #define CONFIG_KGDB_BAUDRATE	230400	/* speed to run kgdb serial port */
@@ -578,11 +575,11 @@ extern unsigned long get_board_sys_clk(unsigned long dummy);
 	"uboot=" MK_STR(CONFIG_UBOOTPATH) "\0"				\
 	"loadaddr=1000000\0"			\
 	"tftpflash=tftpboot $loadaddr $uboot; "			\
-		"protect off " MK_STR(TEXT_BASE) " +$filesize; "	\
-		"erase " MK_STR(TEXT_BASE) " +$filesize; "		\
-		"cp.b $loadaddr " MK_STR(TEXT_BASE) " $filesize; "	\
-		"protect on " MK_STR(TEXT_BASE) " +$filesize; "		\
-		"cmp.b $loadaddr " MK_STR(TEXT_BASE) " $filesize\0"	\
+		"protect off " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "	\
+		"erase " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "		\
+		"cp.b $loadaddr " MK_STR(CONFIG_SYS_TEXT_BASE) " $filesize; "	\
+		"protect on " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "		\
+		"cmp.b $loadaddr " MK_STR(CONFIG_SYS_TEXT_BASE) " $filesize\0"	\
 	"consoledev=ttyS0\0"				\
 	"ramdiskaddr=2000000\0"			\
 	"ramdiskfile=rootfs.ext2.gz.uboot\0"		\

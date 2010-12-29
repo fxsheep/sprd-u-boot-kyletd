@@ -27,14 +27,12 @@
 #include <asm/arch/clk.h>
 #include <serial.h>
 
+DECLARE_GLOBAL_DATA_PTR;
+
 static inline struct s5p_uart *s5p_get_base_uart(int dev_index)
 {
 	u32 offset = dev_index * sizeof(struct s5p_uart);
-
-	if (cpu_is_s5pc100())
-		return (struct s5p_uart *)(S5PC100_UART_BASE + offset);
-	else
-		return (struct s5p_uart *)(S5PC110_UART_BASE + offset);
+	return (struct s5p_uart *)(samsung_get_base_uart() + offset);
 }
 
 /*
@@ -65,16 +63,19 @@ static const int udivslot[] = {
 
 void serial_setbrg_dev(const int dev_index)
 {
-	DECLARE_GLOBAL_DATA_PTR;
 	struct s5p_uart *const uart = s5p_get_base_uart(dev_index);
-	u32 pclk = get_pclk();
+	u32 uclk = get_uart_clk(dev_index);
 	u32 baudrate = gd->baudrate;
 	u32 val;
 
-	val = pclk / baudrate;
+	val = uclk / baudrate;
 
 	writel(val / 16 - 1, &uart->ubrdiv);
-	writew(udivslot[val % 16], &uart->udivslot);
+
+	if (use_divslot)
+		writew(udivslot[val % 16], &uart->rest.slot);
+	else
+		writeb(val % 16, &uart->rest.value);
 }
 
 /*
@@ -133,7 +134,7 @@ int serial_getc_dev(const int dev_index)
 			return 0;
 	}
 
-	return (int)(readl(&uart->urxh) & 0xff);
+	return (int)(readb(&uart->urxh) & 0xff);
 }
 
 /*
@@ -149,7 +150,7 @@ void serial_putc_dev(const char c, const int dev_index)
 			return;
 	}
 
-	writel(c, &uart->utxh);
+	writeb(c, &uart->utxh);
 
 	/* If \n, also do \r */
 	if (c == '\n')

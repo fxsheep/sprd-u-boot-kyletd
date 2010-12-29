@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Freescale Semiconductor, Inc.
+ * Copyright (C) 2006,2010 Freescale Semiconductor, Inc.
  * Dave Liu <daveliu@freescale.com>
  *
  * See file CREDITS for list of people who contributed to this
@@ -22,6 +22,7 @@
 #include <spd_sdram.h>
 #include <asm/mmu.h>
 #include <asm/io.h>
+#include <asm/fsl_enet.h>
 #if defined(CONFIG_OF_LIBFDT)
 #include <libfdt.h>
 #endif
@@ -280,7 +281,7 @@ int checkboard(void)
 static int sdram_init(unsigned int base)
 {
 	volatile immap_t *immap = (immap_t *) CONFIG_SYS_IMMR;
-	volatile fsl_lbus_t *lbc = &immap->lbus;
+	fsl_lbc_t *lbc = LBC_BASE_ADDR;
 	const int sdram_size = CONFIG_SYS_LBC_SDRAM_SIZE * 1024 * 1024;
 	int rem = base % sdram_size;
 	uint *sdram_addr;
@@ -293,8 +294,8 @@ static int sdram_init(unsigned int base)
 	/*
 	 * Setup SDRAM Base and Option Registers
 	 */
-	immap->lbus.bank[2].br = base | CONFIG_SYS_BR2;
-	immap->lbus.bank[2].or = CONFIG_SYS_OR2;
+	set_lbc_br(2, base | CONFIG_SYS_BR2);
+	set_lbc_or(2, CONFIG_SYS_OR2);
 	immap->sysconf.lblaw[2].bar = base;
 	immap->sysconf.lblaw[2].ar = CONFIG_SYS_LBLAWAR2;
 
@@ -396,10 +397,8 @@ void ft_board_setup(void *blob, bd_t *bd)
 				prop = fdt_getprop(blob, path,
 				                   "phy-connection-type", 0);
 				if (prop && (strcmp(prop, "rgmii-id") == 0))
-					fdt_setprop(blob, path,
-					            "phy-connection-type",
-					            "rgmii-rxid",
-					            sizeof("rgmii-rxid"));
+					fdt_fixup_phy_connection(blob, path,
+								RGMII_RXID);
 			}
 #endif
 #if defined(CONFIG_HAS_ETH1)
@@ -410,10 +409,8 @@ void ft_board_setup(void *blob, bd_t *bd)
 				prop = fdt_getprop(blob, path,
 				                   "phy-connection-type", 0);
 				if (prop && (strcmp(prop, "rgmii-id") == 0))
-					fdt_setprop(blob, path,
-					            "phy-connection-type",
-					            "rgmii-rxid",
-					            sizeof("rgmii-rxid"));
+					fdt_fixup_phy_connection(blob, path,
+								RGMII_RXID);
 			}
 #endif
 		}

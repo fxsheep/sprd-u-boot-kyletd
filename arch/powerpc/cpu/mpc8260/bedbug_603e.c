@@ -70,8 +70,7 @@ void bedbug603e_do_break (cmd_tbl_t *cmdtp, int flag, int argc,
   int		which_bp;       /* Breakpoint number    */
   /* -------------------------------------------------- */
 
-  if (argc < 2)
-  {
+  if (argc < 2) {
     cmd_usage(cmdtp);
     return;
   }
@@ -117,8 +116,7 @@ void bedbug603e_do_break (cmd_tbl_t *cmdtp, int flag, int argc,
 
   if(!(( isdigit( argv[ 1 ][ 0 ] )) ||
 	(( argv[ 1 ][ 0 ] >= 'a' ) && ( argv[ 1 ][ 0 ] <= 'f' )) ||
-	(( argv[ 1 ][ 0 ] >= 'A' ) && ( argv[ 1 ][ 0 ] <= 'F' ))))
-  {
+	(( argv[ 1 ][ 0 ] >= 'A' ) && ( argv[ 1 ][ 0 ] <= 'F' )))) {
     cmd_usage(cmdtp);
     return;
   }

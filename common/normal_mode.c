@@ -25,7 +25,7 @@ void normal_mode(void)
 	struct part_info *part;
 	u8 pnum;
 	int ret;
-	unsigned int size;
+	size_t size;
 	const char *cmdline;
 	loff_t off = 0;
 
@@ -34,10 +34,8 @@ void normal_mode(void)
 		printf("mtdparts init error %d\n", ret);
 		return;
 	}
+
 	ret = find_dev_and_part(BOOT_PART, &dev, &pnum, &part);
-#ifdef BOOT_DEBUG
-	printf("function: %s find part %s, pnum %d ret %d\n", __FUNCTION__, BOOT_PART, pnum, ret);
-#endif
 	if(ret){
 		printf("No partition named %s\n", BOOT_PART);
 		return;
@@ -61,9 +59,6 @@ void normal_mode(void)
 		return;
 	}
 
-#ifdef BOOT_DEBUG
-	printf("function: %s kernel addr 0x%08x size 0x%08x, ramdisk: addr 0x%08x size 0x%08x\n", __FUNCTION__, hdr->kernel_addr, hdr->kernel_size, hdr->ramdisk_addr, hdr->ramdisk_size);
-#endif
 	//read kernel image
 	size = (hdr->kernel_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
 	if(size <=0){
@@ -87,8 +82,8 @@ void normal_mode(void)
 		return;
 	}
 #ifdef BOOT_DEBUG
-	printf("kernel @0x08x (0x08x bytes)\n", hdr->kernel_addr, hdr->kernel_size);
-	printf("ramdisk @0x08x (0x08x bytes)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
+	printf("kernel @0x%08x (0x%08x bytes)\n", hdr->kernel_addr, hdr->kernel_size);
+	printf("ramdisk @0x%08x (0x%08x bytes)\n", hdr->ramdisk_addr, hdr->ramdisk_size);
 #endif
 	//set boot environment
 	if(hdr->cmdline[0]){

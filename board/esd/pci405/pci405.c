@@ -281,7 +281,6 @@ int misc_init_r (void)
 #define PCI0_BRDGOPT1 0x4a
 	pci_write_config_word(PCIDEVID_405GP, PCI0_BRDGOPT1, 0x3f20);
 
-#define PLB0_ACR      0x87
 	/*
 	 * Enable fairness and high bus utilization
 	 */
@@ -298,7 +297,7 @@ int misc_init_r (void)
 int checkboard (void)
 {
 	char str[64];
-	int i = getenv_r ("serial#", str, sizeof(str));
+	int i = getenv_f("serial#", str, sizeof(str));
 
 	puts ("Board: ");
 

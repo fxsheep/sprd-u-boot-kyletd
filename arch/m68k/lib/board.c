@@ -73,19 +73,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 static char *failed = "*** failed ***\n";
 
-#ifdef	CONFIG_PCU_E
-extern flash_info_t flash_info[];
-#endif
-
 #include <environment.h>
-
-#if ( ((CONFIG_ENV_ADDR+CONFIG_ENV_SIZE) < CONFIG_SYS_MONITOR_BASE) || \
-      (CONFIG_ENV_ADDR >= (CONFIG_SYS_MONITOR_BASE + CONFIG_SYS_MONITOR_LEN)) ) || \
-    defined(CONFIG_ENV_IS_IN_NVRAM)
-#define	TOTAL_MALLOC_LEN	(CONFIG_SYS_MALLOC_LEN + CONFIG_ENV_SIZE)
-#else
-#define	TOTAL_MALLOC_LEN	CONFIG_SYS_MALLOC_LEN
-#endif
 
 extern ulong __init_end;
 extern ulong _end;
@@ -134,7 +122,7 @@ typedef int (init_fnc_t) (void);
 static int init_baudrate (void)
 {
 	char tmp[64];	/* long enough for environment variables */
-	int i = getenv_r ("baudrate", tmp, sizeof (tmp));
+	int i = getenv_f("baudrate", tmp, sizeof (tmp));
 
 	gd->baudrate = (i > 0)
 			? (int) simple_strtoul (tmp, NULL, 10)
@@ -278,7 +266,7 @@ board_init_f (ulong bootflag)
 	/*
 	 * reserve protected RAM
 	 */
-	i = getenv_r ("pram", tmp, sizeof (tmp));
+	i = getenv_f("pram", tmp, sizeof (tmp));
 	reg = (i > 0) ? simple_strtoul (tmp, NULL, 10) : CONFIG_PRAM;
 	addr -= (reg << 10);		/* size is in kB */
 	debug ("Reserving %ldk for protected RAM at %08lx\n", reg, addr);
@@ -353,7 +341,7 @@ board_init_f (ulong bootflag)
 	bd->bi_memsize   = gd->ram_size;	/* size  of  DRAM memory in bytes */
 #ifdef CONFIG_SYS_INIT_RAM_ADDR
 	bd->bi_sramstart = CONFIG_SYS_INIT_RAM_ADDR;	/* start of  SRAM memory	*/
-	bd->bi_sramsize  = CONFIG_SYS_INIT_RAM_END;	/* size  of  SRAM memory	*/
+	bd->bi_sramsize  = CONFIG_SYS_INIT_RAM_SIZE;	/* size  of  SRAM memory	*/
 #endif
 	bd->bi_mbar_base = CONFIG_SYS_MBAR;		/* base of internal registers */
 
@@ -405,7 +393,6 @@ board_init_f (ulong bootflag)
  */
 void board_init_r (gd_t *id, ulong dest_addr)
 {
-	cmd_tbl_t *cmdtp;
 	char *s;
 	bd_t *bd;
 	extern void malloc_bin_reloc (void);
@@ -433,33 +420,14 @@ void board_init_r (gd_t *id, ulong dest_addr)
 
 	monitor_flash_len = (ulong)&__init_end - dest_addr;
 
+#if defined(CONFIG_NEEDS_MANUAL_RELOC)
 	/*
 	 * We have to relocate the command table manually
 	 */
-	for (cmdtp = &__u_boot_cmd_start; cmdtp !=  &__u_boot_cmd_end; cmdtp++) {
-		ulong addr;
-		addr = (ulong) (cmdtp->cmd) + gd->reloc_off;
-#if 0
-		printf ("Command \"%s\": 0x%08lx => 0x%08lx\n",
-				cmdtp->name, (ulong) (cmdtp->cmd), addr);
-#endif
-		cmdtp->cmd =
-			(int (*)(struct cmd_tbl_s *, int, int, char *[]))addr;
+	fixup_cmdtable(&__u_boot_cmd_start,
+		(ulong)(&__u_boot_cmd_end - &__u_boot_cmd_start));
+#endif /* defined(CONFIG_NEEDS_MANUAL_RELOC) */
 
-		addr = (ulong)(cmdtp->name) + gd->reloc_off;
-		cmdtp->name = (char *)addr;
-
-		if (cmdtp->usage) {
-			addr = (ulong)(cmdtp->usage) + gd->reloc_off;
-			cmdtp->usage = (char *)addr;
-		}
-#ifdef	CONFIG_SYS_LONGHELP
-		if (cmdtp->help) {
-			addr = (ulong)(cmdtp->help) + gd->reloc_off;
-			cmdtp->help = (char *)addr;
-		}
-#endif
-	}
 	/* there are some other pointer constants we must deal with */
 #ifndef CONFIG_ENV_IS_NOWHERE
 	env_name_spec += gd->reloc_off;
@@ -549,7 +517,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	 * Fill in missing fields of bd_info.
 	 * We do this here, where we have "normal" access to the
 	 * environment; we used to do this still running from ROM,
-	 * where had to use getenv_r(), which can be pretty slow when
+	 * where had to use getenv_f(), which can be pretty slow when
 	 * the environment is in EEPROM.
 	 */
 	bd->bi_ip_addr = getenv_IPaddr ("ipaddr");
@@ -595,10 +563,6 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	 * an irq handler gets installed
 	 */
 	timer_init();
-
-#ifdef CONFIG_SERIAL_SOFTWARE_FIFO
-	serial_buffered_init();
-#endif
 
 #ifdef CONFIG_STATUS_LED
 	status_led_set (STATUS_LED_BOOT, STATUS_LED_BLINKING);

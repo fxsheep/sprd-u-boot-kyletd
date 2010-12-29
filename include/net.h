@@ -117,7 +117,7 @@ extern void eth_try_another(int first_restart);	/* Change the device */
 extern void eth_set_current(void);		/* set nterface to ethcur var */
 #endif
 extern struct eth_device *eth_get_dev(void);	/* get the current device MAC */
-extern struct eth_device *eth_get_dev_by_name(char *devname); /* get device */
+extern struct eth_device *eth_get_dev_by_name(const char *devname);
 extern struct eth_device *eth_get_dev_by_index(int index); /* get dev @ index */
 extern int eth_get_dev_index (void);		/* get the device index */
 extern void eth_parse_enetaddr(const char *addr, uchar *enetaddr);
@@ -125,8 +125,10 @@ extern int eth_getenv_enetaddr(char *name, uchar *enetaddr);
 extern int eth_setenv_enetaddr(char *name, const uchar *enetaddr);
 extern int eth_getenv_enetaddr_by_index(int index, uchar *enetaddr);
 
+extern int usb_eth_initialize(bd_t *bi);
 extern int eth_init(bd_t *bis);			/* Initialize the device */
 extern int eth_send(volatile void *packet, int length);	   /* Send a packet */
+
 #ifdef CONFIG_API
 extern int eth_receive(volatile void *packet, int length); /* Receive a packet*/
 #endif
@@ -481,7 +483,18 @@ static inline int is_multicast_ether_addr(const u8 *addr)
 	return (0x01 & addr[0]);
 }
 
-/**
+/*
+ * is_broadcast_ether_addr - Determine if the Ethernet address is broadcast
+ * @addr: Pointer to a six-byte array containing the Ethernet address
+ *
+ * Return true if the address is the broadcast address.
+ */
+static inline int is_broadcast_ether_addr(const u8 *addr)
+{
+	return (addr[0] & addr[1] & addr[2] & addr[3] & addr[4] & addr[5]) == 0xff;
+}
+
+/*
  * is_valid_ether_addr - Determine if the given Ethernet address is valid
  * @addr: Pointer to a six-byte array containing the Ethernet address
  *
@@ -490,7 +503,7 @@ static inline int is_multicast_ether_addr(const u8 *addr)
  *
  * Return true if the address is valid.
  */
-static inline int is_valid_ether_addr(const u8 * addr)
+static inline int is_valid_ether_addr(const u8 *addr)
 {
 	/* FF:FF:FF:FF:FF:FF is a multicast address so we don't need to
 	 * explicitly check for it here. */

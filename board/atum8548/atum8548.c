@@ -47,7 +47,7 @@ int board_early_init_f (void)
 int checkboard (void)
 {
 	volatile ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
-	volatile ccsr_lbc_t *lbc = (void *)(CONFIG_SYS_MPC85xx_LBC_ADDR);
+	volatile fsl_lbc_t *lbc = LBC_BASE_ADDR;
 	volatile ccsr_local_ecm_t *ecm = (void *)(CONFIG_SYS_MPC85xx_ECM_ADDR);
 
 	if ((uint)&gur->porpllsr != 0xe00e0000) {
@@ -193,13 +193,13 @@ void pci_init_board(void)
 
 	if (io_sel & 1) {
 		if (!(gur->pordevsr & MPC85xx_PORDEVSR_SGMII1_DIS))
-			printf ("    eTSEC1 is in sgmii mode.\n");
+			printf("eTSEC1 is in sgmii mode.\n");
 		if (!(gur->pordevsr & MPC85xx_PORDEVSR_SGMII2_DIS))
-			printf ("    eTSEC2 is in sgmii mode.\n");
+			printf("eTSEC2 is in sgmii mode.\n");
 		if (!(gur->pordevsr & MPC85xx_PORDEVSR_SGMII3_DIS))
-			printf ("    eTSEC3 is in sgmii mode.\n");
+			printf("eTSEC3 is in sgmii mode.\n");
 		if (!(gur->pordevsr & MPC85xx_PORDEVSR_SGMII4_DIS))
-			printf ("    eTSEC4 is in sgmii mode.\n");
+			printf("eTSEC4 is in sgmii mode.\n");
 	}
 
 #ifdef CONFIG_PCIE1
@@ -218,14 +218,14 @@ void pci_init_board(void)
 
 		pcie1_hose.region_count = 1;
 #endif
-		printf ("    PCIE1 connected to Slot as %s (base addr %lx)\n",
+		printf ("PCIE1: connected to Slot as %s (base addr %lx)\n",
 				pcie_ep ? "Endpoint" : "Root Complex",
 				pci_info[num].regs);
 
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pcie1_hose, first_free_busno);
 	} else {
-		printf ("    PCIE1: disabled\n");
+		printf("PCIE1: disabled\n");
 	}
 
 	puts("\n");
@@ -242,7 +242,7 @@ void pci_init_board(void)
 	if (!(devdisr & MPC85xx_DEVDISR_PCI1)) {
 		SET_STD_PCI_INFO(pci_info[num], 1);
 		pci_agent = fsl_setup_hose(&pci1_hose, pci_info[num].regs);
-		printf ("\n    PCI1: %d bit, %s MHz, %s, %s, %s (base address %lx)\n",
+		printf("PCI1: %d bit, %s MHz, %s, %s, %s (base address %lx)\n",
 			(pci_32) ? 32 : 64,
 			(pci_speed == 33333000) ? "33" :
 			(pci_speed == 66666000) ? "66" : "unknown",
@@ -254,7 +254,7 @@ void pci_init_board(void)
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pci1_hose, first_free_busno);
 	} else {
-		printf ("    PCI: disabled\n");
+		printf("PCI1: disabled\n");
 	}
 
 	puts("\n");
@@ -267,11 +267,11 @@ void pci_init_board(void)
 		SET_STD_PCI_INFO(pci_info[num], 2);
 		pci_agent = fsl_setup_hose(&pci2_hose, pci_info[num].regs);
 
-		puts ("    PCI2\n");
+		puts("PCI2\n");
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pci1_hose, first_free_busno);
 	} else {
-		printf ("    PCI2: disabled\n");
+		printf("PCI2: disabled\n");
 	}
 	puts("\n");
 #else
@@ -292,14 +292,6 @@ void ft_board_setup(void *blob, bd_t *bd)
 {
 	ft_cpu_setup(blob, bd);
 
-#ifdef CONFIG_PCI1
-	ft_fsl_pci_setup(blob, "pci0", &pci1_hose);
-#endif
-#ifdef CONFIG_PCI2
-	ft_fsl_pci_setup(blob, "pci1", &pci2_hose);
-#endif
-#ifdef CONFIG_PCIE1
-	ft_fsl_pci_setup(blob, "pci2", &pcie1_hose);
-#endif
+	FT_FSL_PCI_SETUP;
 }
 #endif

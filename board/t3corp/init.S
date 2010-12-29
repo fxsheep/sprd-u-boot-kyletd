@@ -21,6 +21,7 @@
  * MA 02111-1307 USA
  */
 
+#include <asm-offsets.h>
 #include <ppc_asm.tmpl>
 #include <config.h>
 #include <asm/mmu.h>
@@ -81,11 +82,13 @@ tlbtab:
 	tlbentry(CONFIG_SYS_PCIE_BASE, SZ_16K, 0x08010000, 0xc, AC_RW | SA_IG)
 
 	/* TLB-entry for FPGA(s) */
-	tlbentry(CONFIG_SYS_FPGA1_BASE, SZ_1M, CONFIG_SYS_FPGA1_BASE, 4,
+	tlbentry(CONFIG_SYS_FPGA1_BASE, SZ_16M, CONFIG_SYS_FPGA1_BASE, 4,
 		 AC_RW | SA_IG)
-	tlbentry(CONFIG_SYS_FPGA2_BASE, SZ_1M, CONFIG_SYS_FPGA2_BASE, 4,
+	tlbentry(CONFIG_SYS_FPGA1_BASE + (16 << 20), SZ_16M,
+		 CONFIG_SYS_FPGA1_BASE + (16 << 20), 4, AC_RW | SA_IG)
+	tlbentry(CONFIG_SYS_FPGA2_BASE, SZ_16M, CONFIG_SYS_FPGA2_BASE, 4,
 		 AC_RW | SA_IG)
-	tlbentry(CONFIG_SYS_FPGA3_BASE, SZ_1M, CONFIG_SYS_FPGA3_BASE, 4,
+	tlbentry(CONFIG_SYS_FPGA3_BASE, SZ_16M, CONFIG_SYS_FPGA3_BASE, 4,
 		 AC_RW | SA_IG)
 
 	/* TLB-entry for OCM */

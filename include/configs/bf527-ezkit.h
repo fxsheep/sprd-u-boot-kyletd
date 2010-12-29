@@ -11,7 +11,6 @@
 /*
  * Processor Settings
  */
-#define CONFIG_BFIN_CPU             bf527-0.0
 #define CONFIG_BFIN_BOOT_MODE       BFIN_BOOT_PARA
 
 
@@ -138,8 +137,6 @@
  */
 #define CONFIG_BFIN_TWI_I2C	1
 #define CONFIG_HARD_I2C		1
-#define CONFIG_SYS_I2C_SPEED	50000
-#define CONFIG_SYS_I2C_SLAVE	0
 
 
 /*
@@ -157,7 +154,7 @@
 /*
  * Video Settings
  */
-#ifdef CONFIG_MK_BF527_EZKIT_REV_2_1
+#ifdef CONFIG_BF527_EZKIT_REV_2_1
 # define CONFIG_LQ035Q1_SPI_BUS	0
 # define CONFIG_LQ035Q1_SPI_CS	7
 #endif

@@ -24,8 +24,8 @@
 #include <common.h>
 #include "du405.h"
 #include <asm/processor.h>
-#include <ppc4xx.h>
-#include <4xx_i2c.h>
+#include <asm/ppc4xx.h>
+#include <asm/ppc4xx-i2c.h>
 #include <command.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -163,7 +163,7 @@ int checkboard (void)
 	int index;
 	int len;
 	char str[64];
-	int i = getenv_r ("serial#", str, sizeof (str));
+	int i = getenv_f("serial#", str, sizeof (str));
 
 	puts ("Board: ");
 

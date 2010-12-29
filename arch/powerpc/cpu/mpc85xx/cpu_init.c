@@ -32,16 +32,13 @@
 #include <ioports.h>
 #include <sata.h>
 #include <asm/io.h>
+#include <asm/cache.h>
 #include <asm/mmu.h>
 #include <asm/fsl_law.h>
 #include <asm/fsl_serdes.h>
 #include "mp.h"
 
 DECLARE_GLOBAL_DATA_PTR;
-
-#ifdef CONFIG_MPC8536
-extern void fsl_serdes_init(void);
-#endif
 
 #ifdef CONFIG_QE
 extern qe_iop_conf_t qe_iop_conf_tab[];
@@ -131,6 +128,44 @@ void config_8560_ioports (volatile ccsr_cpm_t * cpm)
 }
 #endif
 
+#ifdef CONFIG_SYS_FSL_CPC
+static void enable_cpc(void)
+{
+	int i;
+	u32 size = 0;
+
+	cpc_corenet_t *cpc = (cpc_corenet_t *)CONFIG_SYS_FSL_CPC_ADDR;
+
+	for (i = 0; i < CONFIG_SYS_NUM_CPC; i++, cpc++) {
+		u32 cpccfg0 = in_be32(&cpc->cpccfg0);
+		size += CPC_CFG0_SZ_K(cpccfg0);
+
+		out_be32(&cpc->cpccsr0, CPC_CSR0_CE | CPC_CSR0_PE);
+		/* Read back to sync write */
+		in_be32(&cpc->cpccsr0);
+
+	}
+
+	printf("Corenet Platform Cache: %d KB enabled\n", size);
+}
+
+void invalidate_cpc(void)
+{
+	int i;
+	cpc_corenet_t *cpc = (cpc_corenet_t *)CONFIG_SYS_FSL_CPC_ADDR;
+
+	for (i = 0; i < CONFIG_SYS_NUM_CPC; i++, cpc++) {
+		/* Flash invalidate the CPC and clear all the locks */
+		out_be32(&cpc->cpccsr0, CPC_CSR0_FI | CPC_CSR0_LFC);
+		while (in_be32(&cpc->cpccsr0) & (CPC_CSR0_FI | CPC_CSR0_LFC))
+			;
+	}
+}
+#else
+#define enable_cpc()
+#define invalidate_cpc()
+#endif /* CONFIG_SYS_FSL_CPC */
+
 /*
  * Breathe some life into the CPU...
  *
@@ -144,7 +179,7 @@ static void corenet_tb_init(void)
 	volatile ccsr_rcpm_t *rcpm =
 		(void *)(CONFIG_SYS_FSL_CORENET_RCPM_ADDR);
 	volatile ccsr_pic_t *pic =
-		(void *)(CONFIG_SYS_MPC85xx_PIC_ADDR);
+		(void *)(CONFIG_SYS_MPC8xxx_PIC_ADDR);
 	u32 whoami = in_be32(&pic->whoami);
 
 	/* Enable the timebase register for this core */
@@ -154,7 +189,6 @@ static void corenet_tb_init(void)
 
 void cpu_init_f (void)
 {
-	volatile ccsr_lbc_t *memctl = (void *)(CONFIG_SYS_MPC85xx_LBC_ADDR);
 	extern void m8560_cpm_reset (void);
 #ifdef CONFIG_MPC8548
 	ccsr_local_ecm_t *ecm = (void *)(CONFIG_SYS_MPC85xx_ECM_ADDR);
@@ -177,60 +211,7 @@ void cpu_init_f (void)
 	config_8560_ioports((ccsr_cpm_t *)CONFIG_SYS_MPC85xx_CPM_ADDR);
 #endif
 
-	/* Map banks 0 and 1 to the FLASH banks 0 and 1 at preliminary
-	 * addresses - these have to be modified later when FLASH size
-	 * has been determined
-	 */
-#if defined(CONFIG_SYS_OR0_REMAP)
-	out_be32(&memctl->or0, CONFIG_SYS_OR0_REMAP);
-#endif
-#if defined(CONFIG_SYS_OR1_REMAP)
-	out_be32(&memctl->or1, CONFIG_SYS_OR1_REMAP);
-#endif
-
-	/* now restrict to preliminary range */
-	/* if cs1 is already set via debugger, leave cs0/cs1 alone */
-	if (! memctl->br1 & 1) {
-#if defined(CONFIG_SYS_BR0_PRELIM) && defined(CONFIG_SYS_OR0_PRELIM)
-		out_be32(&memctl->br0, CONFIG_SYS_BR0_PRELIM);
-		out_be32(&memctl->or0, CONFIG_SYS_OR0_PRELIM);
-#endif
-
-#if defined(CONFIG_SYS_BR1_PRELIM) && defined(CONFIG_SYS_OR1_PRELIM)
-		out_be32(&memctl->or1, CONFIG_SYS_OR1_PRELIM);
-		out_be32(&memctl->br1, CONFIG_SYS_BR1_PRELIM);
-#endif
-	}
-
-#if defined(CONFIG_SYS_BR2_PRELIM) && defined(CONFIG_SYS_OR2_PRELIM)
-	out_be32(&memctl->or2, CONFIG_SYS_OR2_PRELIM);
-	out_be32(&memctl->br2, CONFIG_SYS_BR2_PRELIM);
-#endif
-
-#if defined(CONFIG_SYS_BR3_PRELIM) && defined(CONFIG_SYS_OR3_PRELIM)
-	out_be32(&memctl->or3, CONFIG_SYS_OR3_PRELIM);
-	out_be32(&memctl->br3, CONFIG_SYS_BR3_PRELIM);
-#endif
-
-#if defined(CONFIG_SYS_BR4_PRELIM) && defined(CONFIG_SYS_OR4_PRELIM)
-	out_be32(&memctl->or4, CONFIG_SYS_OR4_PRELIM);
-	out_be32(&memctl->br4, CONFIG_SYS_BR4_PRELIM);
-#endif
-
-#if defined(CONFIG_SYS_BR5_PRELIM) && defined(CONFIG_SYS_OR5_PRELIM)
-	out_be32(&memctl->or5, CONFIG_SYS_OR5_PRELIM);
-	out_be32(&memctl->br5, CONFIG_SYS_BR5_PRELIM);
-#endif
-
-#if defined(CONFIG_SYS_BR6_PRELIM) && defined(CONFIG_SYS_OR6_PRELIM)
-	out_be32(&memctl->or6, CONFIG_SYS_OR6_PRELIM);
-	out_be32(&memctl->br6, CONFIG_SYS_BR6_PRELIM);
-#endif
-
-#if defined(CONFIG_SYS_BR7_PRELIM) && defined(CONFIG_SYS_OR7_PRELIM)
-	out_be32(&memctl->or7, CONFIG_SYS_OR7_PRELIM);
-	out_be32(&memctl->br7, CONFIG_SYS_BR7_PRELIM);
-#endif
+       init_early_memctl_regs();
 
 #if defined(CONFIG_CPM2)
 	m8560_cpm_reset();
@@ -239,9 +220,6 @@ void cpu_init_f (void)
 	/* Config QE ioports */
 	config_qe_ioports();
 #endif
-#if defined(CONFIG_MPC8536)
-	fsl_serdes_init();
-#endif
 #if defined(CONFIG_FSL_DMA)
 	dma_init();
 #endif
@@ -249,6 +227,9 @@ void cpu_init_f (void)
 	corenet_tb_init();
 #endif
 	init_used_tlb_cams();
+
+	/* Invalidate the CPC before DDR gets enabled */
+	invalidate_cpc();
 }
 
 
@@ -259,11 +240,16 @@ void cpu_init_f (void)
  * use the same bit-encoding as the older 8555, etc, parts.
  *
  */
-
 int cpu_init_r(void)
 {
 #ifdef CONFIG_SYS_LBC_LCRR
-	volatile ccsr_lbc_t *lbc = (void *)(CONFIG_SYS_MPC85xx_LBC_ADDR);
+	volatile fsl_lbc_t *lbc = LBC_BASE_ADDR;
+#endif
+
+#if defined(CONFIG_SYS_P4080_ERRATUM_CPU22)
+	flush_dcache();
+	mtspr(L1CSR2, (mfspr(L1CSR2) | L1CSR2_DCWS));
+	sync();
 #endif
 
 	puts ("L2:    ");
@@ -341,7 +327,7 @@ int cpu_init_r(void)
 	if (l2cache->l2ctl & MPC85xx_L2CTL_L2E) {
 		puts("already enabled");
 		l2srbar = l2cache->l2srbar0;
-#ifdef CONFIG_SYS_INIT_L2_ADDR
+#if defined(CONFIG_SYS_INIT_L2_ADDR) && defined(CONFIG_SYS_FLASH_BASE)
 		if (l2cache->l2ctl & MPC85xx_L2CTL_L2SRAM_ENTIRE
 				&& l2srbar >= CONFIG_SYS_FLASH_BASE) {
 			l2srbar = CONFIG_SYS_INIT_L2_ADDR;
@@ -380,10 +366,18 @@ int cpu_init_r(void)
 #else
 	puts("disabled\n");
 #endif
+
+	enable_cpc();
+
 #ifdef CONFIG_QE
 	uint qe_base = CONFIG_SYS_IMMR + 0x00080000; /* QE immr base */
 	qe_init(qe_base);
 	qe_reset();
+#endif
+
+#if defined(CONFIG_SYS_HAS_SERDES)
+	/* needs to be in ram since code uses global static vars */
+	fsl_serdes_init();
 #endif
 
 #if defined(CONFIG_MP)

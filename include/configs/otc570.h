@@ -35,6 +35,7 @@
 #define CONFIG_OTC570			1	/* Board is esd OTC570 */
 #define CONFIG_ARM926EJS		1	/* This is an ARM926EJS Core */
 #define CONFIG_AT91SAM9263		1	/* It's an AT91SAM9263 SoC */
+#define CONFIG_SYS_AT91_MAIN_CLOCK	16000000/* 16.0 MHz crystal */
 #define CONFIG_SYS_HZ			1000	/* decrementer freq */
 #define CONFIG_DISPLAY_BOARDINFO	1
 #define CONFIG_DISPLAY_CPUINFO		1	/* display cpu info and speed */
@@ -47,7 +48,6 @@
 #undef CONFIG_USE_IRQ				/* don't need IRQ/FIQ stuff */
 
 #define CONFIG_SKIP_LOWLEVEL_INIT
-#define CONFIG_SKIP_RELOCATE_UBOOT
 #define CONFIG_MISC_INIT_R		1	/* Call misc_init_r */
 
 #define CONFIG_ARCH_CPU_INIT
@@ -234,7 +234,6 @@
  */
 #define CONFIG_SYS_MALLOC_LEN		ROUND(3 * CONFIG_ENV_SIZE + \
 					128*1024, 0x1000)
-#define CONFIG_SYS_GBL_DATA_SIZE	128	/* 128 bytes for initial data */
 
 #define CONFIG_STACKSIZE		(32 * 1024)	/* regular stack */
 

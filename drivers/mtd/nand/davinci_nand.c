@@ -481,10 +481,24 @@ static int nand_davinci_4bit_correct_data(struct mtd_info *mtd, uint8_t *dat,
 	 * Set the addr_calc_st bit(bit no 13) in the NAND Flash Control
 	 * register to 1.
 	 */
-	__raw_writel(1 << 13, &davinci_emif_regs->nandfcr);
+	__raw_writel(DAVINCI_NANDFCR_4BIT_CALC_START,
+			&davinci_emif_regs->nandfcr);
 
 	/*
-	 * Wait for the corr_state field (bits 8 to 11)in the
+	 * Wait for the corr_state field (bits 8 to 11) in the
+	 * NAND Flash Status register to be not equal to 0x0, 0x1, 0x2, or 0x3.
+	 * Otherwise ECC calculation has not even begun and the next loop might
+	 * fail because of a false positive!
+	 */
+	i = NAND_TIMEOUT;
+	do {
+		val = __raw_readl(&davinci_emif_regs->nandfsr);
+		val &= 0xc00;
+		i--;
+	} while ((i > 0) && !val);
+
+	/*
+	 * Wait for the corr_state field (bits 8 to 11) in the
 	 * NAND Flash Status register to be equal to 0x0, 0x1, 0x2, or 0x3.
 	 */
 	i = NAND_TIMEOUT;

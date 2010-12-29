@@ -35,6 +35,7 @@ typedef volatile unsigned short vu_short;
 typedef volatile unsigned char	vu_char;
 
 #include <config.h>
+#include <asm-offsets.h>
 #include <linux/bitops.h>
 #include <linux/types.h>
 #include <linux/string.h>
@@ -96,7 +97,7 @@ typedef volatile unsigned char	vu_char;
 #include <asm/immap_83xx.h>
 #endif
 #ifdef	CONFIG_4xx
-#include <ppc4xx.h>
+#include <asm/ppc4xx.h>
 #endif
 #ifdef CONFIG_HYMOD
 #include <board/hymod/hymod.h>
@@ -189,6 +190,15 @@ typedef void (interrupt_handler_t)(void *);
 #define MIN(x, y)  min(x, y)
 #define MAX(x, y)  max(x, y)
 
+#if defined(CONFIG_ENV_IS_EMBEDDED)
+#define TOTAL_MALLOC_LEN	CONFIG_SYS_MALLOC_LEN
+#elif ( ((CONFIG_ENV_ADDR+CONFIG_ENV_SIZE) < CONFIG_SYS_MONITOR_BASE) || \
+	(CONFIG_ENV_ADDR >= (CONFIG_SYS_MONITOR_BASE + CONFIG_SYS_MONITOR_LEN)) ) || \
+      defined(CONFIG_ENV_IS_IN_NVRAM)
+#define	TOTAL_MALLOC_LEN	(CONFIG_SYS_MALLOC_LEN + CONFIG_ENV_SIZE)
+#else
+#define	TOTAL_MALLOC_LEN	CONFIG_SYS_MALLOC_LEN
+#endif
 
 /**
  * container_of - cast a member of a structure out to the containing structure
@@ -204,14 +214,6 @@ typedef void (interrupt_handler_t)(void *);
 /*
  * Function Prototypes
  */
-
-#ifdef CONFIG_SERIAL_SOFTWARE_FIFO
-void	serial_buffered_init (void);
-void	serial_buffered_putc (const char);
-void	serial_buffered_puts (const char *);
-int	serial_buffered_getc (void);
-int	serial_buffered_tstc (void);
-#endif /* CONFIG_SERIAL_SOFTWARE_FIFO */
 
 void	hang		(void) __attribute__ ((noreturn));
 
@@ -256,15 +258,12 @@ int	env_init     (void);
 void	env_relocate (void);
 int	envmatch     (uchar *, int);
 char	*getenv	     (char *);
-int	getenv_r     (char *name, char *buf, unsigned len);
+int	getenv_f     (char *name, char *buf, unsigned len);
 int	saveenv	     (void);
 #ifdef CONFIG_PPC		/* ARM version to be fixed! */
 int inline setenv   (char *, char *);
 #else
 int	setenv	     (char *, char *);
-#ifdef CONFIG_HAS_UID
-void	forceenv     (char *, char *);
-#endif
 #endif /* CONFIG_PPC */
 #ifdef CONFIG_ARM
 # include <asm/mach-types.h>
@@ -529,6 +528,7 @@ ulong get_PERCLK2(void);
 ulong get_PERCLK3(void);
 #endif
 ulong	get_bus_freq  (ulong);
+int get_serial_clock(void);
 
 #if defined(CONFIG_MPC85xx)
 typedef MPC85xx_SYS_INFO sys_info_t;
@@ -585,8 +585,6 @@ uint	dpram_base(void);
 uint	dpram_base_align(uint align);
 uint	dpram_alloc(uint size);
 uint	dpram_alloc_align(uint size,uint align);
-void	post_word_store (ulong);
-ulong	post_word_load (void);
 void	bootcount_store (ulong);
 ulong	bootcount_load (void);
 #define BOOTCOUNT_MAGIC		0xB001C041
@@ -630,6 +628,10 @@ static inline IPaddr_t getenv_IPaddr (char *var)
 {
 	return (string_to_ip(getenv(var)));
 }
+
+/* lib/qsort.c */
+void qsort(void *base, size_t nmemb, size_t size,
+	   int(*compar)(const void *, const void *));
 
 /* lib/time.c */
 void	udelay        (unsigned long);
@@ -727,6 +729,9 @@ int cpu_release(int nr, int argc, char * const argv[]);
 
 #ifdef CONFIG_POST
 #define CONFIG_HAS_POST
+#ifndef CONFIG_POST_ALT_LIST
+#define CONFIG_POST_STD_LIST
+#endif
 #endif
 
 #ifdef CONFIG_INIT_CRITICAL

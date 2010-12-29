@@ -76,7 +76,7 @@ void musb_start(void)
  * epinfo	- Pointer to EP configuration table
  * cnt		- Number of entries in the EP conf table.
  */
-void musb_configure_ep(struct musb_epinfo *epinfo, u8 cnt)
+void musb_configure_ep(const struct musb_epinfo *epinfo, u8 cnt)
 {
 	u16 csr;
 	u16 fifoaddr = 64; /* First 64 bytes of FIFO reserved for EP0 */
@@ -142,6 +142,11 @@ void write_fifo(u8 ep, u32 length, void *fifo_data)
 }
 
 /*
+ * AM35x supports only 32bit read operations so
+ * use seperate read_fifo() function for it.
+ */
+#ifndef CONFIG_USB_AM35X
+/*
  * This function reads data from endpoint fifo
  *
  * ep           - endpoint number
@@ -160,3 +165,4 @@ void read_fifo(u8 ep, u32 length, void *fifo_data)
 	while (length--)
 		*data++ = readb(&musbr->fifox[ep]);
 }
+#endif /* CONFIG_USB_AM35X */

@@ -26,8 +26,8 @@ include $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/config.mk
 gcclibdir := $(shell dirname `$(CC) -print-libgcc-file-name`)
 
 LDSCRIPT= $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/u-boot.lds
-FDL1_LDFLAGS	= -Bstatic -T $(fdl1_obj)u-boot.lds $(PLATFORM_LDFLAGS)
-FDL2_LDFLAGS	= -Bstatic -T $(fdl2_obj)u-boot.lds $(PLATFORM_LDFLAGS)
+FDL1_LDFLAGS	= -Bstatic -T $(LDSCRIPT) $(PLATFORM_LDFLAGS)
+FDL2_LDFLAGS	= -Bstatic -T $(LDSCRIPT) $(PLATFORM_LDFLAGS)
 AFLAGS	+= -I $(TOPDIR)/include/asm/arch
 CFLAGS	+= -I $(TOPDIR)/include/asm/arch
 
@@ -38,7 +38,7 @@ COM_PATH = $(TOPDIR)/nand_fdl/common
 FDL2_SOBJS_LIST = init.o
 FDL1_SOBJS_LIST = init.o
 
-COM_COBJS	= dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o mcu_command.o usb_boot.o drv_usb.o virtual_com.o 
+COM_COBJS	= dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o mcu_command.o usb_boot.o drv_usb.o virtual_com.o
 COM_OBJS = $(addprefix $(COM_PATH)/src/,$(COM_COBJS))
 
 FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o
@@ -50,15 +50,16 @@ FDL2_COBJS = $(addprefix $(FDL2_PATH)/src/,$(FDL2_COBJS_LIST))
 FDL2_SOBJS = $(addprefix $(FDL2_PATH)/src/,$(FDL2_SOBJS_LIST))
 FDL2_OBJS = $(FDL2_COBJS) $(FDL2_SOBJS)
 
-MTD_LIB = $(TOPDIR)/drivers/mtd/libmtd.a 
+MTD_LIB = $(TOPDIR)/drivers/mtd/libmtd.o 
 #ARM_LIB = $(TOPDIR)/arch/arm/lib/libarm.a
-NAND_LIB = $(TOPDIR)/drivers/mtd/nand/libnand.a
-COMMON_LIB = $(TOPDIR)/common/dlmalloc.o 
+NAND_LIB = $(TOPDIR)/drivers/mtd/nand/libnand.o
+COMMON_LIB = $(TOPDIR)/common/dlmalloc.o
 DRIVERS_LIB = $(TOPDIR)/drivers/serial/serial_sc8800x.o
+ARCH_LIB = 
 CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_cfg.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/boot_mode.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_hal.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/adi_phy_v3.o
 
-GENERIC_LIB = $(TOPDIR)/lib/libgeneric.a
-UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB)
+GENERIC_LIB = $(TOPDIR)/lib/libgeneric.o
+UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB) $(ARCH_LIB)
 
 #ALL_UBOOT_LIBS = $(addprefix $(obj),$(__LIBS))
 #UBOOT_LIBS = $(ALL_UBOOT_LIBS)
@@ -98,8 +99,6 @@ $(fdlobj)fdl2: $(FDL2_OBJS) $(COM_OBJS) $(UBOOT_LIBS) $(fdl2_obj)u-boot.lds
 		-Map $(fdlobj)fdl2.map \
 		-o $@ $(PLATFORM_LIBS)
 #-L$(gcclibdir) -lgcc 
-$(fdl1_obj)u-boot.lds $(fdl2_obj)u-boot.lds: $(LDSCRIPT)
-	$(CPP) $(CPPFLAGS) $(LDPPFLAGS) -ansi -D__ASSEMBLY__ -P - <$^ >$@
 
 .PHONY:test
 test:

@@ -101,6 +101,28 @@ static inline void serial_putc(char c)
 		continue;
 }
 
+__attribute__((always_inline)) static inline void
+program_nmi_handler(void)
+{
+	u32 tmp1, tmp2;
+
+	/* Older bootroms don't create a dummy NMI handler,
+	 * so make one ourselves ASAP in case it fires.
+	 */
+	if (CONFIG_BFIN_BOOT_MODE != BFIN_BOOT_BYPASS && !ANOMALY_05000219)
+		return;
+
+	asm volatile (
+		"%0 = RETS;" /* Save current RETS */
+		"CALL 1f;"   /* Figure out current PC */
+		"RTN;"       /* The simple NMI handler */
+		"1:"
+		"%1 = RETS;" /* Load addr of NMI handler */
+		"RETS = %0;" /* Restore RETS */
+		"[%2] = %1;" /* Write NMI handler */
+		: "=r"(tmp1), "=r"(tmp2) : "ab"(EVT2)
+	);
+}
 
 /* Max SCLK can be 133MHz ... dividing that by (2*4) gives
  * us a freq of 16MHz for SPI which should generally be
@@ -369,7 +391,9 @@ program_clocks(ADI_BOOT_DATA *bs, bool put_into_srfs)
 
 		/* Always programming PLL_LOCKCNT avoids Anomaly 05000430 */
 		ADI_SYSCTRL_VALUES memory_settings;
-		uint32_t actions = SYSCTRL_WRITE | SYSCTRL_PLLCTL | SYSCTRL_PLLDIV | SYSCTRL_LOCKCNT;
+		uint32_t actions = SYSCTRL_WRITE | SYSCTRL_PLLCTL | SYSCTRL_LOCKCNT;
+		if (!ANOMALY_05000440)
+			actions |= SYSCTRL_PLLDIV;
 		if (CONFIG_HAS_VR) {
 			actions |= SYSCTRL_VRCTL;
 			if (CONFIG_VR_CTL_VAL & FREQ_MASK)
@@ -388,6 +412,8 @@ program_clocks(ADI_BOOT_DATA *bs, bool put_into_srfs)
 		serial_putc('e');
 		bfrom_SysControl(actions, &memory_settings, NULL);
 		serial_putc('f');
+		if (ANOMALY_05000440)
+			bfin_write_PLL_DIV(CONFIG_PLL_DIV_VAL);
 #if ANOMALY_05000432
 		bfin_write_SIC_IWR1(-1);
 #endif
@@ -640,6 +666,9 @@ void initcode(ADI_BOOT_DATA *bs)
 {
 	ADI_BOOT_DATA bootstruct_scratch;
 
+	/* Setup NMI handler before anything else */
+	program_nmi_handler();
+
 	serial_init();
 
 	serial_putc('A');
@@ -675,7 +704,12 @@ void initcode(ADI_BOOT_DATA *bs)
 
 #ifdef CONFIG_BFIN_BOOTROM_USES_EVT1
 	serial_putc('I');
-	/* tell the bootrom where our entry point is */
+	/* Tell the bootrom where our entry point is so that it knows
+	 * where to jump to when finishing processing the LDR.  This
+	 * allows us to avoid small jump blocks in the LDR, and also
+	 * works around anomaly 05000389 (init address in external
+	 * memory causes bootrom to trigger external addressing IVHW).
+	 */
 	if (CONFIG_BFIN_BOOT_MODE != BFIN_BOOT_BYPASS)
 		bfin_write_EVT1(CONFIG_SYS_MONITOR_BASE);
 #endif

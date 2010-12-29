@@ -23,9 +23,7 @@
 
 include $(TOPDIR)/config.mk
 
-LIB	= $(obj)libcommon.a
-
-AOBJS	=
+LIB	= $(obj)libcommon.o
 
 # core
 COBJS-y += main.o
@@ -60,12 +58,13 @@ COBJS-y += android_boot.o
 COBJS-y += env_common.o
 COBJS-$(CONFIG_ENV_IS_IN_DATAFLASH) += env_dataflash.o
 COBJS-$(CONFIG_ENV_IS_IN_EEPROM) += env_eeprom.o
-COBJS-$(CONFIG_ENV_IS_EMBEDDED) += env_embedded.o
+XCOBJS-$(CONFIG_ENV_IS_EMBEDDED) += env_embedded.o
 COBJS-$(CONFIG_ENV_IS_IN_EEPROM) += env_embedded.o
-COBJS-$(CONFIG_ENV_IS_IN_FLASH) += env_embedded.o
+XCOBJS-$(CONFIG_ENV_IS_IN_FLASH) += env_embedded.o
 COBJS-$(CONFIG_ENV_IS_IN_NVRAM) += env_embedded.o
 COBJS-$(CONFIG_ENV_IS_IN_FLASH) += env_flash.o
 COBJS-$(CONFIG_ENV_IS_IN_MG_DISK) += env_mgdisk.o
+COBJS-$(CONFIG_ENV_IS_IN_MMC) += env_mmc.o
 COBJS-$(CONFIG_ENV_IS_IN_NAND) += env_nand.o
 COBJS-$(CONFIG_ENV_IS_IN_NVRAM) += env_nvram.o
 COBJS-$(CONFIG_ENV_IS_IN_ONENAND) += env_onenand.o
@@ -176,15 +175,17 @@ COBJS-$(CONFIG_USB_KEYBOARD) += usb_kbd.o
 
 
 COBJS	:= $(sort $(COBJS-y))
-SRCS	:= $(AOBJS:.o=.S) $(COBJS:.o=.c)
-OBJS	:= $(addprefix $(obj),$(AOBJS) $(COBJS))
+XCOBJS	:= $(sort $(XCOBJS-y))
+SRCS	:= $(COBJS:.o=.c) $(XCOBJS:.o=.c)
+OBJS	:= $(addprefix $(obj),$(COBJS))
+XOBJS	:= $(addprefix $(obj),$(XCOBJS))
 
 CPPFLAGS += -I..
 
-all:	$(LIB) $(AOBJS)
+all:	$(LIB) $(XOBJS)
 
 $(LIB): $(obj).depend $(OBJS)
-	$(AR) $(ARFLAGS) $@ $(OBJS)
+	$(call cmd_link_o_target, $(OBJS))
 
 $(obj)env_embedded.o: $(src)env_embedded.c $(obj)../tools/envcrc
 	$(CC) $(AFLAGS) -Wa,--no-warn \

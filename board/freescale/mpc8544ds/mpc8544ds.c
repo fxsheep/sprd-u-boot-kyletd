@@ -1,5 +1,5 @@
 /*
- * Copyright 2007,2009 Freescale Semiconductor, Inc.
+ * Copyright 2007,2009-2010 Freescale Semiconductor, Inc.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -40,7 +40,7 @@
 int checkboard (void)
 {
 	volatile ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
-	volatile ccsr_lbc_t *lbc = (void *)(CONFIG_SYS_MPC85xx_LBC_ADDR);
+	volatile fsl_lbc_t *lbc = LBC_BASE_ADDR;
 	volatile ccsr_local_ecm_t *ecm = (void *)(CONFIG_SYS_MPC85xx_ECM_ADDR);
 	u8 vboot;
 	u8 *pixis_base = (u8 *)PIXIS_BASE;
@@ -120,9 +120,9 @@ void pci_init_board(void)
 
 	if (io_sel & 1) {
 		if (!(gur->pordevsr & MPC85xx_PORDEVSR_SGMII1_DIS))
-			printf ("    eTSEC1 is in sgmii mode.\n");
+			printf("eTSEC1 is in sgmii mode.\n");
 		if (!(gur->pordevsr & MPC85xx_PORDEVSR_SGMII3_DIS))
-			printf ("    eTSEC3 is in sgmii mode.\n");
+			printf("eTSEC3 is in sgmii mode.\n");
 	}
 	puts("\n");
 
@@ -142,9 +142,9 @@ void pci_init_board(void)
 
 		pcie3_hose.region_count = 1;
 #endif
-		printf ("    PCIE3 connected to ULI as %s (base addr %lx)\n",
-				pcie_ep ? "Endpoint" : "Root Complex",
-				pci_info[num].regs);
+		printf("PCIE3: connected to ULI as %s (base addr %lx)\n",
+			pcie_ep ? "Endpoint" : "Root Complex",
+			pci_info[num].regs);
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pcie3_hose, first_free_busno);
 
@@ -154,7 +154,7 @@ void pci_init_board(void)
 		 */
 		in_be32((u32 *)CONFIG_SYS_PCIE3_MEM_BUS);
 	} else {
-		printf ("    PCIE3: disabled\n");
+		printf("PCIE3: disabled\n");
 	}
 	puts("\n");
 #else
@@ -177,14 +177,14 @@ void pci_init_board(void)
 
 		pcie1_hose.region_count = 1;
 #endif
-		printf ("    PCIE1 connected to Slot 2 as %s (base addr %lx)\n",
+		printf("PCIE1: connected to Slot 2 as %s (base addr %lx)\n",
 				pcie_ep ? "Endpoint" : "Root Complex",
 				pci_info[num].regs);
 
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pcie1_hose, first_free_busno);
 	} else {
-		printf ("    PCIE1: disabled\n");
+		printf("PCIE1: disabled\n");
 	}
 
 	puts("\n");
@@ -208,13 +208,13 @@ void pci_init_board(void)
 
 		pcie2_hose.region_count = 1;
 #endif
-		printf ("    PCIE2 connected to Slot 1 as %s (base addr %lx)\n",
-				pcie_ep ? "Endpoint" : "Root Complex",
-				pci_info[num].regs);
+		printf("PCIE2: connected to Slot 1 as %s (base addr %lx)\n",
+			pcie_ep ? "Endpoint" : "Root Complex",
+			pci_info[num].regs);
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pcie2_hose, first_free_busno);
 	} else {
-		printf ("    PCIE2: disabled\n");
+		printf("PCIE2: disabled\n");
 	}
 
 	puts("\n");
@@ -231,7 +231,7 @@ void pci_init_board(void)
 	if (!(devdisr & MPC85xx_DEVDISR_PCI1)) {
 		SET_STD_PCI_INFO(pci_info[num], 1);
 		pci_agent = fsl_setup_hose(&pci1_hose, pci_info[num].regs);
-		printf ("\n    PCI: %d bit, %s MHz, %s, %s, %s (base address %lx)\n",
+		printf("PCI: %d bit, %s MHz, %s, %s, %s (base address %lx)\n",
 			(pci_32) ? 32 : 64,
 			(pci_speed == 33333000) ? "33" :
 			(pci_speed == 66666000) ? "66" : "unknown",
@@ -243,7 +243,7 @@ void pci_init_board(void)
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pci1_hose, first_free_busno);
 	} else {
-		printf ("    PCI: disabled\n");
+		printf("PCI: disabled\n");
 	}
 
 	puts("\n");
@@ -360,19 +360,8 @@ void ft_board_setup(void *blob, bd_t *bd)
 {
 	ft_cpu_setup(blob, bd);
 
+	FT_FSL_PCI_SETUP;
 
-#ifdef CONFIG_PCI1
-	ft_fsl_pci_setup(blob, "pci0", &pci1_hose);
-#endif
-#ifdef CONFIG_PCIE2
-	ft_fsl_pci_setup(blob, "pci1", &pcie1_hose);
-#endif
-#ifdef CONFIG_PCIE1
-	ft_fsl_pci_setup(blob, "pci2", &pcie3_hose);
-#endif
-#ifdef CONFIG_PCIE3
-	ft_fsl_pci_setup(blob, "pci3", &pcie2_hose);
-#endif
 #ifdef CONFIG_FSL_SGMII_RISER
 	fsl_sgmii_riser_fdt_fixup(blob);
 #endif

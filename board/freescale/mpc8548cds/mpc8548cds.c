@@ -1,5 +1,5 @@
 /*
- * Copyright 2004, 2007, 200 Freescale Semiconductor, Inc.
+ * Copyright 2004, 2007, 2009-2010 Freescale Semiconductor, Inc.
  *
  * (C) Copyright 2002 Scott McNutt <smcnutt@artesyncp.com>
  *
@@ -118,7 +118,7 @@ void
 local_bus_init(void)
 {
 	volatile ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
-	volatile ccsr_lbc_t *lbc = (void *)(CONFIG_SYS_MPC85xx_LBC_ADDR);
+	volatile fsl_lbc_t *lbc = LBC_BASE_ADDR;
 
 	uint clkdiv;
 	uint lbc_hz;
@@ -154,7 +154,7 @@ sdram_init(void)
 #if defined(CONFIG_SYS_OR2_PRELIM) && defined(CONFIG_SYS_BR2_PRELIM)
 
 	uint idx;
-	volatile ccsr_lbc_t *lbc = (void *)(CONFIG_SYS_MPC85xx_LBC_ADDR);
+	volatile fsl_lbc_t *lbc = LBC_BASE_ADDR;
 	uint *sdram_addr = (uint *)CONFIG_SYS_LBC_SDRAM_BASE;
 	uint cpu_board_rev;
 	uint lsdmr_common;
@@ -166,15 +166,10 @@ sdram_init(void)
 	/*
 	 * Setup SDRAM Base and Option Registers
 	 */
-	lbc->or2 = CONFIG_SYS_OR2_PRELIM;
-	asm("msync");
-
-	lbc->br2 = CONFIG_SYS_BR2_PRELIM;
-	asm("msync");
-
+	set_lbc_or(2, CONFIG_SYS_OR2_PRELIM);
+	set_lbc_br(2, CONFIG_SYS_BR2_PRELIM);
 	lbc->lbcr = CONFIG_SYS_LBC_LBCR;
 	asm("msync");
-
 
 	lbc->lsrt = CONFIG_SYS_LBC_LSRT;
 	lbc->mrtpr = CONFIG_SYS_LBC_MRTPR;
@@ -289,7 +284,7 @@ void pci_init_board(void)
 	if (!(devdisr & MPC85xx_DEVDISR_PCI1)) {
 		SET_STD_PCI_INFO(pci_info[num], 1);
 		pci_agent = fsl_setup_hose(&pci1_hose, pci_info[num].regs);
-		printf ("\n    PCI: %d bit, %s MHz, %s, %s, %s (base address %lx)\n",
+		printf("PCI: %d bit, %s MHz, %s, %s, %s (base address %lx)\n",
 			(pci_32) ? 32 : 64,
 			(pci_speed == 33333000) ? "33" :
 			(pci_speed == 66666000) ? "66" : "unknown",
@@ -313,7 +308,7 @@ void pci_init_board(void)
 		}
 #endif
 	} else {
-		printf ("    PCI: disabled\n");
+		printf("PCI: disabled\n");
 	}
 
 	puts("\n");
@@ -326,10 +321,10 @@ void pci_init_board(void)
 	uint pci2_clk_sel = porpllsr & 0x4000;	/* PORPLLSR[17] */
 	uint pci_dual = get_pci_dual ();	/* PCI DUAL in CM_PCI[3] */
 	if (pci_dual) {
-		printf ("    PCI2: 32 bit, 66 MHz, %s\n",
+		printf("PCI2: 32 bit, 66 MHz, %s\n",
 			pci2_clk_sel ? "sync" : "async");
 	} else {
-		printf ("    PCI2: disabled\n");
+		printf("PCI2: disabled\n");
 	}
 }
 #else
@@ -342,14 +337,14 @@ void pci_init_board(void)
 	if (pcie_configured && !(devdisr & MPC85xx_DEVDISR_PCIE)){
 		SET_STD_PCIE_INFO(pci_info[num], 1);
 		pcie_ep = fsl_setup_hose(&pcie1_hose, pci_info[num].regs);
-		printf ("    PCIE1 connected to Slot as %s (base addr %lx)\n",
-				pcie_ep ? "Endpoint" : "Root Complex",
-				pci_info[num].regs);
+		printf("PCIE1: connected to Slot as %s (base addr %lx)\n",
+			pcie_ep ? "Endpoint" : "Root Complex",
+			pci_info[num].regs);
 
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pcie1_hose, first_free_busno);
 	} else {
-		printf ("    PCIE1: disabled\n");
+		printf("PCIE1: disabled\n");
 	}
 
 	puts("\n");
@@ -393,11 +388,6 @@ int last_stage_init(void)
 #if defined(CONFIG_OF_BOARD_SETUP)
 void ft_pci_setup(void *blob, bd_t *bd)
 {
-#ifdef CONFIG_PCI1
-	ft_fsl_pci_setup(blob, "pci0", &pci1_hose);
-#endif
-#ifdef CONFIG_PCIE1
-	ft_fsl_pci_setup(blob, "pci1", &pcie1_hose);
-#endif
+	FT_FSL_PCI_SETUP;
 }
 #endif

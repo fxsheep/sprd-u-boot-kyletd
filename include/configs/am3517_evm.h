@@ -28,7 +28,7 @@
 /*
  * High Level Configuration Options
  */
-#define CONFIG_ARMCORTEXA8	1	/* This is an ARM V7 CPU core */
+#define CONFIG_ARMV7		1	/* This is an ARM V7 CPU core */
 #define CONFIG_OMAP		1	/* in a TI OMAP core */
 #define CONFIG_OMAP34XX		1	/* which is a 34XX */
 #define CONFIG_OMAP3_AM3517EVM	1	/* working with AM3517EVM */
@@ -61,7 +61,6 @@
  */
 #define CONFIG_ENV_SIZE			(128 << 10)	/* 128 KiB sector */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (128 << 10))
-#define CONFIG_SYS_GBL_DATA_SIZE	128	/* bytes reserved for */
 						/* initial data */
 /*
  * DDR related
@@ -99,6 +98,44 @@
 #define CONFIG_OMAP3_MMC		1
 #define CONFIG_DOS_PARTITION		1
 
+/*
+ * USB configuration
+ * Enable CONFIG_MUSB_HCD for Host functionalities MSC, keyboard
+ * Enable CONFIG_MUSB_UDC for Device functionalities.
+ */
+#define CONFIG_USB_AM35X		1
+#define CONFIG_MUSB_HCD			1
+
+#ifdef CONFIG_USB_AM35X
+
+#ifdef CONFIG_MUSB_HCD
+#define CONFIG_CMD_USB
+
+#define CONFIG_USB_STORAGE
+#define CONGIG_CMD_STORAGE
+#define CONFIG_CMD_FAT
+
+#ifdef CONFIG_USB_KEYBOARD
+#define CONFIG_SYS_USB_EVENT_POLL
+#define CONFIG_PREBOOT "usb start"
+#endif /* CONFIG_USB_KEYBOARD */
+
+#endif /* CONFIG_MUSB_HCD */
+
+#ifdef CONFIG_MUSB_UDC
+/* USB device configuration */
+#define CONFIG_USB_DEVICE		1
+#define CONFIG_USB_TTY			1
+#define CONFIG_SYS_CONSOLE_IS_IN_ENV	1
+/* Change these to suit your needs */
+#define CONFIG_USBD_VENDORID		0x0451
+#define CONFIG_USBD_PRODUCTID		0x5678
+#define CONFIG_USBD_MANUFACTURER	"Texas Instruments"
+#define CONFIG_USBD_PRODUCT_NAME	"AM3517EVM"
+#endif /* CONFIG_MUSB_UDC */
+
+#endif /* CONFIG_USB_AM35X */
+
 /* commands to include */
 #include <config_cmd_default.h>
 
@@ -126,6 +163,7 @@
 #define CONFIG_DRIVER_OMAP34XX_I2C	1
 
 #undef CONFIG_CMD_NET
+#undef CONFIG_CMD_NFS
 /*
  * Board NAND Info.
  */
@@ -293,4 +331,10 @@ extern unsigned int boot_flash_sec;
 extern unsigned int boot_flash_type;
 #endif
 
+#define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM_1
+#define CONFIG_SYS_INIT_RAM_ADDR	0x4020f800
+#define CONFIG_SYS_INIT_RAM_SIZE	0x800
+#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_INIT_RAM_ADDR + \
+					 CONFIG_SYS_INIT_RAM_SIZE - \
+					 GENERATED_GBL_DATA_SIZE)
 #endif /* __CONFIG_H */

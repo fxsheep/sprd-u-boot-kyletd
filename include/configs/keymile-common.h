@@ -30,6 +30,22 @@
 #define CONFIG_BOOTCOUNT_LIMIT
 
 /*
+ * By default kwbimage.cfg from board specific folder is used
+ * If for some board, different configuration file need to be used,
+ * CONFIG_SYS_KWD_CONFIG should be defined in board specific header file
+ */
+#ifndef CONFIG_SYS_KWD_CONFIG
+#define	CONFIG_SYS_KWD_CONFIG	$(SRCTREE)/$(CONFIG_BOARDDIR)/kwbimage.cfg
+#endif /* CONFIG_SYS_KWD_CONFIG */
+
+/*
+ * CONFIG_SYS_TEXT_BASE can be defined in board specific header file, if needed
+ */
+#ifndef CONFIG_SYS_TEXT_BASE
+#define	CONFIG_SYS_TEXT_BASE	0x00400000
+#endif /* CONFIG_SYS_TEXT_BASE */
+
+/*
  * Command line configuration.
  */
 #include <config_cmd_default.h>
@@ -85,6 +101,7 @@
 
 #define CONFIG_LOADS_ECHO	1	/* echo on for serial download */
 #define CONFIG_SYS_LOADS_BAUD_CHANGE	1	/* allow baudrate change */
+#define CONFIG_SYS_BOARD_DRAM_INIT	/* Used board specific dram_init */
 
 /*
  * How to get access to the slot ID.  Put this here to make it easy
@@ -139,8 +156,8 @@
 
 #ifdef CONFIG_IO_MUXING
 #define	CONFIG_KM_DEF_ENV_IOMUX \
-	"nc=setenv ethact HDLC ETHERNET \0" \
-	"nce=setenv ethact SCC ETHERNET \0"	\
+	"nc=setenv ethact HDLC \0" \
+	"nce=setenv ethact SCC \0"	\
 	"stderr=serial,nc \0"	\
 	"stdin=serial,nc \0" \
 	"stdout=serial,nc \0" \

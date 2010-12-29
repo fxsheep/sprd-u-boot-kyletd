@@ -5,7 +5,7 @@
  * terms of the GNU Public License, Version 2, incorporated
  * herein by reference.
  *
- * Copyright 2004-2009 Freescale Semiconductor, Inc.
+ * Copyright 2004-2010 Freescale Semiconductor, Inc.
  * (C) Copyright 2003, Motorola, Inc.
  * author Andy Fleming
  *
@@ -60,9 +60,9 @@ static void phy_run_commands(struct tsec_private *priv, struct phy_cmd *cmd);
 static void adjust_link(struct eth_device *dev);
 #if defined(CONFIG_MII) || defined(CONFIG_CMD_MII) \
 	&& !defined(BITBANGMII)
-static int tsec_miiphy_write(char *devname, unsigned char addr,
+static int tsec_miiphy_write(const char *devname, unsigned char addr,
 			     unsigned char reg, unsigned short value);
-static int tsec_miiphy_read(char *devname, unsigned char addr,
+static int tsec_miiphy_read(const char *devname, unsigned char addr,
 			    unsigned char reg, unsigned short *value);
 #endif
 #ifdef CONFIG_MCAST_TFTP
@@ -95,14 +95,23 @@ static struct tsec_info_struct tsec_info[] = {
 #endif
 };
 
+/*
+ * Initialize all the TSEC devices
+ *
+ * Returns the number of TSEC devices that were initialized
+ */
 int tsec_eth_init(bd_t *bis, struct tsec_info_struct *tsecs, int num)
 {
 	int i;
+	int ret, count = 0;
 
-	for (i = 0; i < num; i++)
-		tsec_initialize(bis, &tsecs[i]);
+	for (i = 0; i < num; i++) {
+		ret = tsec_initialize(bis, &tsecs[i]);
+		if (ret > 0)
+			count += ret;
+	}
 
-	return 0;
+	return count;
 }
 
 int tsec_standard_init(bd_t *bis)
@@ -283,13 +292,12 @@ static uint tsec_local_mdio_read(volatile tsec_mdio_t *phyregs,
 
 /* By default force the TBI PHY into 1000Mbps full duplex when in SGMII mode */
 #ifndef CONFIG_TSEC_TBICR_SETTINGS
-#define TBICR_SETTINGS ( \
+#define CONFIG_TSEC_TBICR_SETTINGS ( \
 		TBICR_PHY_RESET \
+		| TBICR_ANEG_ENABLE \
 		| TBICR_FULL_DUPLEX \
 		| TBICR_SPEED1_SET \
 		)
-#else
-#define TBICR_SETTINGS CONFIG_TSEC_TBICR_SETTINGS
 #endif /* CONFIG_TSEC_TBICR_SETTINGS */
 
 /* Configure the TBI for SGMII operation */
@@ -302,7 +310,7 @@ static void tsec_configure_serdes(struct tsec_private *priv)
 	tsec_local_mdio_write(priv->phyregs_sgmii, priv->regs->tbipa, TBI_TBICON,
 			TBICON_CLK_SELECT);
 	tsec_local_mdio_write(priv->phyregs_sgmii, priv->regs->tbipa, TBI_CR,
-			TBICR_SETTINGS);
+			CONFIG_TSEC_TBICR_SETTINGS);
 }
 
 /* Discover which PHY is attached to the device, and configure it
@@ -1631,6 +1639,27 @@ static struct phy_info phy_info_dm9161 = {
 	},
 };
 
+/* micrel KSZ804  */
+static struct phy_info phy_info_ksz804 =  {
+	0x0022151,
+	"Micrel KSZ804 PHY",
+	4,
+	(struct phy_cmd[]) { /* config */
+		{PHY_BMCR, PHY_BMCR_RESET, NULL},
+		{PHY_BMCR, PHY_BMCR_AUTON|PHY_BMCR_RST_NEG, NULL},
+		{miim_end,}
+	},
+	(struct phy_cmd[]) { /* startup */
+		{PHY_BMSR, miim_read, NULL},
+		{PHY_BMSR, miim_read, &mii_parse_sr},
+		{PHY_BMSR, miim_read, &mii_parse_link},
+		{miim_end,}
+	},
+	(struct phy_cmd[]) { /* shutdown */
+		{miim_end,}
+	}
+};
+
 /* a generic flavor.  */
 static struct phy_info phy_info_generic =  {
 	0,
@@ -1794,6 +1823,7 @@ static struct phy_info *phy_info[] = {
 	&phy_info_M88E1145,
 	&phy_info_M88E1149S,
 	&phy_info_dm9161,
+	&phy_info_ksz804,
 	&phy_info_lxt971,
 	&phy_info_VSC8211,
 	&phy_info_VSC8244,
@@ -1888,7 +1918,7 @@ static void phy_run_commands(struct tsec_private *priv, struct phy_cmd *cmd)
  * Returns:
  *  0 on success
  */
-static int tsec_miiphy_read(char *devname, unsigned char addr,
+static int tsec_miiphy_read(const char *devname, unsigned char addr,
 			    unsigned char reg, unsigned short *value)
 {
 	unsigned short ret;
@@ -1911,7 +1941,7 @@ static int tsec_miiphy_read(char *devname, unsigned char addr,
  * Returns:
  *  0 on success
  */
-static int tsec_miiphy_write(char *devname, unsigned char addr,
+static int tsec_miiphy_write(const char *devname, unsigned char addr,
 			     unsigned char reg, unsigned short value)
 {
 	struct tsec_private *priv = privlist[0];

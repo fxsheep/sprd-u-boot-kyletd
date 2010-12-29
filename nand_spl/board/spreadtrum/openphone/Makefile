@@ -25,7 +25,7 @@ include $(TOPDIR)/config.mk
 include $(TOPDIR)/nand_spl/board/$(BOARDDIR)/config.mk
 
 LDSCRIPT= $(TOPDIR)/nand_spl/board/$(BOARDDIR)/u-boot.lds
-LDFLAGS	= -Bstatic -T $(nandobj)u-boot.lds -Ttext $(TEXT_BASE) $(PLATFORM_LDFLAGS)
+LDFLAGS	= -Bstatic -T $(LDSCRIPT) -Ttext $(CONFIG_SYS_TEXT_BASE) $(PLATFORM_LDFLAGS)
 AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL -g
 
@@ -54,18 +54,15 @@ ALL	= $(nandobj)u-boot-spl $(nandobj)u-boot-spl.bin $(nandobj)u-boot-spl-16k.bin
 all:	$(ALL)
 
 $(nandobj)u-boot-spl-16k.bin: $(nandobj)u-boot-spl
-	$(OBJCOPY) ${OBJCFLAGS} --pad-to=$(PAD_TO) -O binary $< $@
+	$(OBJCOPY) ${OBJCFLAGS} --pad-to $(PAD_TO) -O binary $< $@
 
 $(nandobj)u-boot-spl.bin:	$(nandobj)u-boot-spl
 	$(OBJCOPY) ${OBJCFLAGS} -O binary $< $@
 
-$(nandobj)u-boot-spl:	$(OBJS) $(nandobj)u-boot.lds
+$(nandobj)u-boot-spl:	$(OBJS) $(LDSCRIPT)
 	cd $(LNDIR) && $(LD) $(LDFLAGS) $(__OBJS) \
 		-Map $(nandobj)u-boot-spl.map \
 		-o $@
-
-$(nandobj)u-boot.lds: $(LDSCRIPT)
-	$(CPP) $(CPPFLAGS) $(LDPPFLAGS) -ansi -D__ASSEMBLY__ -P - <$^ >$@
 
 #########################################################################
 

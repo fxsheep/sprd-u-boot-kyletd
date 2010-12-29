@@ -22,7 +22,7 @@
 
 include $(TOPDIR)/config.mk
 
-LIB	= $(obj)lib$(SOC).a
+LIB	= $(obj)lib$(SOC).o
 
 COBJS	= generic.o timer.o reset.o 
 ifndef CONFIG_SKIP_LOWLEVEL_INIT

@@ -230,8 +230,8 @@ CONFIG_VIDEO_HW_CURSOR:	     - Uses the hardware cursor capability of the
 #error	only one of CONFIG_CONSOLE_CURSOR,CONFIG_VIDEO_SW_CURSOR,CONFIG_VIDEO_HW_CURSOR can be defined
 #endif
 void	console_cursor (int state);
-#define CURSOR_ON  console_cursor(1);
-#define CURSOR_OFF console_cursor(0);
+#define CURSOR_ON  console_cursor(1)
+#define CURSOR_OFF console_cursor(0)
 #define CURSOR_SET
 #ifndef CONFIG_I8042_KBD
 #warning Cursor drawing on/off needs timer function s.a. drivers/input/i8042.c
@@ -248,8 +248,8 @@ void	console_cursor (int state);
 #endif
 #define CURSOR_ON
 #define CURSOR_OFF video_putchar(console_col * VIDEO_FONT_WIDTH,\
-				 console_row * VIDEO_FONT_HEIGHT, ' ');
-#define CURSOR_SET video_set_cursor();
+				 console_row * VIDEO_FONT_HEIGHT, ' ')
+#define CURSOR_SET video_set_cursor()
 #endif /* CONFIG_VIDEO_SW_CURSOR */
 
 
@@ -260,7 +260,7 @@ void	console_cursor (int state);
 #define CURSOR_ON
 #define CURSOR_OFF
 #define CURSOR_SET video_set_hw_cursor(console_col * VIDEO_FONT_WIDTH, \
-		  (console_row * VIDEO_FONT_HEIGHT) + video_logo_height);
+		  (console_row * VIDEO_FONT_HEIGHT) + video_logo_height)
 #endif	/* CONFIG_VIDEO_HW_CURSOR */
 
 #ifdef	CONFIG_VIDEO_LOGO
@@ -651,7 +651,8 @@ static void console_scrollup (void)
 
 static void console_back (void)
 {
-	CURSOR_OFF console_col--;
+	CURSOR_OFF;
+	console_col--;
 
 	if (console_col < 0) {
 		console_col = CONSOLE_COLS - 1;
@@ -674,7 +675,7 @@ static void console_newline (void)
 	   is >= CONSOLE_COLS
 	 */
 	if (console_col < CONSOLE_COLS)
-		CURSOR_OFF
+		CURSOR_OFF;
 	console_row++;
 	console_col = 0;
 
@@ -690,7 +691,8 @@ static void console_newline (void)
 
 static void console_cr (void)
 {
-	CURSOR_OFF console_col = 0;
+	CURSOR_OFF;
+	console_col = 0;
 }
 
 /*****************************************************************************/
@@ -711,7 +713,8 @@ void video_putc (const char c)
 		break;
 
 	case 9:		/* tab 8 */
-		CURSOR_OFF console_col |= 0x0008;
+		CURSOR_OFF;
+		console_col |= 0x0008;
 		console_col &= ~0x0007;
 
 		if (console_col >= CONSOLE_COLS)
@@ -734,7 +737,8 @@ void video_putc (const char c)
 			nl = 0;
 		}
 	}
-CURSOR_SET}
+	CURSOR_SET;
+}
 
 
 /*****************************************************************************/
@@ -1114,12 +1118,48 @@ int video_display_bitmap (ulong bmp_image, int x, int y)
 	}
 #endif
 
-	/* We handle only 8bpp or 24 bpp bitmap */
+	/* We handle only 4, 8, or 24 bpp bitmaps */
 	switch (le16_to_cpu (bmp->header.bit_count)) {
+	case 4:
+		padded_line -= width / 2;
+		ycount = height;
+
+		switch (VIDEO_DATA_FORMAT) {
+		case GDF_32BIT_X888RGB:
+			while (ycount--) {
+				WATCHDOG_RESET ();
+				/*
+				 * Don't assume that 'width' is an
+				 * even number
+				 */
+				for (xcount = 0; xcount < width; xcount++) {
+					uchar idx;
+
+					if (xcount & 1) {
+						idx = *bmap & 0xF;
+						bmap++;
+					} else
+						idx = *bmap >> 4;
+					cte = bmp->color_table[idx];
+					FILL_32BIT_X888RGB(cte.red, cte.green,
+							   cte.blue);
+				}
+				bmap += padded_line;
+				fb -= (VIDEO_VISIBLE_COLS + width) *
+				      VIDEO_PIXEL_SIZE;
+			}
+			break;
+		default:
+			puts("4bpp bitmap unsupported with current "
+			     "video mode\n");
+			break;
+		}
+		break;
+
 	case 8:
 		padded_line -= width;
 		if (VIDEO_DATA_FORMAT == GDF__8BIT_INDEX) {
-			/* Copy colormap					     */
+			/* Copy colormap */
 			for (xcount = 0; xcount < colors; ++xcount) {
 				cte = bmp->color_table[xcount];
 				video_set_lut (xcount, cte.red, cte.green, cte.blue);
@@ -1321,11 +1361,11 @@ void logo_plot (void *screen, int width, int x, int y)
 #ifdef CONFIG_VIDEO_BMP_LOGO
 	source = bmp_logo_bitmap;
 
-	/* Allocate temporary space for computing colormap			 */
+	/* Allocate temporary space for computing colormap */
 	logo_red = malloc (BMP_LOGO_COLORS);
 	logo_green = malloc (BMP_LOGO_COLORS);
 	logo_blue = malloc (BMP_LOGO_COLORS);
-	/* Compute color map							 */
+	/* Compute color map */
 	for (i = 0; i < VIDEO_LOGO_COLORS; i++) {
 		logo_red[i] = (bmp_logo_palette[i] & 0x0f00) >> 4;
 		logo_green[i] = (bmp_logo_palette[i] & 0x00f0);

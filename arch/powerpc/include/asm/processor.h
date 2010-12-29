@@ -495,6 +495,7 @@
 #define   L1CSR1_ICFI		0x00000002	/* Instruction Cache Flash Invalidate */
 #define   L1CSR1_ICE		0x00000001	/* Instruction Cache Enable */
 #define SPRN_L1CSR2	0x25e	/* L1 Data Cache Control and Status Register 2 */
+#define   L1CSR2_DCWS		0x40000000	/* Data Cache Write Shadow */
 #define SPRN_L2CSR0	0x3f9	/* L2 Data Cache Control and Status Register 0 */
 #define   L2CSR0_L2E		0x80000000	/* L2 Cache Enable */
 #define   L2CSR0_L2PE		0x40000000	/* L2 Cache Parity/ECC Enable */
@@ -534,9 +535,11 @@
 #define SPRN_MCSRR0	0x23a	/* Machine Check Save and Restore Register 0 */
 #define SPRN_MCSRR1	0x23b	/* Machine Check Save and Restore Register 1 */
 #define SPRN_BUCSR	0x3f5	/* Branch Control and Status Register */
+#define	  BUCSR_STAC_EN	0x01000000	/* Segment target addr cache enable */
+#define	  BUCSR_LS_EN	0x00400000	/* Link stack enable */
 #define	  BUCSR_BBFI	0x00000200	/* Branch buffer flash invalidate */
 #define	  BUCSR_BPEN	0x00000001	/* Branch prediction enable */
-#define   BUCSR_ENABLE (BUCSR_BBFI|BUCSR_BPEN)
+#define   BUCSR_ENABLE (BUCSR_STAC_EN|BUCSR_LS_EN|BUCSR_BBFI|BUCSR_BPEN)
 #define SPRN_BBEAR	0x201	/* Branch Buffer Entry Address Register */
 #define SPRN_BBTAR	0x202	/* Branch Buffer Target Address Register */
 #define SPRN_PID1	0x279	/* Process ID Register 1 */
@@ -913,6 +916,7 @@
 #define PVR_460SX_RA_V1 0x13541801 /* 460SX rev A Variant 1 Security disabled */
 #define PVR_460GX_RA    0x13541802 /* 460GX rev A                   */
 #define PVR_460GX_RA_V1 0x13541803 /* 460GX rev A Variant 1 Security disabled */
+#define PVR_APM821XX_RA 0x12C41C80 /* APM821XX rev A */
 #define PVR_601		0x00010000
 #define PVR_602		0x00050000
 #define PVR_603		0x00030000
@@ -1050,10 +1054,16 @@
 #define SVR_P2010_E	0x80EB00
 #define SVR_P2020	0x80E200
 #define SVR_P2020_E	0x80EA00
+#define SVR_P3041	0x821103
+#define SVR_P3041_E	0x821903
 #define SVR_P4040	0x820100
 #define SVR_P4040_E	0x820900
 #define SVR_P4080	0x820000
 #define SVR_P4080_E	0x820800
+#define SVR_P5010	0x822100
+#define SVR_P5010_E	0x822900
+#define SVR_P5020	0x822000
+#define SVR_P5020_E	0x822800
 
 #define SVR_8610	0x80A000
 #define SVR_8641	0x809000

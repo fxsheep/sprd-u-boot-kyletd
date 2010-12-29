@@ -21,6 +21,7 @@
  * MA 02111-1307 USA
  */
 
+#include <asm-offsets.h>
 #include <config.h>
 #include <mpc85xx.h>
 #include <version.h>
@@ -133,6 +134,12 @@ __secondary_start_page:
 	/* set stash id to (coreID) * 2 + 32 + L1 CT (0) */
 	slwi	r8,r4,1
 	addi	r8,r8,32
+	mtspr	L1CSR2,r8
+#endif
+
+#if defined(CONFIG_SYS_P4080_ERRATUM_CPU22)
+	mfspr	r8,L1CSR2
+	oris	r8,r8,(L1CSR2_DCWS)@h
 	mtspr	L1CSR2,r8
 #endif
 

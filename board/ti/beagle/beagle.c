@@ -32,13 +32,35 @@
 #include <common.h>
 #include <twl4030.h>
 #include <asm/io.h>
+#include <asm/arch/mmc_host_def.h>
 #include <asm/arch/mux.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/gpio.h>
 #include <asm/mach-types.h>
 #include "beagle.h"
 
-static int beagle_revision_c;
+#define TWL4030_I2C_BUS			0
+#define EXPANSION_EEPROM_I2C_BUS	1
+#define EXPANSION_EEPROM_I2C_ADDRESS	0x50
+
+#define TINCANTOOLS_ZIPPY		0x01000100
+#define TINCANTOOLS_ZIPPY2		0x02000100
+#define TINCANTOOLS_TRAINER		0x04000100
+#define TINCANTOOLS_SHOWDOG		0x03000100
+#define KBADC_BEAGLEFPGA		0x01000600
+
+#define BEAGLE_NO_EEPROM		0xffffffff
+
+DECLARE_GLOBAL_DATA_PTR;
+
+static struct {
+	unsigned int device_vendor;
+	unsigned char revision;
+	unsigned char content;
+	char fab_revision[8];
+	char env_var[16];
+	char env_setting[64];
+} expansion_config;
 
 /*
  * Routine: board_init
@@ -46,8 +68,6 @@ static int beagle_revision_c;
  */
 int board_init(void)
 {
-	DECLARE_GLOBAL_DATA_PTR;
-
 	gpmc_init(); /* in SRAM or SDRAM, finish GPMC */
 	/* board id for Linux */
 	gd->bd->bi_arch_number = MACH_TYPE_OMAP3_BEAGLE;
@@ -58,43 +78,66 @@ int board_init(void)
 }
 
 /*
- * Routine: beagle_get_revision
- * Description: Return the revision of the BeagleBoard this code is running on.
- *              If it is a revision Ax/Bx board, this function returns 0,
- *              on a revision C board you will get a 1.
+ * Routine: get_board_revision
+ * Description: Detect if we are running on a Beagle revision Ax/Bx,
+ *		C1/2/3, C4 or xM. This can be done by reading
+ *		the level of GPIO173, GPIO172 and GPIO171. This should
+ *		result in
+ *		GPIO173, GPIO172, GPIO171: 1 1 1 => Ax/Bx
+ *		GPIO173, GPIO172, GPIO171: 1 1 0 => C1/2/3
+ *		GPIO173, GPIO172, GPIO171: 1 0 1 => C4
+ *		GPIO173, GPIO172, GPIO171: 0 0 0 => xM
  */
-int beagle_get_revision(void)
+int get_board_revision(void)
 {
-	return beagle_revision_c;
+	int revision;
+
+	if (!omap_request_gpio(171) &&
+	    !omap_request_gpio(172) &&
+	    !omap_request_gpio(173)) {
+
+		omap_set_gpio_direction(171, 1);
+		omap_set_gpio_direction(172, 1);
+		omap_set_gpio_direction(173, 1);
+
+		revision = omap_get_gpio_datain(173) << 2 |
+			   omap_get_gpio_datain(172) << 1 |
+			   omap_get_gpio_datain(171);
+
+		omap_free_gpio(171);
+		omap_free_gpio(172);
+		omap_free_gpio(173);
+	} else {
+		printf("Error: unable to acquire board revision GPIOs\n");
+		revision = -1;
+	}
+
+	return revision;
 }
 
 /*
- * Routine: beagle_identify
- * Description: Detect if we are running on a Beagle revision Ax/Bx or
- *              Cx. This can be done by GPIO_171. If this is low, we are
- *              running on a revision C board.
+ * Routine: get_expansion_id
+ * Description: This function checks for expansion board by checking I2C
+ *		bus 1 for the availability of an AT24C01B serial EEPROM.
+ *		returns the device_vendor field from the EEPROM
  */
-void beagle_identify(void)
+unsigned int get_expansion_id(void)
 {
-	beagle_revision_c = 0;
-	if (!omap_request_gpio(171)) {
-		unsigned int val;
+	i2c_set_bus_num(EXPANSION_EEPROM_I2C_BUS);
 
-		omap_set_gpio_direction(171, 1);
-		val = omap_get_gpio_datain(171);
-		omap_free_gpio(171);
-
-		if (val)
-			beagle_revision_c = 0;
-		else
-			beagle_revision_c = 1;
+	/* return BEAGLE_NO_EEPROM if eeprom doesn't respond */
+	if (i2c_probe(EXPANSION_EEPROM_I2C_ADDRESS) == 1) {
+		i2c_set_bus_num(TWL4030_I2C_BUS);
+		return BEAGLE_NO_EEPROM;
 	}
 
-	printf("Board revision ");
-	if (beagle_revision_c)
-		printf("C\n");
-	else
-		printf("Ax/Bx\n");
+	/* read configuration data */
+	i2c_read(EXPANSION_EEPROM_I2C_ADDRESS, 0, 1, (u8 *)&expansion_config,
+		 sizeof(expansion_config));
+
+	i2c_set_bus_num(TWL4030_I2C_BUS);
+
+	return expansion_config.device_vendor;
 }
 
 /*
@@ -105,6 +148,93 @@ int misc_init_r(void)
 {
 	struct gpio *gpio5_base = (struct gpio *)OMAP34XX_GPIO5_BASE;
 	struct gpio *gpio6_base = (struct gpio *)OMAP34XX_GPIO6_BASE;
+
+	switch (get_board_revision()) {
+	case REVISION_AXBX:
+		printf("Beagle Rev Ax/Bx\n");
+		setenv("beaglerev", "AxBx");
+		setenv("mpurate", "600");
+		break;
+	case REVISION_CX:
+		printf("Beagle Rev C1/C2/C3\n");
+		setenv("beaglerev", "Cx");
+		setenv("mpurate", "600");
+		MUX_BEAGLE_C();
+		break;
+	case REVISION_C4:
+		printf("Beagle Rev C4\n");
+		setenv("beaglerev", "C4");
+		setenv("mpurate", "720");
+		MUX_BEAGLE_C();
+		/* Set VAUX2 to 1.8V for EHCI PHY */
+		twl4030_pmrecv_vsel_cfg(TWL4030_PM_RECEIVER_VAUX2_DEDICATED,
+					TWL4030_PM_RECEIVER_VAUX2_VSEL_18,
+					TWL4030_PM_RECEIVER_VAUX2_DEV_GRP,
+					TWL4030_PM_RECEIVER_DEV_GRP_P1);
+		break;
+	case REVISION_XM:
+		printf("Beagle xM Rev A\n");
+		setenv("beaglerev", "xMA");
+		setenv("mpurate", "1000");
+		MUX_BEAGLE_XM();
+		/* Set VAUX2 to 1.8V for EHCI PHY */
+		twl4030_pmrecv_vsel_cfg(TWL4030_PM_RECEIVER_VAUX2_DEDICATED,
+					TWL4030_PM_RECEIVER_VAUX2_VSEL_18,
+					TWL4030_PM_RECEIVER_VAUX2_DEV_GRP,
+					TWL4030_PM_RECEIVER_DEV_GRP_P1);
+		break;
+	default:
+		printf("Beagle unknown 0x%02x\n", get_board_revision());
+	}
+
+	switch (get_expansion_id()) {
+	case TINCANTOOLS_ZIPPY:
+		printf("Recognized Tincantools Zippy board (rev %d %s)\n",
+			expansion_config.revision,
+			expansion_config.fab_revision);
+		MUX_TINCANTOOLS_ZIPPY();
+		setenv("buddy", "zippy");
+		break;
+	case TINCANTOOLS_ZIPPY2:
+		printf("Recognized Tincantools Zippy2 board (rev %d %s)\n",
+			expansion_config.revision,
+			expansion_config.fab_revision);
+		MUX_TINCANTOOLS_ZIPPY();
+		setenv("buddy", "zippy2");
+		break;
+	case TINCANTOOLS_TRAINER:
+		printf("Recognized Tincantools Trainer board (rev %d %s)\n",
+			expansion_config.revision,
+			expansion_config.fab_revision);
+		MUX_TINCANTOOLS_ZIPPY();
+		MUX_TINCANTOOLS_TRAINER();
+		setenv("buddy", "trainer");
+		break;
+	case TINCANTOOLS_SHOWDOG:
+		printf("Recognized Tincantools Showdow board (rev %d %s)\n",
+			expansion_config.revision,
+			expansion_config.fab_revision);
+		/* Place holder for DSS2 definition for showdog lcd */
+		setenv("defaultdisplay", "showdoglcd");
+		setenv("buddy", "showdog");
+		break;
+	case KBADC_BEAGLEFPGA:
+		printf("Recognized KBADC Beagle FPGA board\n");
+		MUX_KBADC_BEAGLEFPGA();
+		setenv("buddy", "beaglefpga");
+		break;
+	case BEAGLE_NO_EEPROM:
+		printf("No EEPROM on expansion board\n");
+		setenv("buddy", "none");
+		break;
+	default:
+		printf("Unrecognized expansion board: %x\n",
+			expansion_config.device_vendor);
+		setenv("buddy", "unknown");
+	}
+
+	if (expansion_config.content == 1)
+		setenv(expansion_config.env_var, expansion_config.env_setting);
 
 	twl4030_power_init();
 	twl4030_led_init(TWL4030_LED_LEDEN_LEDAON | TWL4030_LED_LEDEN_LEDBON);
@@ -120,8 +250,6 @@ int misc_init_r(void)
 	writel(GPIO31 | GPIO30 | GPIO29 | GPIO28 | GPIO22 | GPIO21 |
 		GPIO15 | GPIO14 | GPIO13 | GPIO12, &gpio5_base->setdataout);
 
-	beagle_identify();
-
 	dieid_num_r();
 
 	return 0;
@@ -136,8 +264,12 @@ int misc_init_r(void)
 void set_muxconf_regs(void)
 {
 	MUX_BEAGLE();
-
-	if (beagle_revision_c) {
-		MUX_BEAGLE_C();
-	}
 }
+
+#ifdef CONFIG_GENERIC_MMC
+int board_mmc_init(bd_t *bis)
+{
+	omap_mmc_init(0);
+	return 0;
+}
+#endif

@@ -41,8 +41,8 @@
 #include <asm/io.h>
 #include <ppc_asm.tmpl>
 #include <commproc.h>
-#include <ppc4xx_enet.h>
-#include <405_mal.h>
+#include <asm/ppc4xx-emac.h>
+#include <asm/ppc4xx-mal.h>
 #include <miiphy.h>
 
 #if !defined(CONFIG_PHY_CLK_FREQ)
@@ -338,7 +338,7 @@ static int emac_miiphy_command(u8 addr, u8 reg, int cmd, u16 value)
 	return 0;
 }
 
-int emac4xx_miiphy_read (char *devname, unsigned char addr, unsigned char reg,
+int emac4xx_miiphy_read (const char *devname, unsigned char addr, unsigned char reg,
 			 unsigned short *value)
 {
 	unsigned long sta_reg;
@@ -359,7 +359,7 @@ int emac4xx_miiphy_read (char *devname, unsigned char addr, unsigned char reg,
 /* write a phy reg and return the value with a rc	    */
 /***********************************************************/
 
-int emac4xx_miiphy_write (char *devname, unsigned char addr, unsigned char reg,
+int emac4xx_miiphy_write (const char *devname, unsigned char addr, unsigned char reg,
 			  unsigned short value)
 {
 	return emac_miiphy_command(addr, reg, EMAC_STACR_WRITE, value);

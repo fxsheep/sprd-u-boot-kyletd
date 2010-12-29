@@ -518,9 +518,6 @@ void reset_cmd_timeout(void)
 	} while (0)
 
 #define CTL_CH(c)		((c) - 'a' + 1)
-
-#define MAX_CMDBUF_SIZE		CONFIG_SYS_CBSIZE
-
 #define CTL_BACKSPACE		('\b')
 #define DEL			((char)255)
 #define DEL7			((char)127)
@@ -531,7 +528,7 @@ void reset_cmd_timeout(void)
 #define getcmd_cbeep()		getcmd_putch('\a')
 
 #define HIST_MAX		20
-#define HIST_SIZE		MAX_CMDBUF_SIZE
+#define HIST_SIZE		CONFIG_SYS_CBSIZE
 
 static int hist_max = 0;
 static int hist_add_idx = 0;
@@ -643,12 +640,10 @@ static void cread_print_hist_list(void)
 
 #define ERASE_TO_EOL() {				\
 	if (num < eol_num) {				\
-		int tmp;				\
-		for (tmp = num; tmp < eol_num; tmp++)	\
-			getcmd_putch(' ');		\
-		while (tmp-- > num)			\
+		printf("%*s", (int)(eol_num - num), ""); \
+		do {					\
 			getcmd_putch(CTL_BACKSPACE);	\
-		eol_num = num;				\
+		} while (--eol_num > num);		\
 	}						\
 }
 
@@ -949,7 +944,7 @@ int readline_into_buffer (const char *const prompt, char * buffer)
 {
 	char *p = buffer;
 #ifdef CONFIG_CMDLINE_EDITING
-	unsigned int len=MAX_CMDBUF_SIZE;
+	unsigned int len = CONFIG_SYS_CBSIZE;
 	int rc;
 	static int initted = 0;
 
@@ -1418,10 +1413,8 @@ int do_run (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	int i;
 
-	if (argc < 2) {
-		cmd_usage(cmdtp);
-		return 1;
-	}
+	if (argc < 2)
+		return cmd_usage(cmdtp);
 
 	for (i=1; i<argc; ++i) {
 		char *arg;

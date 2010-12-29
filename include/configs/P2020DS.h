@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2009 Freescale Semiconductor, Inc.
+ * Copyright 2007-2010 Freescale Semiconductor, Inc.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -27,7 +27,9 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#ifdef CONFIG_MK_36BIT
+#include "../board/freescale/common/ics307_clk.h"
+
+#ifdef CONFIG_36BIT
 #define CONFIG_PHYS_64BIT
 #endif
 
@@ -38,6 +40,10 @@
 #define CONFIG_P2020		1
 #define CONFIG_P2020DS		1
 #define CONFIG_MP		1	/* support multiple processors */
+
+#ifndef CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_TEXT_BASE	0xeff80000
+#endif
 
 #define CONFIG_FSL_ELBC		1	/* Has Enhanced localbus controller */
 #define CONFIG_PCI		1	/* Enable PCI/PCIE */
@@ -54,17 +60,9 @@
 #define CONFIG_TSEC_ENET		/* tsec ethernet support */
 #define CONFIG_ENV_OVERWRITE
 
-#ifndef __ASSEMBLY__
-extern unsigned long calculate_board_sys_clk(unsigned long dummy);
-extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
-/* extern unsigned long get_board_sys_clk(unsigned long dummy); */
-/* extern unsigned long get_board_ddr_clk(unsigned long dummy); */
-#endif
-#define CONFIG_SYS_CLK_FREQ	calculate_board_sys_clk(0) /* sysclk for MPC85xx */
-#define CONFIG_DDR_CLK_FREQ	calculate_board_ddr_clk(0) /* ddrclk for MPC85xx */
+#define CONFIG_SYS_CLK_FREQ	get_board_sys_clk() /* sysclk for MPC85xx */
+#define CONFIG_DDR_CLK_FREQ	get_board_ddr_clk() /* ddrclk for MPC85xx */
 #define CONFIG_ICS307_REFCLK_HZ	33333000  /* ICS307 clock chip ref freq */
-#define CONFIG_GET_CLK_FROM_ICS307	  /* decode sysclk and ddrclk freq
-					     from ICS307 instead of switches */
 
 /*
  * These can be toggled for performance analysis, otherwise use default.
@@ -79,8 +77,9 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
 #define CONFIG_SYS_NUM_ADDR_MAP		16	/* number of TLB1 entries */
 #endif
 
-#define CONFIG_SYS_MEMTEST_START	0x00000000	/* memtest works on */
-#define CONFIG_SYS_MEMTEST_END		0x7fffffff
+#define CONFIG_POST CONFIG_SYS_POST_MEMORY	/* test POST memory test */
+#define CONFIG_SYS_MEMTEST_START	0x00200000	/* memtest works on */
+#define CONFIG_SYS_MEMTEST_END		0x00400000
 #define CONFIG_PANIC_HANG	/* do not reset board on panic */
 
 /*
@@ -96,13 +95,13 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
 #endif
 #define CONFIG_SYS_IMMR		CONFIG_SYS_CCSRBAR	/* PQII uses CONFIG_SYS_IMMR */
 
-#define CONFIG_SYS_PCIE3_ADDR		(CONFIG_SYS_CCSRBAR+0x8000)
-#define CONFIG_SYS_PCIE2_ADDR		(CONFIG_SYS_CCSRBAR+0x9000)
-#define CONFIG_SYS_PCIE1_ADDR		(CONFIG_SYS_CCSRBAR+0xa000)
-
 /* DDR Setup */
 #define CONFIG_VERY_BIG_RAM
+#ifdef CONFIG_DDR2
+#define CONFIG_FSL_DDR2
+#else
 #define CONFIG_FSL_DDR3		1
+#endif
 #undef CONFIG_FSL_DDR_INTERACTIVE
 
 /* ECC will be enabled based on perf_mode environment variable */
@@ -119,6 +118,7 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
 #define CONFIG_CHIP_SELECTS_PER_CTRL	2
 
 /* I2C addresses of SPD EEPROMs */
+#define CONFIG_DDR_SPD
 #define CONFIG_SYS_SPD_BUS_NUM		0	/* SPD EEPROM located on I2C bus 0 */
 #define SPD_EEPROM_ADDRESS1	0x51	/* CTLR 0 DIMM 0 */
 
@@ -229,7 +229,7 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
 #define CONFIG_SYS_FLASH_ERASE_TOUT	60000		/* Flash Erase Timeout (ms) */
 #define CONFIG_SYS_FLASH_WRITE_TOUT	500		/* Flash Write Timeout (ms) */
 
-#define CONFIG_SYS_MONITOR_BASE	TEXT_BASE	/* start of monitor */
+#define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_TEXT_BASE	/* start of monitor */
 
 #define CONFIG_FLASH_CFI_DRIVER
 #define CONFIG_SYS_FLASH_CFI
@@ -238,6 +238,7 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
 
 #define CONFIG_BOARD_EARLY_INIT_R	/* call board_early_init_r function */
 
+#define CONFIG_HWCONFIG			/* enable hwconfig */
 #define CONFIG_FSL_NGPIXIS		/* use common ngPIXIS code */
 
 #ifdef CONFIG_FSL_NGPIXIS
@@ -259,10 +260,21 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
 
 #define CONFIG_SYS_INIT_RAM_LOCK	1
 #define CONFIG_SYS_INIT_RAM_ADDR	0xffd00000	/* Initial L1 address */
-#define CONFIG_SYS_INIT_RAM_END	0x00004000	/* End of used area in RAM */
+#ifdef CONFIG_PHYS_64BIT
+#define CONFIG_SYS_INIT_RAM_ADDR_PHYS_HIGH 0xf
+#define CONFIG_SYS_INIT_RAM_ADDR_PHYS_LOW CONFIG_SYS_INIT_RAM_ADDR
+/* The assembler doesn't like typecast */
+#define CONFIG_SYS_INIT_RAM_ADDR_PHYS \
+	((CONFIG_SYS_INIT_RAM_ADDR_PHYS_HIGH * 1ull << 32) | \
+	  CONFIG_SYS_INIT_RAM_ADDR_PHYS_LOW)
+#else
+#define CONFIG_SYS_INIT_RAM_ADDR_PHYS	CONFIG_SYS_INIT_RAM_ADDR /* Initial L1 address */
+#define CONFIG_SYS_INIT_RAM_ADDR_PHYS_HIGH 0
+#define CONFIG_SYS_INIT_RAM_ADDR_PHYS_LOW CONFIG_SYS_INIT_RAM_ADDR_PHYS
+#endif
+#define CONFIG_SYS_INIT_RAM_SIZE	0x00004000	/* Size of used area in RAM */
 
-#define CONFIG_SYS_GBL_DATA_SIZE	128	/* num bytes initial data */
-#define CONFIG_SYS_GBL_DATA_OFFSET	(CONFIG_SYS_INIT_RAM_END - CONFIG_SYS_GBL_DATA_SIZE)
+#define CONFIG_SYS_GBL_DATA_OFFSET	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
 #define CONFIG_SYS_INIT_SP_OFFSET	CONFIG_SYS_GBL_DATA_OFFSET
 
 #define CONFIG_SYS_MONITOR_LEN		(256 * 1024) /* Reserve 256 kB for Mon */
@@ -329,7 +341,6 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
  * shorted - index 1
  */
 #define CONFIG_CONS_INDEX	1
-#undef	CONFIG_SERIAL_SOFTWARE_FIFO
 #define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
@@ -553,6 +564,7 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
 #define CONFIG_CMD_ELF
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_SETEXPR
+#define CONFIG_CMD_REGINFO
 
 #if defined(CONFIG_PCI)
 #define CONFIG_CMD_PCI
@@ -576,7 +588,8 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
  * Miscellaneous configurable options
  */
 #define CONFIG_SYS_LONGHELP			/* undef to save memory	*/
-#define CONFIG_CMDLINE_EDITING		/* Command-line editing */
+#define CONFIG_CMDLINE_EDITING			/* Command-line editing */
+#define CONFIG_AUTO_COMPLETE			/* add autocompletion support */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
 #define CONFIG_SYS_PROMPT	"=> "		/* Monitor Command Prompt */
 #if defined(CONFIG_CMD_KGDB)
@@ -595,14 +608,6 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
  * the maximum mapped by the Linux kernel during initialization.
  */
 #define CONFIG_SYS_BOOTMAPSZ	(16 << 20)	/* Initial Memory map for Linux*/
-
-/*
- * Internal Definitions
- *
- * Boot Flags
- */
-#define BOOTFLAG_COLD	0x01		/* Normal Power-On: Boot from FLASH */
-#define BOOTFLAG_WARM	0x02		/* Software reboot */
 
 #if defined(CONFIG_CMD_KGDB)
 #define CONFIG_KGDB_BAUDRATE	230400	/* speed to run kgdb serial port */
@@ -650,11 +655,11 @@ extern unsigned long calculate_board_ddr_clk(unsigned long dummy);
  "netdev=eth0\0"						\
  "uboot=" MK_STR(CONFIG_UBOOTPATH) "\0"				\
  "tftpflash=tftpboot $loadaddr $uboot; "			\
-	"protect off " MK_STR(TEXT_BASE) " +$filesize; "	\
-	"erase " MK_STR(TEXT_BASE) " +$filesize; "		\
-	"cp.b $loadaddr " MK_STR(TEXT_BASE) " $filesize; "	\
-	"protect on " MK_STR(TEXT_BASE) " +$filesize; "		\
-	"cmp.b $loadaddr " MK_STR(TEXT_BASE) " $filesize\0"	\
+	"protect off " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "	\
+	"erase " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "		\
+	"cp.b $loadaddr " MK_STR(CONFIG_SYS_TEXT_BASE) " $filesize; "	\
+	"protect on " MK_STR(CONFIG_SYS_TEXT_BASE) " +$filesize; "		\
+	"cmp.b $loadaddr " MK_STR(CONFIG_SYS_TEXT_BASE) " $filesize\0"	\
  "consoledev=ttyS0\0"				\
  "ramdiskaddr=2000000\0"			\
  "ramdiskfile=p2020ds/ramdisk.uboot\0"		\

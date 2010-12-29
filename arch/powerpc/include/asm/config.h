@@ -22,6 +22,9 @@
 #define _ASM_CONFIG_H_
 
 #define CONFIG_LMB
+#define CONFIG_SYS_BOOT_RAMDISK_HIGH
+#define CONFIG_SYS_BOOT_GET_CMDLINE
+#define CONFIG_SYS_BOOT_GET_KBD
 
 #ifndef CONFIG_MAX_MEM_MAPPED
 #if defined(CONFIG_4xx) || defined(CONFIG_E500) || defined(CONFIG_MPC86xx)
@@ -44,8 +47,12 @@
 	defined(CONFIG_P1021) || defined(CONFIG_P1022) || \
 	defined(CONFIG_P2020) || defined(CONFIG_MPC8641)
 #define CONFIG_MAX_CPUS		2
+#elif defined(CONFIG_PPC_P3041)
+#define CONFIG_MAX_CPUS		4
 #elif defined(CONFIG_PPC_P4080)
 #define CONFIG_MAX_CPUS		8
+#elif defined(CONFIG_PPC_P5020)
+#define CONFIG_MAX_CPUS		2
 #else
 #define CONFIG_MAX_CPUS		1
 #endif
@@ -66,6 +73,15 @@
 #define CONFIG_TSECV2
 #endif
 
+/*
+ * SEC (crypto unit) major compatible version determination
+ */
+#if defined(CONFIG_FSL_CORENET)
+#define CONFIG_SYS_FSL_SEC_COMPAT	4
+#elif defined(CONFIG_MPC85xx) || defined(CONFIG_MPC83xx)
+#define CONFIG_SYS_FSL_SEC_COMPAT	2
+#endif
+
 /* Number of TLB CAM entries we have on FSL Book-E chips */
 #if defined(CONFIG_E500MC)
 #define CONFIG_SYS_NUM_TLBCAMS	64
@@ -73,7 +89,13 @@
 #define CONFIG_SYS_NUM_TLBCAMS	16
 #endif
 
-/* Relocation to SDRAM works on all PPC boards */
-#define CONFIG_RELOC_FIXUP_WORKS
+/* Since so many PPC SOCs have a semi-common LBC, define this here */
+#if defined(CONFIG_MPC85xx) || defined(CONFIG_MPC86xx) || \
+	defined(CONFIG_MPC83xx)
+#define CONFIG_FSL_LBC
+#endif
+
+/* All PPC boards must swap IDE bytes */
+#define CONFIG_IDE_SWAP_IO
 
 #endif /* _ASM_CONFIG_H_ */

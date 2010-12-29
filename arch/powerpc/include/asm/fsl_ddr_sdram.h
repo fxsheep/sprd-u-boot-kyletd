@@ -119,6 +119,7 @@ typedef struct fsl_ddr_cfg_regs_s {
 	unsigned int ddr_sr_cntr;
 	unsigned int ddr_sdram_rcw_1;
 	unsigned int ddr_sdram_rcw_2;
+	unsigned int ddr_eor;
 } fsl_ddr_cfg_regs_t;
 
 typedef struct memctl_options_partial_s {
@@ -156,6 +157,7 @@ typedef struct memctl_options_s {
 	unsigned int memctl_interleaving;
 	unsigned int memctl_interleaving_mode;
 	unsigned int ba_intlv_ctl;
+	unsigned int addr_hash;
 
 	/* Operational mode parameters */
 	unsigned int ECC_mode;	 /* Use ECC? */
@@ -172,6 +174,7 @@ typedef struct memctl_options_s {
 	unsigned int OTF_burst_chop_en;
 	/* mirrior DIMMs for DDR3 */
 	unsigned int mirrored_dimm;
+	unsigned int quad_rank_present;
 
 	/* Global Timing Parameters */
 	unsigned int cas_latency_override;
@@ -210,4 +213,10 @@ typedef struct memctl_options_s {
 } memctl_options_t;
 
 extern phys_size_t fsl_ddr_sdram(void);
+
+typedef struct fixed_ddr_parm{
+	int min_freq;
+	int max_freq;
+	fsl_ddr_cfg_regs_t *ddr_settings;
+} fixed_ddr_parm_t;
 #endif

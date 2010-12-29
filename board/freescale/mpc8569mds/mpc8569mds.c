@@ -1,5 +1,5 @@
 /*
- * Copyright 2009 Freescale Semiconductor.
+ * Copyright 2009-2010 Freescale Semiconductor.
  *
  * (C) Copyright 2002 Scott McNutt <smcnutt@artesyncp.com>
  *
@@ -27,6 +27,7 @@
 #include <pci.h>
 #include <asm/processor.h>
 #include <asm/mmu.h>
+#include <asm/cache.h>
 #include <asm/immap_85xx.h>
 #include <asm/fsl_pci.h>
 #include <asm/fsl_ddr_sdram.h>
@@ -211,6 +212,31 @@ int board_early_init_f (void)
 	return 0;
 }
 
+int board_early_init_r(void)
+{
+	const unsigned int flashbase = CONFIG_SYS_NAND_BASE;
+	const u8 flash_esel = 0;
+
+	/*
+	 * Remap Boot flash to caching-inhibited
+	 * so that flash can be erased properly.
+	 */
+
+	/* Flush d-cache and invalidate i-cache of any FLASH data */
+	flush_dcache();
+	invalidate_icache();
+
+	/* invalidate existing TLB entry for flash */
+	disable_tlb(flash_esel);
+
+	set_tlb(1, flashbase, CONFIG_SYS_NAND_BASE,	/* tlb, epn, rpn */
+		MAS3_SX|MAS3_SW|MAS3_SR, MAS2_I|MAS2_G,	/* perms, wimge */
+		0, flash_esel,				/* ts, esel */
+		BOOKE_PAGESZ_64M, 1);			/* tsize, iprot */
+
+	return 0;
+}
+
 int checkboard (void)
 {
 	printf ("Board: 8569 MDS\n");
@@ -308,7 +334,7 @@ void
 local_bus_init(void)
 {
 	volatile ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
-	volatile ccsr_lbc_t *lbc = (void *)(CONFIG_SYS_MPC85xx_LBC_ADDR);
+	volatile fsl_lbc_t *lbc = LBC_BASE_ADDR;
 
 	uint clkdiv;
 	uint lbc_hz;
@@ -558,13 +584,13 @@ void pci_init_board(void)
 	if (pcie_configured && !(devdisr & MPC85xx_DEVDISR_PCIE)){
 		SET_STD_PCIE_INFO(pci_info[num], 1);
 		pcie_ep = fsl_setup_hose(&pcie1_hose, pci_info[num].regs);
-		printf ("    PCIE1 connected to Slot as %s (base addr %lx)\n",
-				pcie_ep ? "Endpoint" : "Root Complex",
-				pci_info[num].regs);
+		printf("PCIE1: connected to Slot as %s (base addr %lx)\n",
+			pcie_ep ? "Endpoint" : "Root Complex",
+			pci_info[num].regs);
 		first_free_busno = fsl_pci_init_port(&pci_info[num++],
 					&pcie1_hose, first_free_busno);
 	} else {
-		printf ("    PCIE1: disabled\n");
+		printf("PCIE1: disabled\n");
 	}
 
 	puts("\n");
@@ -596,8 +622,8 @@ void ft_board_setup(void *blob, bd_t *bd)
 			break;
 		}
 
-		err = fdt_setprop_string(blob, nodeoff, "phy-connection-type",
-					"rmii");
+		err = fdt_fixup_phy_connection(blob, nodeoff, RMII);
+
 		if (err < 0) {
 			printf("WARNING: could not set phy-connection-type "
 				"%s.\n", fdt_strerror(err));
@@ -635,9 +661,8 @@ void ft_board_setup(void *blob, bd_t *bd)
 #endif
 	ft_cpu_setup(blob, bd);
 
-#ifdef CONFIG_PCIE1
-	ft_fsl_pci_setup(blob, "pci1", &pcie1_hose);
-#endif
+	FT_FSL_PCI_SETUP;
+
 	fdt_board_fixup_esdhc(blob, bd);
 	fdt_board_fixup_qe_uart(blob, bd);
 	fdt_board_fixup_qe_usb(blob, bd);

@@ -26,6 +26,8 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif /* HWCONFIG_TEST */
 
+DECLARE_GLOBAL_DATA_PTR;
+
 static const char *hwconfig_parse(const char *opts, size_t maxlen,
 				  const char *opt, char *stopchs, char eqch,
 				  size_t *arglen)
@@ -66,26 +68,44 @@ next:
 	return NULL;
 }
 
-const char *cpu_hwconfig __attribute__((weak));
-const char *board_hwconfig __attribute__((weak));
+const char cpu_hwconfig[] __attribute__((weak)) = "";
+const char board_hwconfig[] __attribute__((weak)) = "";
+
+#define HWCONFIG_PRE_RELOC_BUF_SIZE	128
 
 static const char *__hwconfig(const char *opt, size_t *arglen)
 {
-	const char *env_hwconfig = getenv("hwconfig");
+	const char *env_hwconfig = NULL, *ret;
+	char buf[HWCONFIG_PRE_RELOC_BUF_SIZE];
 
-	if (env_hwconfig)
-		return hwconfig_parse(env_hwconfig, strlen(env_hwconfig),
+	if (gd->flags & GD_FLG_ENV_READY) {
+		env_hwconfig = getenv("hwconfig");
+	} else {
+		/*
+		 * Use our own on stack based buffer before relocation to allow
+		 * accessing longer hwconfig strings that might be in the
+		 * environment before we've relocated.  This is pretty fragile
+		 * on both the use of stack and if the buffer is big enough.
+		 * However we will get a warning from getenv_f for the later.
+		 */
+		if ((getenv_f("hwconfig", buf, sizeof(buf))) > 0)
+			env_hwconfig = buf;
+	}
+
+	if (env_hwconfig) {
+		ret = hwconfig_parse(env_hwconfig, strlen(env_hwconfig),
 				      opt, ";", ':', arglen);
+		if (ret)
+			return ret;
+	}
 
-	if (board_hwconfig)
-		return hwconfig_parse(board_hwconfig, strlen(board_hwconfig),
-				      opt, ";", ':', arglen);
+	ret = hwconfig_parse(board_hwconfig, strlen(board_hwconfig),
+			opt, ";", ':', arglen);
+	if (ret)
+		return ret;
 
-	if (cpu_hwconfig)
-		return hwconfig_parse(cpu_hwconfig, strlen(cpu_hwconfig),
-				      opt, ";", ':', arglen);
-
-	return NULL;
+	return hwconfig_parse(cpu_hwconfig, strlen(cpu_hwconfig),
+			opt, ";", ':', arglen);
 }
 
 /*

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007 Freescale Semiconductor, Inc.
+ * Copyright (C) 2004-2007, 2010 Freescale Semiconductor, Inc.
  *
  * See file CREDITS for list of people who contributed to this
  * project.
@@ -65,6 +65,7 @@
 #define PARTID_NO_E(spridr)		((spridr & 0xFFFE0000) >> 16)
 #define SPR_FAMILY(spridr)		((spridr & 0xFFF00000) >> 20)
 
+#define SPR_8308			0x8100
 #define SPR_831X_FAMILY			0x80B
 #define SPR_8311			0x80B2
 #define SPR_8313			0x80B0
@@ -115,8 +116,9 @@
 #define SPCR_TSEC2EP			0x00000003	/* TSEC2 emergency priority */
 #define SPCR_TSEC2EP_SHIFT		(31-31)
 
-#elif defined(CONFIG_MPC831x) || defined(CONFIG_MPC837x)
-/* SPCR bits - MPC831x and MPC837x specific */
+#elif defined(CONFIG_MPC8308) || defined(CONFIG_MPC831x) || \
+	defined(CONFIG_MPC837x)
+/* SPCR bits - MPC8308, MPC831x and MPC837x specific */
 #define SPCR_TSECDP			0x00003000	/* TSEC data priority */
 #define SPCR_TSECDP_SHIFT		(31-19)
 #define SPCR_TSECBDP			0x00000C00	/* TSEC buffer descriptor priority */
@@ -317,6 +319,54 @@
 #define SICRH_GPIO2_H			0x00000030
 #define SICRH_SPI			0x00000003
 #define SICRH_SPI_SD			0x00000001
+
+#elif defined(CONFIG_MPC8308)
+/* SICRL bits - MPC8308 specific */
+#define SICRL_SPI_PF0			(0 << 28)
+#define SICRL_SPI_PF1			(1 << 28)
+#define SICRL_SPI_PF3			(3 << 28)
+#define SICRL_UART_PF0			(0 << 26)
+#define SICRL_UART_PF1			(1 << 26)
+#define SICRL_UART_PF3			(3 << 26)
+#define SICRL_IRQ_PF0			(0 << 24)
+#define SICRL_IRQ_PF1			(1 << 24)
+#define SICRL_I2C2_PF0			(0 << 20)
+#define SICRL_I2C2_PF1			(1 << 20)
+#define SICRL_ETSEC1_TX_CLK		(0 << 6)
+#define SICRL_ETSEC1_GTX_CLK125		(1 << 6)
+
+/* SICRH bits - MPC8308 specific */
+#define SICRH_ESDHC_A_SD		(0 << 30)
+#define SICRH_ESDHC_A_GTM		(1 << 30)
+#define SICRH_ESDHC_A_GPIO		(3 << 30)
+#define SICRH_ESDHC_B_SD		(0 << 28)
+#define SICRH_ESDHC_B_GTM		(1 << 28)
+#define SICRH_ESDHC_B_GPIO		(3 << 28)
+#define SICRH_ESDHC_C_SD		(0 << 26)
+#define SICRH_ESDHC_C_GTM		(1 << 26)
+#define SICRH_ESDHC_C_GPIO		(3 << 26)
+#define SICRH_GPIO_A_GPIO		(0 << 24)
+#define SICRH_GPIO_A_TSEC2		(1 << 24)
+#define SICRH_GPIO_B_GPIO		(0 << 22)
+#define SICRH_GPIO_B_TSEC2_TX_CLK	(1 << 22)
+#define SICRH_GPIO_B_TSEC2_GTX_CLK125	(2 << 22)
+#define SICRH_IEEE1588_A_TMR		(1 << 20)
+#define SICRH_IEEE1588_A_GPIO		(3 << 20)
+#define SICRH_USB			(1 << 18)
+#define SICRH_GTM_GTM			(1 << 16)
+#define SICRH_GTM_GPIO			(3 << 16)
+#define SICRH_IEEE1588_B_TMR		(1 << 14)
+#define SICRH_IEEE1588_B_GPIO		(3 << 14)
+#define SICRH_ETSEC2_CRS		(1 << 12)
+#define SICRH_ETSEC2_GPIO		(3 << 12)
+#define SICRH_GPIOSEL_0			(0 << 8)
+#define SICRH_GPIOSEL_1			(1 << 8)
+#define SICRH_TMROBI_V3P3		(0 << 4)
+#define SICRH_TMROBI_V2P5		(1 << 4)
+#define SICRH_TSOBI1_V3P3		(0 << 1)
+#define SICRH_TSOBI1_V2P5		(1 << 1)
+#define SICRH_TSOBI2_V3P3		(0 << 0)
+#define SICRH_TSOBI2_V2P5		(1 << 0)
 #endif
 
 /* SWCRR - System Watchdog Control Register
@@ -473,7 +523,7 @@
 #define HRCWL_CE_TO_PLL_1X30		0x0000001E
 #define HRCWL_CE_TO_PLL_1X31		0x0000001F
 
-#elif defined(CONFIG_MPC8315)
+#elif defined(CONFIG_MPC8308) || defined(CONFIG_MPC8315)
 #define HRCWL_SVCOD			0x30000000
 #define HRCWL_SVCOD_SHIFT		28
 #define HRCWL_SVCOD_DIV_2		0x00000000
@@ -541,7 +591,8 @@
 #define HRCWH_ROM_LOC_LOCAL_16BIT	0x00600000
 #define HRCWH_ROM_LOC_LOCAL_32BIT	0x00700000
 
-#if defined(CONFIG_MPC831x) || defined(CONFIG_MPC837x)
+#if defined(CONFIG_MPC8308) || defined(CONFIG_MPC831x) || \
+	defined(CONFIG_MPC837x)
 #define HRCWH_ROM_LOC_NAND_SP_8BIT	0x00100000
 #define HRCWH_ROM_LOC_NAND_SP_16BIT	0x00200000
 #define HRCWH_ROM_LOC_NAND_LP_8BIT	0x00500000
@@ -592,7 +643,8 @@
 
 /* RSR - Reset Status Register
  */
-#if defined(CONFIG_MPC831x) || defined(CONFIG_MPC837x)
+#if defined(CONFIG_MPC8308) || defined(CONFIG_MPC831x) || \
+	defined(CONFIG_MPC837x)
 #define RSR_RSTSRC			0xF0000000	/* Reset source */
 #define RSR_RSTSRC_SHIFT		28
 #else
@@ -734,8 +786,8 @@
 #define SCCR_USBDRCM_2			0x00200000
 #define SCCR_USBDRCM_3			0x00300000
 
-#elif defined(CONFIG_MPC8315)
-/* SCCR bits - MPC8315 specific */
+#elif defined(CONFIG_MPC8308) || defined(CONFIG_MPC8315)
+/* SCCR bits - MPC8315/MPC8308 specific */
 #define SCCR_TSEC1CM			0xc0000000
 #define SCCR_TSEC1CM_SHIFT		30
 #define SCCR_TSEC1CM_0			0x00000000
@@ -749,6 +801,13 @@
 #define SCCR_TSEC2CM_1			0x10000000
 #define SCCR_TSEC2CM_2			0x20000000
 #define SCCR_TSEC2CM_3			0x30000000
+
+#define SCCR_SDHCCM			0x0c000000
+#define SCCR_SDHCCM_SHIFT		26
+#define SCCR_SDHCCM_0			0x00000000
+#define SCCR_SDHCCM_1			0x04000000
+#define SCCR_SDHCCM_2			0x08000000
+#define SCCR_SDHCCM_3			0x0c000000
 
 #define SCCR_USBDRCM			0x00c00000
 #define SCCR_USBDRCM_SHIFT		22
@@ -1205,9 +1264,9 @@
 
 #ifndef __ASSEMBLY__
 struct pci_region;
-void mpc83xx_pci_init(int num_buses, struct pci_region **reg, int warmboot);
+void mpc83xx_pci_init(int num_buses, struct pci_region **reg);
 void mpc83xx_pcislave_unlock(int bus);
-void mpc83xx_pcie_init(int num_buses, struct pci_region **reg, int warmboot);
+void mpc83xx_pcie_init(int num_buses, struct pci_region **reg);
 #endif
 
 #endif	/* __MPC83XX_H__ */

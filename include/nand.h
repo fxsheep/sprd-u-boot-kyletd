@@ -98,13 +98,16 @@ struct nand_read_options {
 typedef struct nand_read_options nand_read_options_t;
 
 struct nand_erase_options {
-	ulong length;		/* number of bytes to erase */
-	ulong offset;		/* first address in NAND to erase */
+	loff_t length;		/* number of bytes to erase */
+	loff_t offset;		/* first address in NAND to erase */
 	int quiet;		/* don't display progress messages */
 	int jffs2;		/* if true: format for jffs2 usage
 				 * (write appropriate cleanmarker blocks) */
 	int scrub;		/* if true, really clean NAND by erasing
 				 * bad blocks (UNSAFE) */
+
+	/* Don't include skipped bad blocks in size to be erased */
+	int spread;
 };
 
 typedef struct nand_erase_options nand_erase_options_t;
@@ -131,4 +134,13 @@ void board_nand_select_device(struct nand_chip *nand, int chip);
 
 __attribute__((noreturn)) void nand_boot(void);
 
+#endif
+
+#ifdef CONFIG_ENV_OFFSET_OOB
+#define ENV_OOB_MARKER 0x30425645 /*"EVB0" in little-endian -- offset is stored
+				    as block number*/
+#define ENV_OOB_MARKER_OLD 0x30564e45 /*"ENV0" in little-endian -- offset is
+					stored as byte number */
+#define ENV_OFFSET_SIZE 8
+int get_nand_env_oob(nand_info_t *nand, unsigned long *result);
 #endif

@@ -32,6 +32,11 @@
 #include <fsl_esdhc.h>
 #include <asm/cache.h>
 #include <asm/io.h>
+#include <asm/mmu.h>
+#include <asm/fsl_law.h>
+#include <post.h>
+#include <asm/processor.h>
+#include <asm/fsl_ddr_sdram.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -72,7 +77,7 @@ int checkcpu (void)
 		puts("Unicore software on multiprocessor system!!\n"
 		     "To enable mutlticore build define CONFIG_MP\n");
 #endif
-		volatile ccsr_pic_t *pic = (void *)(CONFIG_SYS_MPC85xx_PIC_ADDR);
+		volatile ccsr_pic_t *pic = (void *)(CONFIG_SYS_MPC8xxx_PIC_ADDR);
 		printf("CPU%d:  ", pic->whoami);
 	} else {
 		puts("CPU:   ");
@@ -93,17 +98,25 @@ int checkcpu (void)
 	minor = PVR_MIN(pvr);
 
 	printf("Core:  ");
-	switch (fam) {
-	case PVR_FAM(PVR_85xx):
-	    puts("E500");
-	    break;
-	default:
-	    puts("Unknown");
-	    break;
+	if (PVR_FAM(PVR_85xx)) {
+		switch(PVR_MEM(pvr)) {
+		case 0x1:
+		case 0x2:
+			puts("E500");
+			break;
+		case 0x3:
+			puts("E500MC");
+			break;
+		case 0x4:
+			puts("E5500");
+			break;
+		default:
+			puts("Unknown");
+			break;
+		}
+	} else {
+		puts("Unknown");
 	}
-
-	if (PVR_MEM(pvr) == 0x03)
-		puts("MC");
 
 	printf(", Version: %d.%d, (0x%08x)\n", major, minor, pvr);
 
@@ -169,7 +182,7 @@ int checkcpu (void)
 
 #ifdef CONFIG_SYS_DPAA_FMAN
 	for (i = 0; i < CONFIG_SYS_NUM_FMAN; i++) {
-		printf("       FMAN%d: %s MHz\n", i,
+		printf("       FMAN%d: %s MHz\n", i + 1,
 			strmhz(buf1, sysinfo.freqFMan[i]));
 	}
 #endif
@@ -250,71 +263,6 @@ reset_85xx_watchdog(void)
 #endif	/* CONFIG_WATCHDOG */
 
 /*
- * Configures a UPM. The function requires the respective MxMR to be set
- * before calling this function. "size" is the number or entries, not a sizeof.
- */
-void upmconfig (uint upm, uint * table, uint size)
-{
-	int i, mdr, mad, old_mad = 0;
-	volatile u32 *mxmr;
-	volatile ccsr_lbc_t *lbc = (void *)(CONFIG_SYS_MPC85xx_LBC_ADDR);
-	volatile u32 *brp,*orp;
-	volatile u8* dummy = NULL;
-	int upmmask;
-
-	switch (upm) {
-	case UPMA:
-		mxmr = &lbc->mamr;
-		upmmask = BR_MS_UPMA;
-		break;
-	case UPMB:
-		mxmr = &lbc->mbmr;
-		upmmask = BR_MS_UPMB;
-		break;
-	case UPMC:
-		mxmr = &lbc->mcmr;
-		upmmask = BR_MS_UPMC;
-		break;
-	default:
-		printf("%s: Bad UPM index %d to configure\n", __FUNCTION__, upm);
-		hang();
-	}
-
-	/* Find the address for the dummy write transaction */
-	for (brp = &lbc->br0, orp = &lbc->or0, i = 0; i < 8;
-		 i++, brp += 2, orp += 2) {
-
-		/* Look for a valid BR with selected UPM */
-		if ((in_be32(brp) & (BR_V | BR_MSEL)) == (BR_V | upmmask)) {
-			dummy = (volatile u8*)(in_be32(brp) & BR_BA);
-			break;
-		}
-	}
-
-	if (i == 8) {
-		printf("Error: %s() could not find matching BR\n", __FUNCTION__);
-		hang();
-	}
-
-	for (i = 0; i < size; i++) {
-		/* 1 */
-		out_be32(mxmr,  (in_be32(mxmr) & 0x4fffffc0) | MxMR_OP_WARR | i);
-		/* 2 */
-		out_be32(&lbc->mdr, table[i]);
-		/* 3 */
-		mdr = in_be32(&lbc->mdr);
-		/* 4 */
-		*(volatile u8 *)dummy = 0;
-		/* 5 */
-		do {
-			mad = in_be32(mxmr) & MxMR_MAD_MSK;
-		} while (mad <= old_mad && !(!mad && i == (size-1)));
-		old_mad = mad;
-	}
-	out_be32(mxmr, (in_be32(mxmr) & 0x4fffffc0) | MxMR_OP_NORM);
-}
-
-/*
  * Initializes on-chip MMC controllers.
  * to override, implement board_mmc_init()
  */
@@ -326,3 +274,230 @@ int cpu_mmc_init(bd_t *bis)
 	return 0;
 #endif
 }
+
+/*
+ * Print out the state of various machine registers.
+ * Currently prints out LAWs, BR0/OR0, and TLBs
+ */
+void mpc85xx_reginfo(void)
+{
+	print_tlbcam();
+	print_laws();
+	print_lbc_regs();
+}
+
+#if CONFIG_POST & CONFIG_SYS_POST_MEMORY
+
+/* Board-specific functions defined in each board's ddr.c */
+void fsl_ddr_get_spd(generic_spd_eeprom_t *ctrl_dimms_spd,
+	unsigned int ctrl_num);
+void read_tlbcam_entry(int idx, u32 *valid, u32 *tsize, unsigned long *epn,
+		       phys_addr_t *rpn);
+unsigned int
+	setup_ddr_tlbs_phys(phys_addr_t p_addr, unsigned int memsize_in_meg);
+
+static void dump_spd_ddr_reg(void)
+{
+	int i, j, k, m;
+	u8 *p_8;
+	u32 *p_32;
+	ccsr_ddr_t *ddr[CONFIG_NUM_DDR_CONTROLLERS];
+	generic_spd_eeprom_t
+		spd[CONFIG_NUM_DDR_CONTROLLERS][CONFIG_DIMM_SLOTS_PER_CTLR];
+
+	for (i = 0; i < CONFIG_NUM_DDR_CONTROLLERS; i++)
+		fsl_ddr_get_spd(spd[i], i);
+
+	puts("SPD data of all dimms (zero vaule is omitted)...\n");
+	puts("Byte (hex)  ");
+	k = 1;
+	for (i = 0; i < CONFIG_NUM_DDR_CONTROLLERS; i++) {
+		for (j = 0; j < CONFIG_DIMM_SLOTS_PER_CTLR; j++)
+			printf("Dimm%d ", k++);
+	}
+	puts("\n");
+	for (k = 0; k < sizeof(generic_spd_eeprom_t); k++) {
+		m = 0;
+		printf("%3d (0x%02x)  ", k, k);
+		for (i = 0; i < CONFIG_NUM_DDR_CONTROLLERS; i++) {
+			for (j = 0; j < CONFIG_DIMM_SLOTS_PER_CTLR; j++) {
+				p_8 = (u8 *) &spd[i][j];
+				if (p_8[k]) {
+					printf("0x%02x  ", p_8[k]);
+					m++;
+				} else
+					puts("      ");
+			}
+		}
+		if (m)
+			puts("\n");
+		else
+			puts("\r");
+	}
+
+	for (i = 0; i < CONFIG_NUM_DDR_CONTROLLERS; i++) {
+		switch (i) {
+		case 0:
+			ddr[i] = (void *)CONFIG_SYS_MPC85xx_DDR_ADDR;
+			break;
+#ifdef CONFIG_SYS_MPC85xx_DDR2_ADDR
+		case 1:
+			ddr[i] = (void *)CONFIG_SYS_MPC85xx_DDR2_ADDR;
+			break;
+#endif
+		default:
+			printf("%s unexpected controller number = %u\n",
+				__func__, i);
+			return;
+		}
+	}
+	printf("DDR registers dump for all controllers "
+		"(zero vaule is omitted)...\n");
+	puts("Offset (hex)   ");
+	for (i = 0; i < CONFIG_NUM_DDR_CONTROLLERS; i++)
+		printf("     Base + 0x%04x", (u32)ddr[i] & 0xFFFF);
+	puts("\n");
+	for (k = 0; k < sizeof(ccsr_ddr_t)/4; k++) {
+		m = 0;
+		printf("%6d (0x%04x)", k * 4, k * 4);
+		for (i = 0; i < CONFIG_NUM_DDR_CONTROLLERS; i++) {
+			p_32 = (u32 *) ddr[i];
+			if (p_32[k]) {
+				printf("        0x%08x", p_32[k]);
+				m++;
+			} else
+				puts("                  ");
+		}
+		if (m)
+			puts("\n");
+		else
+			puts("\r");
+	}
+	puts("\n");
+}
+
+/* invalid the TLBs for DDR and setup new ones to cover p_addr */
+static int reset_tlb(phys_addr_t p_addr, u32 size, phys_addr_t *phys_offset)
+{
+	u32 vstart = CONFIG_SYS_DDR_SDRAM_BASE;
+	unsigned long epn;
+	u32 tsize, valid, ptr;
+	phys_addr_t rpn = 0;
+	int ddr_esel;
+
+	ptr = vstart;
+
+	while (ptr < (vstart + size)) {
+		ddr_esel = find_tlb_idx((void *)ptr, 1);
+		if (ddr_esel != -1) {
+			read_tlbcam_entry(ddr_esel, &valid, &tsize, &epn, &rpn);
+			disable_tlb(ddr_esel);
+		}
+		ptr += TSIZE_TO_BYTES(tsize);
+	}
+
+	/* Setup new tlb to cover the physical address */
+	setup_ddr_tlbs_phys(p_addr, size>>20);
+
+	ptr = vstart;
+	ddr_esel = find_tlb_idx((void *)ptr, 1);
+	if (ddr_esel != -1) {
+		read_tlbcam_entry(ddr_esel, &valid, &tsize, &epn, phys_offset);
+	} else {
+		printf("TLB error in function %s\n", __func__);
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
+ * slide the testing window up to test another area
+ * for 32_bit system, the maximum testable memory is limited to
+ * CONFIG_MAX_MEM_MAPPED
+ */
+int arch_memory_test_advance(u32 *vstart, u32 *size, phys_addr_t *phys_offset)
+{
+	phys_addr_t test_cap, p_addr;
+	phys_size_t p_size = min(gd->ram_size, CONFIG_MAX_MEM_MAPPED);
+
+#if !defined(CONFIG_PHYS_64BIT) || \
+    !defined(CONFIG_SYS_INIT_RAM_ADDR_PHYS) || \
+	(CONFIG_SYS_INIT_RAM_ADDR_PHYS < 0x100000000ull)
+		test_cap = p_size;
+#else
+		test_cap = gd->ram_size;
+#endif
+	p_addr = (*vstart) + (*size) + (*phys_offset);
+	if (p_addr < test_cap - 1) {
+		p_size = min(test_cap - p_addr, CONFIG_MAX_MEM_MAPPED);
+		if (reset_tlb(p_addr, p_size, phys_offset) == -1)
+			return -1;
+		*vstart = CONFIG_SYS_DDR_SDRAM_BASE;
+		*size = (u32) p_size;
+		printf("Testing 0x%08llx - 0x%08llx\n",
+			(u64)(*vstart) + (*phys_offset),
+			(u64)(*vstart) + (*phys_offset) + (*size) - 1);
+	} else
+		return 1;
+
+	return 0;
+}
+
+/* initialization for testing area */
+int arch_memory_test_prepare(u32 *vstart, u32 *size, phys_addr_t *phys_offset)
+{
+	phys_size_t p_size = min(gd->ram_size, CONFIG_MAX_MEM_MAPPED);
+
+	*vstart = CONFIG_SYS_DDR_SDRAM_BASE;
+	*size = (u32) p_size;	/* CONFIG_MAX_MEM_MAPPED < 4G */
+	*phys_offset = 0;
+
+#if !defined(CONFIG_PHYS_64BIT) || \
+    !defined(CONFIG_SYS_INIT_RAM_ADDR_PHYS) || \
+	(CONFIG_SYS_INIT_RAM_ADDR_PHYS < 0x100000000ull)
+		if (gd->ram_size > CONFIG_MAX_MEM_MAPPED) {
+			puts("Cannot test more than ");
+			print_size(CONFIG_MAX_MEM_MAPPED,
+				" without proper 36BIT support.\n");
+		}
+#endif
+	printf("Testing 0x%08llx - 0x%08llx\n",
+		(u64)(*vstart) + (*phys_offset),
+		(u64)(*vstart) + (*phys_offset) + (*size) - 1);
+
+	return 0;
+}
+
+/* invalid TLBs for DDR and remap as normal after testing */
+int arch_memory_test_cleanup(u32 *vstart, u32 *size, phys_addr_t *phys_offset)
+{
+	unsigned long epn;
+	u32 tsize, valid, ptr;
+	phys_addr_t rpn = 0;
+	int ddr_esel;
+
+	/* disable the TLBs for this testing */
+	ptr = *vstart;
+
+	while (ptr < (*vstart) + (*size)) {
+		ddr_esel = find_tlb_idx((void *)ptr, 1);
+		if (ddr_esel != -1) {
+			read_tlbcam_entry(ddr_esel, &valid, &tsize, &epn, &rpn);
+			disable_tlb(ddr_esel);
+		}
+		ptr += TSIZE_TO_BYTES(tsize);
+	}
+
+	puts("Remap DDR ");
+	setup_ddr_tlbs(gd->ram_size>>20);
+	puts("\n");
+
+	return 0;
+}
+
+void arch_memory_failure_handle(void)
+{
+	dump_spd_ddr_reg();
+}
+#endif

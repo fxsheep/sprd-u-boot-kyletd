@@ -23,7 +23,7 @@
 
 #include <common.h>
 #include <command.h>
-#include <ppc4xx.h>
+#include <asm/ppc4xx.h>
 #include <asm/processor.h>
 #include <asm/ppc4xx-isram.h>
 #include <spd_sdram.h>
@@ -223,8 +223,7 @@ int do_l2cache( cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[] )
 			l2cache_status() ? "ON" : "OFF");
 		return 0;
 	default:
-		cmd_usage(cmdtp);
-		return 1;
+		return cmd_usage(cmdtp);
 	}
 
 	return  0;

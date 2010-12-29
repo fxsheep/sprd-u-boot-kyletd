@@ -5,6 +5,8 @@
 #include <asm/arch/bits.h>
 #include <asm/arch/chip_drv_config_extern.h>
 
+char * version_string="fdl2";
+
 int printf(const char *fmt, ...)
 {
 #if 1
@@ -61,6 +63,16 @@ int vprintf(const char *fmt, va_list args)
 void putc(const char c)
 {
 	serial_putc(c);
+}
+
+void puts(const char *str)
+{
+//	serial_puts(str);
+}
+
+int ctrlc(void)
+{
+	return 0;
 }
 
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])

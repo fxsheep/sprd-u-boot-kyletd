@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2009 Freescale Semiconductor, Inc.
+ * Copyright 2007-2010 Freescale Semiconductor, Inc.
  *
  * (C) Copyright 2000
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
@@ -28,6 +28,8 @@
 #include <fdt_support.h>
 #include <asm/processor.h>
 #include <linux/ctype.h>
+#include <asm/io.h>
+#include <asm/fsl_portals.h>
 #ifdef CONFIG_FSL_ESDHC
 #include <fsl_esdhc.h>
 #endif
@@ -46,24 +48,41 @@ void ft_fixup_cpu(void *blob, u64 memory_limit)
 	ulong spin_tbl_addr = get_spin_phys_addr();
 	u32 bootpg = determine_mp_bootpg();
 	u32 id = get_my_id();
+	const char *enable_method;
 
 	off = fdt_node_offset_by_prop_value(blob, -1, "device_type", "cpu", 4);
 	while (off != -FDT_ERR_NOTFOUND) {
 		u32 *reg = (u32 *)fdt_getprop(blob, off, "reg", 0);
 
 		if (reg) {
+			u64 val = *reg * SIZE_BOOT_ENTRY + spin_tbl_addr;
+			val = cpu_to_fdt32(val);
 			if (*reg == id) {
-				fdt_setprop_string(blob, off, "status", "okay");
+				fdt_setprop_string(blob, off, "status",
+								"okay");
 			} else {
-				u64 val = *reg * SIZE_BOOT_ENTRY + spin_tbl_addr;
-				val = cpu_to_fdt32(val);
 				fdt_setprop_string(blob, off, "status",
 								"disabled");
-				fdt_setprop_string(blob, off, "enable-method",
-								"spin-table");
+			}
+
+			if (hold_cores_in_reset(0)) {
+#ifdef CONFIG_FSL_CORENET
+				/* Cores held in reset, use BRR to release */
+				enable_method = "fsl,brr-holdoff";
+#else
+				/* Cores held in reset, use EEBPCR to release */
+				enable_method = "fsl,eebpcr-holdoff";
+#endif
+			} else {
+				/* Cores out of reset and in a spin-loop */
+				enable_method = "spin-table";
+
 				fdt_setprop(blob, off, "cpu-release-addr",
 						&val, sizeof(val));
 			}
+
+			fdt_setprop_string(blob, off, "enable-method",
+							enable_method);
 		} else {
 			printf ("cpu NULL\n");
 		}
@@ -80,7 +99,30 @@ void ft_fixup_cpu(void *blob, u64 memory_limit)
 }
 #endif
 
+#ifdef CONFIG_SYS_FSL_CPC
+static inline void ft_fixup_l3cache(void *blob, int off)
+{
+	u32 line_size, num_ways, size, num_sets;
+	cpc_corenet_t *cpc = (void *)CONFIG_SYS_FSL_CPC_ADDR;
+	u32 cfg0 = in_be32(&cpc->cpccfg0);
+
+	size = CPC_CFG0_SZ_K(cfg0) * 1024 * CONFIG_SYS_NUM_CPC;
+	num_ways = CPC_CFG0_NUM_WAYS(cfg0);
+	line_size = CPC_CFG0_LINE_SZ(cfg0);
+	num_sets = size / (line_size * num_ways);
+
+	fdt_setprop(blob, off, "cache-unified", NULL, 0);
+	fdt_setprop_cell(blob, off, "cache-block-size", line_size);
+	fdt_setprop_cell(blob, off, "cache-size", size);
+	fdt_setprop_cell(blob, off, "cache-sets", num_sets);
+	fdt_setprop_cell(blob, off, "cache-level", 3);
+#ifdef CONFIG_SYS_CACHE_STASHING
+	fdt_setprop_cell(blob, off, "cache-stash-id", 1);
+#endif
+}
+#else
 #define ft_fixup_l3cache(x, y)
+#endif
 
 #if defined(CONFIG_L2_CACHE)
 /* return size in kilobytes */
@@ -298,17 +340,17 @@ void fdt_add_enet_stashing(void *fdt)
 }
 
 #if defined(CONFIG_SYS_DPAA_FMAN) || defined(CONFIG_SYS_DPAA_PME)
-static void ft_fixup_clks(void *blob, const char *alias, unsigned long freq)
+static void ft_fixup_clks(void *blob, const char *compat, u32 offset,
+			  unsigned long freq)
 {
-	const char *path = fdt_get_alias(blob, alias);
-
-	int off = fdt_path_offset(blob, path);
+	phys_addr_t phys = offset + CONFIG_SYS_CCSRBAR_PHYS;
+	int off = fdt_node_offset_by_compat_reg(blob, compat, phys);
 
 	if (off >= 0) {
 		off = fdt_setprop_cell(blob, off, "clock-frequency", freq);
 		if (off > 0)
 			printf("WARNING enable to set clock-frequency "
-				"for %s: %s\n", alias, fdt_strerror(off));
+				"for %s: %s\n", compat, fdt_strerror(off));
 	}
 }
 
@@ -317,14 +359,17 @@ static void ft_fixup_dpaa_clks(void *blob)
 	sys_info_t sysinfo;
 
 	get_sys_info(&sysinfo);
-	ft_fixup_clks(blob, "fman0", sysinfo.freqFMan[0]);
+	ft_fixup_clks(blob, "fsl,fman", CONFIG_SYS_FSL_FM1_OFFSET,
+			sysinfo.freqFMan[0]);
 
 #if (CONFIG_SYS_NUM_FMAN == 2)
-	ft_fixup_clks(blob, "fman1", sysinfo.freqFMan[1]);
+	ft_fixup_clks(blob, "fsl,fman", CONFIG_SYS_FSL_FM2_OFFSET,
+			sysinfo.freqFMan[1]);
 #endif
 
 #ifdef CONFIG_SYS_DPAA_PME
-	ft_fixup_clks(blob, "pme", sysinfo.freqPME);
+	do_fixup_by_compat_u32(blob, "fsl,pme",
+		"clock-frequency", sysinfo.freqPME, 1);
 #endif
 }
 #else
@@ -400,12 +445,17 @@ void ft_cpu_setup(void *blob, bd_t *bd)
 		"clock-frequency", bd->bi_brgfreq, 1);
 #endif
 
+#ifdef CONFIG_FSL_CORENET
+	do_fixup_by_compat_u32(blob, "fsl,qoriq-clockgen-1.0",
+		"clock-frequency", CONFIG_SYS_CLK_FREQ, 1);
+#endif
+
 	fdt_fixup_memory(blob, (u64)bd->bi_memstart, (u64)bd->bi_memsize);
 
 #ifdef CONFIG_MP
 	ft_fixup_cpu(blob, (u64)bd->bi_memstart + (u64)bd->bi_memsize);
-#endif
 	ft_fixup_num_cores(blob);
+#endif
 
 	ft_fixup_cache(blob);
 
@@ -414,4 +464,18 @@ void ft_cpu_setup(void *blob, bd_t *bd)
 #endif
 
 	ft_fixup_dpaa_clks(blob);
+
+#if defined(CONFIG_SYS_BMAN_MEM_PHYS)
+	fdt_portal(blob, "fsl,bman-portal", "bman-portals",
+			(u64)CONFIG_SYS_BMAN_MEM_PHYS,
+			CONFIG_SYS_BMAN_MEM_SIZE);
+#endif
+
+#if defined(CONFIG_SYS_QMAN_MEM_PHYS)
+	fdt_portal(blob, "fsl,qman-portal", "qman-portals",
+			(u64)CONFIG_SYS_QMAN_MEM_PHYS,
+			CONFIG_SYS_QMAN_MEM_SIZE);
+
+	fdt_fixup_qportals(blob);
+#endif
 }

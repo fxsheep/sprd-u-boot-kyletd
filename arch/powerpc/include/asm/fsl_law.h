@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 Freescale Semiconductor, Inc.
+ * Copyright 2008-2010 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -47,12 +47,14 @@ enum law_size {
 };
 
 #define law_size_bits(sz)	(__ilog2_u64(sz) - 1)
+#define lawar_size(x)	(1ULL << ((x & 0x3f) + 1))
 
 #ifdef CONFIG_FSL_CORENET
 enum law_trgt_if {
 	LAW_TRGT_IF_PCIE_1 = 0x00,
 	LAW_TRGT_IF_PCIE_2 = 0x01,
 	LAW_TRGT_IF_PCIE_3 = 0x02,
+	LAW_TRGT_IF_PCIE_4 = 0x03,
 	LAW_TRGT_IF_RIO_1 = 0x08,
 	LAW_TRGT_IF_RIO_2 = 0x09,
 

@@ -38,13 +38,17 @@ int nand_flash_init(void)
 
 int nand_format(void)
 {
+#ifdef FDL2_DEBUG
 	printf("function: %s\n", __FUNCTION__);
+#endif
 	struct mtd_info *nand;
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 	
+#ifdef FDL2_DEBUG
 	printf("function: %s nand_curr_device is %d\n", __FUNCTION__, nand_curr_device);
+#endif
 	unsigned int off = nand->erasesize; //TO SKIP THE FIRST BLOCK
 	unsigned int size = nand->size - off; //to erase the left blocks
 
@@ -55,13 +59,17 @@ int nand_format(void)
 	opts.jffs2 = 0;
 	opts.scrub = 0;
 	
+#ifdef FDL2_DEBUG
 	printf("function: %s erase off 0x%x length: 0x%x jffs2: 0x%x scurb: 0x%x\n",__FUNCTION__, opts.offset, opts.length, opts.jffs2, opts.scrub);
+#endif
 	return nand_erase_opts(nand, &opts);
 }
 
 int nand_erase_fdl(unsigned int addr, unsigned int size)
 {
+#ifdef FDL2_DEBUG
 	printf("function: %s\n", __FUNCTION__);
+#endif
 	struct mtd_info *nand;
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  return NAND_SYSTEM_ERROR;
@@ -78,18 +86,24 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 	opts.length = size;
 	opts.jffs2 = 0;
 
+#ifdef FDL2_DEBUG
 	printf("function: %s erase off 0x%x length: 0x%x jffs2: 0x%x scurb: 0x%x\n",__FUNCTION__, opts.offset, opts.length, opts.jffs2, opts.scrub);
+#endif
 	return nand_erase_opts(nand, &opts);
 }
 int nand_start_write(unsigned int addr, unsigned int size)
 {
+#ifdef FDL2_DEBUG
 	printf("function: %s\n", __FUNCTION__);
+#endif
 	struct mtd_info *nand;
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 
+#ifdef FDL2_DEBUG
 	printf("function: %s write addr: 0x%x erasesize: 0x%x\n", __FUNCTION__, addr, nand->erasesize);
+#endif
 	if(addr & (nand->erasesize - 1))
 	  return NAND_INVALID_ADDR;
 
@@ -102,7 +116,9 @@ int nand_start_write(unsigned int addr, unsigned int size)
 	}else 
 	  return NAND_INVALID_ADDR;
 
+#ifdef FDL2_DEBUG
 	printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
+#endif
 	//printf("current device no: %d erase size: 0x%x write size: 0x%x\n", nand_curr_device, nand->erasesize, nand->writesize);
 	nand_write_addr = addr;
 	cur_write_pos = addr;
@@ -116,89 +132,73 @@ int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 			    struct mtd_oob_ops *ops);
 int nand_write_fdl(unsigned int size, unsigned char *buf)
 {
+#ifdef FDL2_DEBUG
 	printf("function: %s\n", __FUNCTION__);
+#endif
 	struct mtd_info *nand;
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 	int ret=0;
 
+	//find a good block to write 
+	while(!(cur_write_pos & (nand->erasesize-1))){
+#ifdef FDL2_DEBUG
+		printf("function: %s to check bad block, check address 0x%x\n", __FUNCTION__,cur_write_pos&(~(nand->erasesize - 1)));
+#endif
+		if(nand_block_isbad(nand, cur_write_pos&(~(nand->erasesize - 1)))){
+#ifdef FDL2_DEBUG
+			printf("function: %s block is bad\n",__FUNCTION__);
+#endif
+			printf("%s skip bad block 0x%x\n", __FUNCTION__, cur_write_pos&(~(nand->erasesize - 1)));
+			cur_write_pos = (cur_write_pos + nand->erasesize)&(~(nand->erasesize - 1));
+			continue;
+		}else {
+#ifdef FDL2_DEBUG
+			printf("function: %s block is not bad, erase it\n", __FUNCTION__);
+#endif
+			ret = nand_erase_fdl(cur_write_pos, nand->erasesize);
+			if(ret != 0){
+				ret = nand->block_markbad(nand, cur_write_pos);
+				if(ret != 0){
+				  printf("function: %s mark 0x%x bad error\n", __FUNCTION__, cur_write_pos);
+				  return NAND_SYSTEM_ERROR + 1;
+				}else {
+					printf("function: %s skip bad block 0x%x\n", __FUNCTION__, cur_write_pos);
+					cur_write_pos = (cur_write_pos + nand->erasesize)&(~(nand->erasesize - 1));
+					continue;
+				}
+			}else
+				break;
+		}
+	}
+
 	if(!is_system_write){
+#ifdef FDL2_DEBUG
 		printf("function: %s cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
+#endif
 		if(size < nand->writesize)
 		  size = nand->writesize;
 		else if(size > nand->writesize)
 		  return NAND_INVALID_SIZE;
-#if 1
-#ifdef FDL2_DEBUG
-		printf("function: %s writesize: 0x%x erasesize: 0x%x curr_device: %d cur_write_pos: 0x%x\n", __FUNCTION__, nand->writesize, nand->erasesize, nand_curr_device, cur_write_pos);
-#endif
-		while(!(cur_write_pos & (nand->erasesize-1))){
-#ifdef FDL2_DEBUG
-			printf("function: %s to check bad block, check address 0x%x\n", __FUNCTION__,cur_write_pos&(~(nand->erasesize - 1)));
-#endif
-			if(nand_block_isbad(nand, cur_write_pos&(~(nand->erasesize - 1)))){
-#ifdef FDL2_DEBUG
-				printf("function: %s block is bad\n",__FUNCTION__);
-#endif
-				printf("%s skip bad block 0x%x\n", __FUNCTION__, cur_write_pos&(~(nand->erasesize - 1)));
-				cur_write_pos = (cur_write_pos + nand->erasesize)&(~(nand->erasesize - 1));
-				continue;
-			}else {
-#ifdef FDL2_DEBUG
-				printf("function: %s block is not bad, erase it\n", __FUNCTION__);
-#endif
-				ret = nand_erase_fdl(cur_write_pos, nand->erasesize);
-				if(ret != 0)
-				  return NAND_SYSTEM_ERROR + 1;
-				break;
-			}
-		}
-#endif
 #ifdef FDL2_DEBUG
 		printf("function: %s erase done, now to write it\n", __FUNCTION__);
 #endif
 		ret = nand_write_skip_bad(nand, cur_write_pos, &size, buf);
 		if(0==ret){
-#ifdef FDL2_DEBUG
-			printf("function: %s write success add write pos\n", __FUNCTION__);
-#endif
 			cur_write_pos += nand->writesize;
+		}else{
+			nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
+			return NAND_SYSTEM_ERROR;
 		}
-#ifdef FDL2_DEBUG
-		printf("function: %s write done\n", __FUNCTION__);
-#endif
 	}else{ // system write 
+#ifdef FDL2_DEBUG
 		printf("function: %s system write cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
+#endif
 		if(size != (nand->writesize + nand->oobsize))
 		  return NAND_INVALID_SIZE;
 
-		while(!(cur_write_pos & (nand->erasesize-1))){
-			if(nand_block_isbad(nand, cur_write_pos&(~(nand->erasesize - 1)))){
-				printf("%s skip bad block 0x%x\n", __FUNCTION__, cur_write_pos&(~(nand->erasesize - 1)));
-				cur_write_pos = (cur_write_pos + nand->erasesize)&(~(nand->erasesize - 1));
-				continue;
-			}else {
-				ret = nand_erase_fdl(cur_write_pos, nand->erasesize);
-				if(ret != 0){
-					cur_write_pos = (cur_write_pos + nand->erasesize)&(~(nand->erasesize - 1));
-					continue;
-				}else 
-					break;
-			}
-		}
-#if 0
-		struct mtd_oob_ops ops;
-		memset(&ops, 0, sizeof(ops));
-		ops.mode = MTD_OOB_AUTO;
-		ops.len = nand->writesize;
-		ops.ooblen = sizeof(yaffs_PackedTags2); 
-		ops.ooboffs = 0;
-		ops.datbuf = buf;
-		ops.oobbuf = buf + nand->writesize;
-#else
 		struct nand_chip *chip = nand->priv;
-		nand_get_device(chip, nand, FL_WRITING);
 
 		chip->ops.mode = MTD_OOB_AUTO;
 		chip->ops.len = nand->writesize;
@@ -206,15 +206,19 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		chip->ops.oobbuf = (uint8_t *)buf + nand->writesize;
 		chip->ops.ooblen = sizeof(yaffs_PackedTags2);
 		chip->ops.ooboffs = 0;
-#endif
 
+#ifdef FDL2_DEBUG
 		printf("function: %s system write start to write\n", __FUNCTION__);
-		//printf("function: %s chip subpagesize 0x%x write len 0x%x write add 0x%x, write addr point 0x%x, chip point 0x%x\n", __FUNCTION__, chip->subpagesize,chip->ops.len, cur_write_pos, &cur_write_pos, &(chip->ops));
+#endif
 		ret = nand_do_write_ops(nand, (unsigned long long)cur_write_pos, &(chip->ops));
-		nand_release_device(nand);
 		if(0==ret){
+#ifdef FDL2_DEBUG
 			printf("function: %s system write write complete\n", __FUNCTION__);
+#endif
 			cur_write_pos += nand->writesize;
+		}else{
+			nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
+			return NAND_SYSTEM_ERROR;
 		}
 	}
 	if(ret == 0){
@@ -228,11 +232,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		ops.ooboffs = 0;
 		ret = nand_do_read_ops(nand,(unsigned long long)(cur_write_pos-nand->writesize),&ops);
 		if(ret<0){
-			ops.len = 2;
-			ops.datbuf = NULL;
-			ops.oobbuf = buf_tmp;
-			ops.ooboffs =0; 
-			ret = nand_do_write_oob(nand, (unsigned long long)((cur_write_pos-nand->writesize)&(~(nand->erasesize - 1))+nand->writesize), &ops);
+			ret = nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
 			if (ret) {
 				printf("block 0x%08lx NOT marked as bad! \n",cur_write_pos);
 			}
@@ -244,7 +244,9 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 }
 int nand_end_write(void)
 {
+#ifdef FDL2_DEBUG
 	printf("function: %s\n", __FUNCTION__);
+#endif
 	nand_write_addr = NULL;
 	nand_write_size = 0;
 	cur_write_pos = NULL;

@@ -167,10 +167,8 @@ int do_burn_in (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	int i;
 	int cycle_status;
 
-	if (argc > 1) {
-		cmd_usage(cmdtp);
-		return 1;
-	}
+	if (argc > 1)
+		return cmd_usage(cmdtp);
 
 	led_init ();
 	global_vars_init ();
@@ -270,14 +268,11 @@ int do_dip (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	int i, dip;
 
-	if (argc > 1) {
-		cmd_usage(cmdtp);
-		return 1;
-	}
+	if (argc > 1)
+		return cmd_usage(cmdtp);
 
-	if ((dip = read_dip ()) == -1) {
+	if ((dip = read_dip ()) == -1)
 		return 1;
-	}
 
 	for (i = 0; i < 4; i++) {
 		if ((dip & (1 << i)) == 0)
@@ -303,14 +298,11 @@ int do_vcc5v (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	int vcc5v;
 
-	if (argc > 1) {
-		cmd_usage(cmdtp);
-		return 1;
-	}
+	if (argc > 1)
+		return cmd_usage(cmdtp);
 
-	if ((vcc5v = read_vcc5v ()) == -1) {
+	if ((vcc5v = read_vcc5v ()) == -1)
 		return (1);
-	}
 
 	printf ("%d", (vcc5v / 1000));
 	printf (".%d", (vcc5v % 1000) / 100);
@@ -331,10 +323,8 @@ int do_contact_temp (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	int contact_temp;
 
-	if (argc > 1) {
-		cmd_usage(cmdtp);
-		return 1;
-	}
+	if (argc > 1)
+		return cmd_usage(cmdtp);
 
 	tsc2000_spi_init ();
 
@@ -354,36 +344,32 @@ U_BOOT_CMD(
 
 int do_burn_in_status (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	if (argc > 1) {
-		cmd_usage(cmdtp);
-		return 1;
-	}
+	if (argc > 1)
+		return cmd_usage(cmdtp);
 
 	if (i2c_read_multiple (I2C_EEPROM_DEV_ADDR, EE_ADDR_STATUS, 1,
-				(unsigned char*) &status, 1)) {
+				(unsigned char*) &status, 1))
 		return (1);
-	}
+
 	if (i2c_read_multiple (I2C_EEPROM_DEV_ADDR, EE_ADDR_PASS_CYCLES, 1,
-				(unsigned char*) &pass_cycles, 2)) {
+				(unsigned char*) &pass_cycles, 2))
 		return (1);
-	}
+
 	if (i2c_read_multiple (I2C_EEPROM_DEV_ADDR, EE_ADDR_FIRST_ERROR_CYCLE,
-				1, (unsigned char*) &first_error_cycle, 2)) {
+				1, (unsigned char*) &first_error_cycle, 2))
 		return (1);
-	}
+
 	if (i2c_read_multiple (I2C_EEPROM_DEV_ADDR, EE_ADDR_FIRST_ERROR_NUM,
-				1, (unsigned char*) &first_error_num, 1)) {
+				1, (unsigned char*) &first_error_num, 1))
 		return (1);
-	}
+
 	if (i2c_read_multiple (I2C_EEPROM_DEV_ADDR, EE_ADDR_FIRST_ERROR_NAME,
 			       1, (unsigned char*)first_error_name,
-			       sizeof (first_error_name))) {
+			       sizeof (first_error_name)))
 		return (1);
-	}
 
-	if (read_max_cycles () != 0) {
+	if (read_max_cycles () != 0)
 		return (1);
-	}
 
 	printf ("max_cycles = %d\n", max_cycles);
 	printf ("status = %d\n", status);
@@ -651,28 +637,28 @@ static int adc_read (unsigned int channel)
 
 	adc_init ();
 
-	padc->ADCCON &= ~ADC_STDBM; /* select normal mode */
-	padc->ADCCON &= ~(0x7 << 3); /* clear the channel bits */
-	padc->ADCCON |= ((channel << 3) | ADC_ENABLE_START);
+	padc->adccon &= ~ADC_STDBM; /* select normal mode */
+	padc->adccon &= ~(0x7 << 3); /* clear the channel bits */
+	padc->adccon |= ((channel << 3) | ADC_ENABLE_START);
 
 	while (j--) {
-		if ((padc->ADCCON & ADC_ENABLE_START) == 0)
+		if ((padc->adccon & ADC_ENABLE_START) == 0)
 			break;
 		udelay (1);
 	}
 
 	if (j == 0) {
 		printf("%s: ADC timeout\n", __FUNCTION__);
-		padc->ADCCON |= ADC_STDBM; /* select standby mode */
+		padc->adccon |= ADC_STDBM; /* select standby mode */
 		return -1;
 	}
 
-	result = padc->ADCDAT & 0x3FF;
+	result = padc->adcdat & 0x3FF;
 
-	padc->ADCCON |= ADC_STDBM; /* select standby mode */
+	padc->adccon |= ADC_STDBM; /* select standby mode */
 
 	debug ("%s: channel %d, result[DIGIT]=%d\n", __FUNCTION__,
-	       (padc->ADCCON >> 3) & 0x7, result);
+	       (padc->adccon >> 3) & 0x7, result);
 
 	/*
 	 * Wait for ADC to be ready for next conversion. This delay value was
@@ -690,8 +676,8 @@ static void adc_init (void)
 
 	padc = s3c2400_get_base_adc();
 
-	padc->ADCCON &= ~(0xff << 6); /* clear prescaler bits */
-	padc->ADCCON |= ((65 << 6) | ADC_PRSCEN); /* set prescaler */
+	padc->adccon &= ~(0xff << 6); /* clear prescaler bits */
+	padc->adccon |= ((65 << 6) | ADC_PRSCEN); /* set prescaler */
 
 	/*
 	 * Wait some time to avoid problem with very first call of
@@ -713,10 +699,10 @@ static void led_set (unsigned int state)
 
 	switch (state) {
 	case 0: /* turn LED off */
-		gpio->PADAT |= (1 << 12);
+		gpio->padat |= (1 << 12);
 		break;
 	case 1: /* turn LED on */
-		gpio->PADAT &= ~(1 << 12);
+		gpio->padat &= ~(1 << 12);
 		break;
 	default:
 		break;
@@ -743,8 +729,8 @@ static void led_init (void)
 	struct s3c24x0_gpio * const gpio = s3c24x0_get_base_gpio();
 
 	/* configure GPA12 as output and set to High -> LED off */
-	gpio->PACON &= ~(1 << 12);
-	gpio->PADAT |= (1 << 12);
+	gpio->pacon &= ~(1 << 12);
+	gpio->padat |= (1 << 12);
 }
 
 
@@ -850,14 +836,11 @@ int do_temp_log (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	struct rtc_time tm;
 #endif
 
-	if (argc > 2) {
-		cmd_usage(cmdtp);
-		return 1;
-	}
+	if (argc > 2)
+		return cmd_usage(cmdtp);
 
-	if (argc > 1) {
+	if (argc > 1)
 		delay = simple_strtoul(argv[1], NULL, 10);
-	}
 
 	tsc2000_spi_init ();
 	while (1) {

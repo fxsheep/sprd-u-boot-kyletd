@@ -87,7 +87,7 @@ typedef struct vidinfo {
 	u_char	vl_wbf;		/* Wait between frames */
 } vidinfo_t;
 
-#elif defined CONFIG_PXA250
+#elif defined CONFIG_PXA250 || defined CONFIG_PXA27X || defined CONFIG_CPU_MONAHANS
 /*
  * PXA LCD DMA descriptor
  */
@@ -167,6 +167,7 @@ typedef struct vidinfo {
 	u_long vl_sync;		/* Horizontal / vertical sync */
 	u_long vl_bpix;		/* Bits per pixel, 0 = 1, 1 = 2, 2 = 4, 3 = 8, 4 = 16 */
 	u_long vl_tft;		/* 0 = passive, 1 = TFT */
+	u_long vl_cont_pol_low;	/* contrast polarity is low */
 
 	/* Horizontal control register. */
 	u_long vl_hsync_len;	/* Length of horizontal sync */

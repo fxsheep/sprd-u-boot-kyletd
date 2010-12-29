@@ -46,6 +46,7 @@ void pmic_spi_free(struct spi_slave *slave)
 u32 pmic_reg(u32 reg, u32 val, u32 write)
 {
 	u32 pmic_tx, pmic_rx;
+	u32 tmp;
 
 	if (!slave) {
 		slave = pmic_spi_probe();
@@ -65,7 +66,9 @@ u32 pmic_reg(u32 reg, u32 val, u32 write)
 
 	pmic_tx = (write << 31) | (reg << 25) | (val & 0x00FFFFFF);
 
-	if (spi_xfer(slave, 4 << 3, &pmic_tx, &pmic_rx,
+	tmp = cpu_to_be32(pmic_tx);
+
+	if (spi_xfer(slave, 4 << 3, &tmp, &pmic_rx,
 			SPI_XFER_BEGIN | SPI_XFER_END)) {
 		spi_release_bus(slave);
 		return -1;
@@ -73,7 +76,8 @@ u32 pmic_reg(u32 reg, u32 val, u32 write)
 
 	if (write) {
 		pmic_tx &= ~(1 << 31);
-		if (spi_xfer(slave, 4 << 3, &pmic_tx, &pmic_rx,
+		tmp = cpu_to_be32(pmic_tx);
+		if (spi_xfer(slave, 4 << 3, &tmp, &pmic_rx,
 			SPI_XFER_BEGIN | SPI_XFER_END)) {
 			spi_release_bus(slave);
 			return -1;
@@ -81,7 +85,7 @@ u32 pmic_reg(u32 reg, u32 val, u32 write)
 	}
 
 	spi_release_bus(slave);
-	return pmic_rx;
+	return cpu_to_be32(pmic_rx);
 }
 
 void pmic_reg_write(u32 reg, u32 value)
@@ -163,26 +167,22 @@ int do_pmic(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	u32 val;
 
 	/* at least two arguments please */
-	if (argc < 2) {
-		cmd_usage(cmdtp);
-		return 1;
-	}
+	if (argc < 2)
+		return cmd_usage(cmdtp);
 
 	cmd = argv[1];
 	if (strcmp(cmd, "dump") == 0) {
-		if (argc < 3) {
-			cmd_usage(cmdtp);
-			return 1;
-		}
+		if (argc < 3)
+			return cmd_usage(cmdtp);
+
 		nregs = simple_strtoul(argv[2], NULL, 16);
 		pmic_dump(nregs);
 		return 0;
 	}
 	if (strcmp(cmd, "write") == 0) {
-		if (argc < 4) {
-			cmd_usage(cmdtp);
-			return 1;
-		}
+		if (argc < 4)
+			return cmd_usage(cmdtp);
+
 		nregs = simple_strtoul(argv[2], NULL, 16);
 		val = simple_strtoul(argv[3], NULL, 16);
 		pmic_reg_write(nregs, val);

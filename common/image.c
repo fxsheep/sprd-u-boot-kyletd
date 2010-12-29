@@ -103,6 +103,7 @@ static table_entry_t uimage_os[] = {
 	{	IH_OS_LYNXOS,	"lynxos",	"LynxOS",		},
 #endif
 	{	IH_OS_NETBSD,	"netbsd",	"NetBSD",		},
+	{	IH_OS_OSE,	"ose",		"Enea OSE",		},
 	{	IH_OS_RTEMS,	"rtems",	"RTEMS",		},
 	{	IH_OS_U_BOOT,	"u-boot",	"U-Boot",		},
 #if defined(CONFIG_CMD_ELF) || defined(USE_HOSTCC)
@@ -433,17 +434,23 @@ ulong getenv_bootm_low(void)
 
 phys_size_t getenv_bootm_size(void)
 {
+	phys_size_t tmp;
 	char *s = getenv ("bootm_size");
 	if (s) {
-		phys_size_t tmp;
 		tmp = (phys_size_t)simple_strtoull (s, NULL, 16);
 		return tmp;
 	}
+	s = getenv("bootm_low");
+	if (s)
+		tmp = (phys_size_t)simple_strtoull (s, NULL, 16);
+	else
+		tmp = 0;
+
 
 #if defined(CONFIG_ARM)
-	return gd->bd->bi_dram[0].size;
+	return gd->bd->bi_dram[0].size - tmp;
 #else
-	return gd->bd->bi_memsize;
+	return gd->bd->bi_memsize - tmp;
 #endif
 }
 
@@ -513,7 +520,7 @@ char *get_table_entry_name (table_entry_t *table, char *msg, int id)
 {
 	for (; table->id >= 0; ++table) {
 		if (table->id == id)
-#if defined(USE_HOSTCC) || defined(CONFIG_RELOC_FIXUP_WORKS)
+#if defined(USE_HOSTCC) || !defined(CONFIG_NEEDS_MANUAL_RELOC)
 			return table->lname;
 #else
 			return table->lname + gd->reloc_off;
@@ -578,10 +585,10 @@ int get_table_entry_id (table_entry_t *table,
 	fprintf (stderr, "\n");
 #else
 	for (t = table; t->id >= 0; ++t) {
-#ifdef CONFIG_RELOC_FIXUP_WORKS
-		if (t->sname && strcmp(t->sname, name) == 0)
-#else
+#ifdef CONFIG_NEEDS_MANUAL_RELOC
 		if (t->sname && strcmp(t->sname + gd->reloc_off, name) == 0)
+#else
+		if (t->sname && strcmp(t->sname, name) == 0)
 #endif
 			return (t->id);
 	}
@@ -985,7 +992,7 @@ int boot_get_ramdisk (int argc, char * const argv[], bootm_headers_t *images,
 	return 0;
 }
 
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K) || defined(CONFIG_SPARC)
+#ifdef CONFIG_SYS_BOOT_RAMDISK_HIGH
 /**
  * boot_ramdisk_high - relocate init ramdisk
  * @lmb: pointer to lmb handle, will be used for memory mgmt
@@ -1074,7 +1081,7 @@ int boot_ramdisk_high (struct lmb *lmb, ulong rd_data, ulong rd_len,
 error:
 	return -1;
 }
-#endif /* defined(CONFIG_PPC) || defined(CONFIG_M68K) || defined(CONFIG_SPARC) */
+#endif /* CONFIG_SYS_BOOT_RAMDISK_HIGH */
 
 #ifdef CONFIG_OF_LIBFDT
 static void fdt_error (const char *msg)
@@ -1169,8 +1176,10 @@ static int fit_check_fdt (const void *fit, int fdt_noffset, int verify)
  * @of_flat_tree: pointer to a char* variable, will hold fdt start address
  * @of_size: pointer to a ulong variable, will hold fdt length
  *
- * boot_relocate_fdt() determines if the of_flat_tree address is within
- * the bootmap and if not relocates it into that region
+ * boot_relocate_fdt() allocates a region of memory within the bootmap and
+ * relocates the of_flat_tree into that region, even if the fdt is already in
+ * the bootmap.  It also expands the size of the fdt by CONFIG_SYS_FDT_PAD
+ * bytes.
  *
  * of_flat_tree and of_size are set to final (after relocation) values
  *
@@ -1178,12 +1187,14 @@ static int fit_check_fdt (const void *fit, int fdt_noffset, int verify)
  *      0 - success
  *      1 - failure
  */
+#if defined(CONFIG_SYS_BOOTMAPSZ)
 int boot_relocate_fdt (struct lmb *lmb, ulong bootmap_base,
 		char **of_flat_tree, ulong *of_size)
 {
-	char	*fdt_blob = *of_flat_tree;
-	ulong	relocate = 0;
+	void	*fdt_blob = *of_flat_tree;
+	void	*of_start = 0;
 	ulong	of_len = 0;
+	int	err;
 
 	/* nothing to do */
 	if (*of_size == 0)
@@ -1194,62 +1205,32 @@ int boot_relocate_fdt (struct lmb *lmb, ulong bootmap_base,
 		goto error;
 	}
 
-#ifndef CONFIG_SYS_NO_FLASH
-	/* move the blob if it is in flash (set relocate) */
-	if (addr2info ((ulong)fdt_blob) != NULL)
-		relocate = 1;
-#endif
+	/* position on a 4K boundary before the alloc_current */
+	/* Pad the FDT by a specified amount */
+	of_len = *of_size + CONFIG_SYS_FDT_PAD;
+	of_start = (void *)(unsigned long)lmb_alloc_base(lmb, of_len, 0x1000,
+			(CONFIG_SYS_BOOTMAPSZ + bootmap_base));
 
-	/*
-	 * The blob needs to be inside the boot mapping.
-	 */
-	if (fdt_blob < (char *)bootmap_base)
-		relocate = 1;
-
-	if ((fdt_blob + *of_size + CONFIG_SYS_FDT_PAD) >=
-			((char *)CONFIG_SYS_BOOTMAPSZ + bootmap_base))
-		relocate = 1;
-
-	/* move flattend device tree if needed */
-	if (relocate) {
-		int err;
-		ulong of_start = 0;
-
-		/* position on a 4K boundary before the alloc_current */
-		/* Pad the FDT by a specified amount */
-		of_len = *of_size + CONFIG_SYS_FDT_PAD;
-		of_start = (unsigned long)lmb_alloc_base(lmb, of_len, 0x1000,
-				(CONFIG_SYS_BOOTMAPSZ + bootmap_base));
-
-		if (of_start == 0) {
-			puts("device tree - allocation error\n");
-			goto error;
-		}
-
-		debug ("## device tree at 0x%08lX ... 0x%08lX (len=%ld=0x%lX)\n",
-			(ulong)fdt_blob, (ulong)fdt_blob + *of_size - 1,
-			of_len, of_len);
-
-		printf ("   Loading Device Tree to %08lx, end %08lx ... ",
-			of_start, of_start + of_len - 1);
-
-		err = fdt_open_into (fdt_blob, (void *)of_start, of_len);
-		if (err != 0) {
-			fdt_error ("fdt move failed");
-			goto error;
-		}
-		puts ("OK\n");
-
-		*of_flat_tree = (char *)of_start;
-		*of_size = of_len;
-	} else {
-		*of_flat_tree = fdt_blob;
-		of_len = (CONFIG_SYS_BOOTMAPSZ + bootmap_base) - (ulong)fdt_blob;
-		lmb_reserve(lmb, (ulong)fdt_blob, of_len);
-		fdt_set_totalsize(*of_flat_tree, of_len);
-
-		*of_size = of_len;
+	if (of_start == 0) {
+		puts("device tree - allocation error\n");
+		goto error;
 	}
+
+	debug ("## device tree at %p ... %p (len=%ld [0x%lX])\n",
+		fdt_blob, fdt_blob + *of_size - 1, of_len, of_len);
+
+	printf ("   Loading Device Tree to %p, end %p ... ",
+		of_start, of_start + of_len - 1);
+
+	err = fdt_open_into (fdt_blob, of_start, of_len);
+	if (err != 0) {
+		fdt_error ("fdt move failed");
+		goto error;
+	}
+	puts ("OK\n");
+
+	*of_flat_tree = of_start;
+	*of_size = of_len;
 
 	set_working_fdt_addr(*of_flat_tree);
 	return 0;
@@ -1257,6 +1238,7 @@ int boot_relocate_fdt (struct lmb *lmb, ulong bootmap_base,
 error:
 	return 1;
 }
+#endif /* CONFIG_SYS_BOOTMAPSZ */
 
 /**
  * boot_get_fdt - main fdt handling routine
@@ -1552,7 +1534,7 @@ int boot_get_fdt (int flag, int argc, char * const argv[], bootm_headers_t *imag
 				goto error;
 			}
 
-			if (be32_to_cpu (fdt_totalsize (fdt_blob)) != fdt_len) {
+			if (fdt_totalsize(fdt_blob) != fdt_len) {
 				fdt_error ("fdt size != image size");
 				goto error;
 			}
@@ -1566,7 +1548,7 @@ int boot_get_fdt (int flag, int argc, char * const argv[], bootm_headers_t *imag
 	}
 
 	*of_flat_tree = fdt_blob;
-	*of_size = be32_to_cpu (fdt_totalsize (fdt_blob));
+	*of_size = fdt_totalsize(fdt_blob);
 	debug ("   of_flat_tree at 0x%08lx size 0x%08lx\n",
 			(ulong)*of_flat_tree, *of_size);
 
@@ -1579,7 +1561,7 @@ error:
 }
 #endif /* CONFIG_OF_LIBFDT */
 
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
+#ifdef CONFIG_SYS_BOOT_GET_CMDLINE
 /**
  * boot_get_cmdline - allocate and initialize kernel cmdline
  * @lmb: pointer to lmb handle, will be used for memory mgmt
@@ -1621,7 +1603,9 @@ int boot_get_cmdline (struct lmb *lmb, ulong *cmd_start, ulong *cmd_end,
 
 	return 0;
 }
+#endif /* CONFIG_SYS_BOOT_GET_CMDLINE */
 
+#ifdef CONFIG_SYS_BOOT_GET_KBD
 /**
  * boot_get_kbd - allocate and initialize kernel copy of board info
  * @lmb: pointer to lmb handle, will be used for memory mgmt
@@ -1654,7 +1638,7 @@ int boot_get_kbd (struct lmb *lmb, bd_t **kbd, ulong bootmap_base)
 
 	return 0;
 }
-#endif /* CONFIG_PPC || CONFIG_M68K */
+#endif /* CONFIG_SYS_BOOT_GET_KBD */
 #endif /* !USE_HOSTCC */
 
 #if defined(CONFIG_FIT)

@@ -28,9 +28,9 @@
 #define __CONFIG_H
 
 /* High Level Configuration Options */
-#define CONFIG_ARMCORTEXA8	1	/* This is an ARM V7 CPU core */
+#define CONFIG_ARMV7		1	/* This is an ARM V7 CPU core */
 #define CONFIG_SAMSUNG		1	/* in a SAMSUNG core */
-#define CONFIG_S5PC1XX		1	/* which is in a S5PC1XX Family */
+#define CONFIG_S5P		1	/* which is in a S5P Family */
 #define CONFIG_S5PC110		1	/* which is in a S5PC110 */
 #define CONFIG_MACH_GONI	1	/* working with Goni */
 
@@ -39,8 +39,6 @@
 #define CONFIG_ARCH_CPU_INIT
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
-
-#undef CONFIG_SKIP_RELOCATE_UBOOT
 
 /* input clock of PLL: has 24MHz input clock at S5PC110 */
 #define CONFIG_SYS_CLK_FREQ_C110	24000000
@@ -58,7 +56,6 @@
  * 1MB = 0x100000, 0x100000 = 1024 * 1024
  */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (1 << 20))
-#define CONFIG_SYS_GBL_DATA_SIZE	128	/* size in bytes for */
 						/* initial data */
 /*
  * select serial console configuration
@@ -66,6 +63,11 @@
 #define CONFIG_SERIAL2			1	/* use SERIAL2 */
 #define CONFIG_SERIAL_MULTI		1
 #define CONFIG_BAUDRATE			115200
+
+/* MMC */
+#define CONFIG_GENERIC_MMC		1
+#define CONFIG_MMC			1
+#define CONFIG_S5P_MMC			1
 
 /* It should define before config_cmd_default.h */
 #define CONFIG_SYS_NO_FLASH		1
@@ -82,6 +84,7 @@
 #define CONFIG_CMD_REGINFO
 #define CONFIG_CMD_ONENAND
 #define CONFIG_CMD_MTDPARTS
+#define CONFIG_CMD_MMC
 
 #define CONFIG_BOOTDELAY		1
 #define CONFIG_ZERO_BOOTDELAY_CHECK
@@ -213,5 +216,7 @@
 #define CONFIG_SYS_ONENAND_BASE		0xB0000000
 
 #define CONFIG_DOS_PARTITION		1
+
+#define CONFIG_SYS_INIT_SP_ADDR	(CONFIG_SYS_LOAD_ADDR - 0x1000000)
 
 #endif	/* __CONFIG_H */

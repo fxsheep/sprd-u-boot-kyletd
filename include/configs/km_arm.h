@@ -108,7 +108,6 @@
 #define CONFIG_KM_CONSOLE_TTY	"ttyS0"
 
 /* size in bytes reserved for initial data */
-#define CONFIG_SYS_GBL_DATA_SIZE	128
 
 /*
  * Other required minimal configurations
@@ -127,9 +126,9 @@
 #define CONFIG_NETCONSOLE	/* include NetConsole support   */
 #define CONFIG_NET_MULTI	/* specify more that one ports available */
 #define CONFIG_MII		/* expose smi ove miiphy interface */
-#define CONFIG_KIRKWOOD_EGIGA	/* Enable kirkwood Gbe Controller Driver */
+#define CONFIG_MVGBE		/* Enable Marvell Gbe Controller Driver */
 #define CONFIG_SYS_FAULT_ECHO_LINK_DOWN	/* detect link using phy */
-#define CONFIG_KIRKWOOD_EGIGA_PORTS	{1,0}	/* enable port 0 only */
+#define CONFIG_MVGBE_PORTS	{1, 0}	/* enable port 0 only */
 #define CONFIG_PHY_BASE_ADR	0
 #define CONFIG_ENV_OVERWRITE	/* ethaddr can be reprogrammed */
 #define CONFIG_RESET_PHY_R	/* use reset_phy() to init 88E1118 PHY */
@@ -142,15 +141,7 @@
 /*
  * I2C related stuff
  */
-#undef	CONFIG_HARD_I2C		/* I2C with hardware support */
 #define	CONFIG_SOFT_I2C		/* I2C bit-banged	*/
-
-#if defined(CONFIG_HARD_I2C)
-#define	CONFIG_I2C_KIRKWOOD
-#define	CONFIG_I2C_KW_REG_BASE		KW_TWSI_BASE
-#define	CONFIG_SYS_I2C_SLAVE		0x0
-#define	CONFIG_SYS_I2C_SPEED		100000
-#endif
 
 #define	CONFIG_KIRKWOOD_GPIO		/* Enable GPIO Support */
 #if defined(CONFIG_SOFT_I2C)
@@ -188,4 +179,10 @@ int get_scl (void);
 #undef	CONFIG_JFFS2_CMDLINE
 #endif
 
+/* additions for new relocation code, must be added to all boards */
+#define CONFIG_SYS_SDRAM_BASE		0x00000000
+/* Kirkwood has 2k of Security SRAM, use it for SP */
+#define CONFIG_SYS_INIT_SP_ADDR		0xC8012000
+/* Do early setups now in board_init_f() */
+#define CONFIG_BOARD_EARLY_INIT_F
 #endif /* _CONFIG_KM_ARM_H */
