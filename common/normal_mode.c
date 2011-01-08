@@ -10,6 +10,7 @@
 #include <android_boot.h>
 #include <environment.h>
 #include <jffs2/jffs2.h>
+#include <boot_mode.h>
 
 unsigned char raw_header[2048];
 #ifdef FLASH_PAGE_SIZE

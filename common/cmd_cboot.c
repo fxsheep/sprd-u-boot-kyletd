@@ -3,12 +3,42 @@
 #include <command.h>
 #include <linux/types.h>
 #include <android_bootimg.h>
+#include <linux/keypad.h>
+#include <linux/key_code.h>
+#include <boot_mode.h>
 
 #define COMMAND_MAX 128
 int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
-	if(argc > 2)
+	uint32_t key_code = 0;
+    volatile int i;
+
+    if(argc > 2)
 	  goto usage;
+
+    board_keypad_init();
+    for(i=0; i<0x50000;i++){
+        key_code = board_key_scan();
+        if(key_code != KEY_RESERVED)
+          break;
+    }
+
+    switch(key_code){
+    case KEY_MENU:
+        fastboot_mode();
+        break;
+    case KEY_HOME:
+        recovery_mode();
+        break;
+    case KEY_CAMERA:
+        charge_mode();
+        break;
+    case KEY_SEND:
+        dloader_mode();
+        break;
+    default:
+        break;
+    }
 
 	if(argc == 1){
 		normal_mode();

@@ -11,6 +11,7 @@
 #include <android_boot.h>
 #include <environment.h>
 #include <jffs2/jffs2.h>
+#include <boot_mode.h>
 
 extern unsigned char raw_header[2048];
 #ifdef FLASH_PAGE_SIZE
@@ -36,9 +37,6 @@ void recovery_mode(void)
 		return;
 	}
 	ret = find_dev_and_part(RECOVERY_PART, &dev, &pnum, &part);
-#ifdef BOOT_DEBUG
-	printf("function: %s find part %s, pnum %d ret %d\n", __FUNCTION__, RECOVERY_PART, pnum, ret);
-#endif
 	if(ret){
 		printf("No partition named %s\n", RECOVERY_PART);
 		return;
