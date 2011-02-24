@@ -15,24 +15,16 @@
 
 #ifndef _ANALOG_REG_V3_H_
 #define _ANALOG_REG_V3_H_
-/*----------------------------------------------------------------------------*
- **                         Dependencies                                      *
- **-------------------------------------------------------------------------- */
 
-/**---------------------------------------------------------------------------*
- **                             Compiler Flag                                 *
- **---------------------------------------------------------------------------*/
-#ifdef   __cplusplus
-extern   "C"
-{
-#endif
+#include <asm/arch/bits.h>
 /**----------------------------------------------------------------------------*
 **                               Micro Define                                 **
 **----------------------------------------------------------------------------*/
 ///
 //Analog die register define
 ///
-//#define   ANA_REG_BASE           0x82000480
+#define   ANA_REG_BASE          0x82000480
+
 #define   ANA_AGEN              (ANA_REG_BASE + 0x00)
 #define   ANA_MODULE_ARM_RST    (ANA_REG_BASE + 0x04)
 #define   ANA_CLK_CTL           (ANA_REG_BASE + 0x08)
@@ -60,6 +52,8 @@ extern   "C"
 #define   ANA_MCU_PROT          (ANA_REG_BASE + 0x5C)
 #define   ANA_DCDC_CTRL_DS      (ANA_REG_BASE + 0x60)
 #define   ANA_ADIE_CHIP_ID      (ANA_REG_BASE + 0x64)
+
+
 
 /*
   the AGEN register bit
@@ -133,36 +127,9 @@ extern   "C"
 #define LDO_PA_RST              BIT_7
 
 ///ANA_ADIE_CHIP_ID
-#define ANA_G1_CHIP_ID          ((uint16)0)
-#define ANA_G2_CHIP_ID          ((uint16)1)
+#define ANA_G1_CHIP_ID          ((unsigned short)0)
+#define ANA_G2_CHIP_ID          ((unsigned short)1)
 
-//ANA_HWRST_STATUS
-#define HWRST_STATUS_POWERON_MASK (0xf0)
-#define HWRST_STATUS_RECOVERY (0x20)
-#define HWRST_STATUS_FASTBOOT (0X30)
-
-
-
-/**----------------------------------------------------------------------------*
-**                             Data Prototype                                 **
-**----------------------------------------------------------------------------*/
-
-/**----------------------------------------------------------------------------*
-**                         Local Function Prototype                           **
-**----------------------------------------------------------------------------*/
-
-/**----------------------------------------------------------------------------*
-**                           Function Prototype                               **
-**----------------------------------------------------------------------------*/
-
-
-/**----------------------------------------------------------------------------*
-**                         Compiler Flag                                      **
-**----------------------------------------------------------------------------*/
-#ifdef   __cplusplus
-}
-#endif
-/**---------------------------------------------------------------------------*/
 
 #endif //_ANALOG_REG_V3_H_
 

@@ -8,6 +8,7 @@
 #include <boot_mode.h>
 
 #define COMMAND_MAX 128
+
 int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	uint32_t key_code = 0;
@@ -40,35 +41,50 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         break;
     }
 
+    unsigned check_reboot_mode(void);
+    unsigned rst_mode= check_reboot_mode();
+    if(rst_mode == RECOVERY_MODE)
+      recovery_mode();
+    else if(rst_mode == FASTBOOT_MODE)
+      fastboot_mode();
+
+    int recovery_init(void);
+    int ret =0;
+    ret = recovery_init();
+    if(ret == 1)
+      recovery_mode();
+
 	if(argc == 1){
 		normal_mode();
 		return 1;
 	}
 
-	if(strcmp(argv[1],"normal") == 0){
-		normal_mode();
-		return 1;
-	}
-	
-	if(strcmp(argv[1],"recovery") == 0){
-		recovery_mode();
-		return 1;
-	}
+    if(argc == 2){
+        if(strcmp(argv[1],"normal") == 0){
+            normal_mode();
+            return 1;
+        }
+        
+        if(strcmp(argv[1],"recovery") == 0){
+            recovery_mode();
+            return 1;
+        }
 
-	if(strcmp(argv[1],"fastboot") == 0){
-		fastboot_mode();
-		return 1;
-	}
+        if(strcmp(argv[1],"fastboot") == 0){
+            fastboot_mode();
+            return 1;
+        }
 
-	if(strcmp(argv[1],"dloader") == 0){
-		dloader_mode();
-		return 1;
-	}
+        if(strcmp(argv[1],"dloader") == 0){
+            dloader_mode();
+            return 1;
+        }
 
-	if(strcmp(argv[1],"charge") == 0){
-		charge_mode();
-		return 1;
-	}
+        if(strcmp(argv[1],"charge") == 0){
+            charge_mode();
+            return 1;
+        }
+    }
 
 usage:
 	cmd_usage(cmdtp);

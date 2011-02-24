@@ -16,10 +16,10 @@
 /**---------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **---------------------------------------------------------------------------*/
-#include "os_api.h"
-#include "sc_reg.h"
-#include "adi_hal_internal.h"
-#include "watchdog_phy.h"
+#include <asm/arch/os_api.h>
+#include <asm/arch/sc_reg.h>
+#include <asm/arch/adi_hal_internal.h>
+#include <asm/arch/watchdog_phy.h>
 
 /**---------------------------------------------------------------------------*
  **                         Compiler Flag                                     *
@@ -122,6 +122,12 @@ PUBLIC int32 WDG_PHY_INT_CLR (void)
     ANA_REG_SET (WDG_LOCK, (~WDG_UNLOCK_KEY));
     return 0;
 }
+PUBLIC void WDG_ClockOn(void)
+{
+    ANA_REG_OR(ANA_AGEN, AGEN_WDG_EN | AGEN_RTC_ARCH_EN | AGEN_RTC_WDG_EN);
+}
+
+
 
 
 /**---------------------------------------------------------------------------*

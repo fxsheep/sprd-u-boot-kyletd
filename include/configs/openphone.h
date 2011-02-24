@@ -22,7 +22,7 @@
 #define __CONFIG_H
 
 
-//#define NAND_DEBUG 1  
+//#define NAND_DEBUG  
 /*#define DEBUG*/
 #define U_BOOT_SPRD_VER 1
 /*#define SPRD_EVM_TAG_ON 1*/
@@ -213,7 +213,8 @@
 #ifdef SPRD_EVM_TAG_ON
 #define CONFIG_BOOTDELAY	0
 #else
-#define CONFIG_BOOTDELAY	2
+#define CONFIG_BOOTDELAY	0
+#define CONFIG_ZERO_BOOTDELAY_CHECK
 #endif
 
 #define CONFIG_LOADADDR		0x01000000	/* loadaddr env var */
@@ -228,10 +229,37 @@
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #elif defined CONFIG_OPENPHONE
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),256k(params),256k(pt),10m(boot),10m(recovery),120m(system),60m(sps),10m(factory),2m(cache),256k(misc),20m(fota),20m(cp),-(userdata)"
-#define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
+#define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 
 #define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
+#define CONFIG_IPADDR 192.168.10.2
+#define CONFIG_SERVERIP 192.168.10.5
+#define CONFIG_NETMASK 255.255.255.0
+#define CONFIG_USBNET_DEVADDR 26:03:ee:00:87:9f
+#define CONFIG_USBNET_HOSTADDR 9a:04:c7:d6:30:d0
+
+#define CONFIG_USB_GADGET_SC8800G
+
+#define CONFIG_NET_MULTI
+#define CONFIG_CMD_NET
+#define CONFIG_CMD_DNS
+#define CONFIG_CMD_NFS
+#define CONFIG_CMD_RARP
+#define CONFIG_CMD_PING
+/*#define CONFIG_CMD_SNTP */
+
+#define CONFIG_USB_DWC
+#define CONFIG_USB_GADGET_DUALSPEED
+//#define CONFIG_USB_ETHER
+#define CONFIG_CMD_FASTBOOT
+/*
+#define CONFIG_UPDATE_TFTP
+#define CONFIG_FIT
+#define CONFIG_OF_LIBFDT
+#define CONFIG_SYS_MAX_FLASH_BANKS 1
+#define CONFIG_SYS_MAX_FLASH_SECT 128
+*/
 #endif /* __CONFIG_H */

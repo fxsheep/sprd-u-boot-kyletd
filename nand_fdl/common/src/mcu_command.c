@@ -6,7 +6,7 @@
 #include "sc_reg.h"
 
 #include "cmddef.h"
-#include "boot_mode.h"
+#include "mocor_boot_mode.h"
 #include "chip.h"
 
 typedef void (*BOOT_ENTRY) (void);

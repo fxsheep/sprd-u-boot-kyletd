@@ -245,7 +245,7 @@ LIBS += common/libcommon.o
 LIBS += lib/libfdt/libfdt.o
 LIBS += api/libapi.o
 LIBS += post/libpost.o
-
+LIBS += drivers/usb/gadget/dwc_otg/libdwc_otg.o
 ifeq ($(SOC),omap3)
 LIBS += $(CPUDIR)/omap-common/libomap-common.o
 endif

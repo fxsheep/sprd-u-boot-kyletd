@@ -20,36 +20,38 @@
 #ifndef _ADI_HAL_INTERNAL_H_
 #define  _ADI_HAL_INTERNAL_H_
 
+#include "sci_types.h"
+
     
-PUBLIC uint16 ADI_Analogdie_reg_read(uint32 addr);
+unsigned short ADI_Analogdie_reg_read (unsigned int addr);
 
-PUBLIC void ADI_Analogdie_reg_write(uint32 addr, uint16 data);
+void ADI_Analogdie_reg_write (unsigned int addr, unsigned short data);
 
 
-PUBLIC void ADI_init (void);
+void ADI_init (void);
 
 ///for analog die register operation
 #define ANA_REG_OR(reg_addr, value)     \
     do{\
-        uint16 adi_tmp_val = ADI_Analogdie_reg_read(reg_addr); \
+        unsigned short adi_tmp_val = ADI_Analogdie_reg_read(reg_addr); \
         adi_tmp_val |= (uint16)(value); \
         ADI_Analogdie_reg_write(reg_addr, adi_tmp_val); \
     }while(0)
 #define ANA_REG_MSK_OR(reg_addr, value, msk)        \
     do{\
-        uint16 adi_tmp_val = ADI_Analogdie_reg_read(reg_addr); \
-        adi_tmp_val &= (uint16)(~(msk)); \
-        adi_tmp_val |= (uint16)((value)&(msk)); \
+        unsigned short adi_tmp_val = ADI_Analogdie_reg_read(reg_addr); \
+        adi_tmp_val &= (unsigned short)(~(msk)); \
+        adi_tmp_val |= (unsigned short)((value)&(msk)); \
         ADI_Analogdie_reg_write(reg_addr, adi_tmp_val); \
     }while(0)
 #define ANA_REG_AND(reg_addr, value)    \
     do{\
-        uint16 adi_tmp_val = ADI_Analogdie_reg_read(reg_addr); \
-        adi_tmp_val &= (uint16)(value); \
+        unsigned short adi_tmp_val = ADI_Analogdie_reg_read(reg_addr); \
+        adi_tmp_val &= (unsigned short)(value); \
         ADI_Analogdie_reg_write(reg_addr, adi_tmp_val); \
     }while(0)
 
-#define ANA_REG_SET(reg_addr, value)    ADI_Analogdie_reg_write(reg_addr, (uint16)(value))
+#define ANA_REG_SET(reg_addr, value)    ADI_Analogdie_reg_write(reg_addr, (unsigned short)(value))
 
 #define ANA_REG_GET(reg_addr)           ADI_Analogdie_reg_read(reg_addr)
 

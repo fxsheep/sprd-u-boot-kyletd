@@ -223,6 +223,10 @@ int eth_initialize(bd_t *bis)
 #if defined(CONFIG_DB64460) || defined(CONFIG_P3Mx)
 	mv6446x_eth_initialize(bis);
 #endif
+#if defined(CONFIG_USB_ETHER)
+	usb_eth_initialize(bis);
+#endif
+
 	if (!eth_devices) {
 		puts ("No ethernet found.\n");
 		show_boot_progress (-64);

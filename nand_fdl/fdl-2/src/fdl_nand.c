@@ -85,6 +85,7 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 	opts.offset = addr;
 	opts.length = size;
 	opts.jffs2 = 0;
+	opts.quiet = 1;
 
 #ifdef FDL2_DEBUG
 	printf("function: %s erase off 0x%x length: 0x%x jffs2: 0x%x scurb: 0x%x\n",__FUNCTION__, opts.offset, opts.length, opts.jffs2, opts.scrub);

@@ -7,4 +7,7 @@ void charge_mode(void);
 void dloader_mode(void);
 void fastboot_mode(void);
 
+#define RECOVERY_MODE   0x77665502
+#define FASTBOOT_MODE   0x77665500
+
 #endif

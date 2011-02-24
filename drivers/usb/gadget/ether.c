@@ -19,7 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
+//#define DEBUG
 #include <common.h>
 #include <asm/errno.h>
 #include <linux/usb/ch9.h>
@@ -680,7 +680,8 @@ static struct usb_gadget_strings	stringtab = {
 };
 
 /*============================================================================*/
-static u8 control_req[USB_BUFSIZ];
+//static u8 control_req[USB_BUFSIZ]; //sword
+static u8 control_req[USB_BUFSIZ] __attribute__ ((aligned(4)));
 static u8 status_req[STATUS_BYTECOUNT] __attribute__ ((aligned(4)));
 
 
@@ -1803,7 +1804,8 @@ static int usb_eth_init(struct eth_device *netdev, bd_t *bd)
 	ts = get_timer(0);
 	while (!l_ethdev.network_started) {
 		/* Handle control-c and timeouts */
-		if (ctrlc() || (get_timer(ts) > timeout)) {
+		//if (ctrlc() || (get_timer(ts) > timeout)) { //sword
+		if (ctrlc()) {
 			error("The remote end did not respond in time.");
 			goto fail;
 		}
@@ -1911,6 +1913,10 @@ static struct usb_gadget_driver eth_driver = {
 	.resume		= eth_resume,
 };
 
+/*
+#define CONFIG_USBNET_DEV_ADDR "26:03:ee:00:87:9f"
+#define CONFIG_USBNET_HOST_ADDR "9a:04:c7:d6:30:d0"
+*/
 int usb_eth_initialize(bd_t *bi)
 {
 	int status = 0;
@@ -1946,6 +1952,7 @@ int usb_eth_initialize(bd_t *bi)
 	dev_addr[sizeof(dev_addr)-1] = '\0';
 	host_addr[sizeof(host_addr)-1] = '\0';
 
+	printf("dev addr %s, host addr:%s\r\n", dev_addr, host_addr);
 	if (!is_eth_addr_valid(dev_addr)) {
 		error("Need valid 'usbnet_devaddr' to be set");
 		status = -1;

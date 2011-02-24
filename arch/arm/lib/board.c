@@ -445,6 +445,21 @@ static char *failed = "*** failed ***\n";
  ************************************************************************
  */
 
+extern void ADI_init (void);
+extern int LDO_Init(void);
+
+#include <asm/arch/regs_ana.h>
+#include <asm/arch/adi_hal_internal.h>
+
+#define PIN_CTL_REG 0x8C000000
+static void chip_init(void)
+{
+    ANA_REG_SET(ANA_ADIE_CHIP_ID,0);
+    /* setup pins configration when LDO shutdown*/
+    //__raw_writel(0x1fff00, PIN_CTL_REG);
+     *(volatile unsigned int *)PIN_CTL_REG = 0x1fff00;
+}
+
 void board_init_r (gd_t *id, ulong dest_addr)
 {
 	char *s;
@@ -590,7 +605,10 @@ void board_init_r (gd_t *id, ulong dest_addr)
 		copy_filename (BootFile, s, sizeof (BootFile));
 	}
 #endif
-
+	ADI_init();
+	chip_init();
+	LDO_Init();
+	//usb_eth_initialize(NULL);
 #ifdef BOARD_LATE_INIT
 	board_late_init ();
 #endif
@@ -602,7 +620,8 @@ void board_init_r (gd_t *id, ulong dest_addr)
 #if defined(CONFIG_NET_MULTI)
 	puts ("Net:   ");
 #endif
-	eth_initialize(gd->bd);
+	//eth_initialize(gd->bd);
+
 #if defined(CONFIG_RESET_PHY_R)
 	debug ("Reset Ethernet PHY\n");
 	reset_phy();

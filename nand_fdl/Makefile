@@ -56,7 +56,7 @@ NAND_LIB = $(TOPDIR)/drivers/mtd/nand/libnand.o
 COMMON_LIB = $(TOPDIR)/common/dlmalloc.o
 DRIVERS_LIB = $(TOPDIR)/drivers/serial/serial_sc8800x.o
 ARCH_LIB = 
-CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_cfg.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/boot_mode.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_hal.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/adi_phy_v3.o
+CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_cfg.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/boot_mode.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_hal.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/adi_drv.o
 
 GENERIC_LIB = $(TOPDIR)/lib/libgeneric.o
 UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB) $(ARCH_LIB)
@@ -84,7 +84,7 @@ $(fdlobj)fdl1.bin: $(fdlobj)fdl1
 $(fdlobj)fdl2.bin:	$(fdlobj)fdl2
 	$(OBJCOPY) ${OBJCFLAGS} -O binary $< $@
 
-$(fdlobj)fdl1: $(FDL1_OBJS) $(COM_OBJS) $(UBOOT_LIBS) $(fdl1_obj)u-boot.lds
+$(fdlobj)fdl1: $(FDL1_OBJS) $(COM_OBJS) $(UBOOT_LIBS)
 	cd $(FDL1_LNDIR) && $(LD) $(FDL1_LDFLAGS) -Ttext $(FDL1_TEXT_BASE) \
 		--start-group $(FDL1_COBJS_LIST) $(FDL1_SOBJS_LIST) $(COM_OBJS) \
 			$(UBOOT_LIBS) --end-group \
@@ -92,7 +92,7 @@ $(fdlobj)fdl1: $(FDL1_OBJS) $(COM_OBJS) $(UBOOT_LIBS) $(fdl1_obj)u-boot.lds
 		-o $@ $(PLATFORM_LIBS)
 #-L$(gcclibdir) -lgcc 
 
-$(fdlobj)fdl2: $(FDL2_OBJS) $(COM_OBJS) $(UBOOT_LIBS) $(fdl2_obj)u-boot.lds
+$(fdlobj)fdl2: $(FDL2_OBJS) $(COM_OBJS) $(UBOOT_LIBS) 
 	cd $(FDL2_LNDIR) && $(LD) $(FDL2_LDFLAGS) -Ttext $(FDL2_TEXT_BASE) \
 		--start-group $(FDL2_COBJS_LIST) $(FDL2_SOBJS_LIST) $(COM_OBJS) \
 			$(UBOOT_LIBS) --end-group \

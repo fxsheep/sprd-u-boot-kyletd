@@ -84,6 +84,7 @@ PUBLIC void WDG_ResetMCU (void);
 //  Note:
 /*****************************************************************************/
 PUBLIC void WDG_TimerLoad (uint32 time_ms);
+PUBLIC void WDG_ClockOn(void);
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

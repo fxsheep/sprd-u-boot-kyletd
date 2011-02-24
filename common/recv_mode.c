@@ -103,3 +103,8 @@ void recovery_mode(void)
 	boot_linux(hdr->kernel_addr,hdr->tags_addr);
 
 }
+
+int recovery_init(void)
+{
+    return 0;
+}

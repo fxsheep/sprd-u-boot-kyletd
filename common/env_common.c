@@ -123,6 +123,18 @@ uchar default_environment[] = {
 #if defined(CONFIG_PCI_BOOTDELAY) && (CONFIG_PCI_BOOTDELAY > 0)
 	"pcidelay="	MK_STR(CONFIG_PCI_BOOTDELAY)	"\0"
 #endif
+#ifdef CONFIG_USBNET_DEVADDR
+	"usbnet_devaddr="	MK_STR(CONFIG_USBNET_DEVADDR)	"\0"
+#endif
+#ifdef CONFIG_USBNET_HOSTADDR
+	"usbnet_hostaddr="MK_STR(CONFIG_USBNET_HOSTADDR)	"\0"
+#endif
+#ifdef MTDPARTS_DEFAULT
+	"mtdparts=" MTDPARTS_DEFAULT	"\0"
+#endif
+#ifdef MTDIDS_DEFAULT
+	"mtdids=" MTDIDS_DEFAULT	"\0"
+#endif
 #ifdef  CONFIG_EXTRA_ENV_SETTINGS
 	CONFIG_EXTRA_ENV_SETTINGS
 #endif

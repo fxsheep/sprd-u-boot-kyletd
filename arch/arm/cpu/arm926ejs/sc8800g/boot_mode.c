@@ -20,7 +20,7 @@
 #include "os_api.h"
 #include "sc_reg.h"
 #include "chip_internal.h"
-#include "boot_mode.h"
+#include "mocor_boot_mode.h"
 
 /**---------------------------------------------------------------------------*
  **                         Compiler Flag                                     *

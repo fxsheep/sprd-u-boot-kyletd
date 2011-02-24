@@ -19,13 +19,12 @@
 /**---------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **---------------------------------------------------------------------------*/
-#include "sci_types.h"
-#include "sc_reg.h"
-#include "os_api.h"
-#include "wdg_drvapi.h"
+#include <asm/arch/sci_types.h>
+#include <asm/arch/sc_reg.h>
+#include <asm/arch/os_api.h>
+#include <asm/arch/wdg_drvapi.h>
 //#include "fiq_drvapi.h"
-#include "watchdog_phy.h"
-#include "ref_outport.h"
+#include <asm/arch/watchdog_phy.h>
 
 #define  WDG_TRACE  
 /**---------------------------------------------------------------------------*
@@ -55,15 +54,6 @@ PUBLIC void WDG_TimerStop
 
     ret = WDG_PHY_CONFIG (&config);
 
-    {
-        volatile uint32 tick1 = SCI_GetTickCount();
-        volatile uint32 tick2 = SCI_GetTickCount();
-
-        while ( (tick2 - tick1) < 1)
-        {
-            tick2 = SCI_GetTickCount();
-        }
-    }
     return;
 }
 
@@ -84,20 +74,12 @@ PUBLIC void WDG_TimerStart
     WDG_TRACE ("Watch Dog Trace: WDG_TimerStart");
 
     config.state    = WDG_TIMER_STATE_START ;
-    config.mode     = WDG_TIMEOUT_MODE_KEEP;
+    //config.mode     = WDG_TIMEOUT_MODE_KEEP;
+    config.mode     = WDG_TIMEOUT_MODE_RESET;
     config.val      = init_val;
 
     ret = WDG_PHY_CONFIG (&config);
 
-    {
-        volatile uint32 tick1 = SCI_GetTickCount();
-        volatile uint32 tick2 = SCI_GetTickCount();
-
-        while ( (tick2 - tick1) < 2)
-        {
-            tick2 = SCI_GetTickCount();
-        }
-    }
 }
 
 /*****************************************************************************/

@@ -150,6 +150,11 @@
 #define	gadget_is_m66592(g)	0
 #endif
 
+#ifdef CONFIG_USB_GADGET_SC8800G
+#define	gadget_is_sprd_otg(g)	!strcmp("dwc_otg", (g)->name)
+#else
+#define	gadget_is_sprd_otg(g)	0
+#endif
 
 /*
  * CONFIG_USB_GADGET_SX2
@@ -216,5 +221,7 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
 		return 0x20;
 	else if (gadget_is_m66592(gadget))
 		return 0x21;
+	else if (gadget_is_sprd_otg(gadget))
+		return 0x27;
 	return -ENOENT;
 }
