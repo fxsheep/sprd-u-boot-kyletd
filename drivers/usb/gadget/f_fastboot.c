@@ -958,13 +958,13 @@ static struct usb_gadget_driver fastboot_driver = {
 
 #define mdelay(n)	udelay((n)*1000)
 
-#define BASE_ADDR	0x20000000
+#define BASE_ADDR	0x00000000
 #define DEFAULT_CMDLINE	"mem=128M console=null";
 
 #define TAGS_ADDR	(BASE_ADDR + 0x00000100)
 #define KERNEL_ADDR	(BASE_ADDR + 0x00800000)
 #define RAMDISK_ADDR	(BASE_ADDR + 0x01000000)
-#define SCRATCH_ADDR	0x1000000//(BASE_ADDR + 0x02000000)
+//(BASE_ADDR + 0x02000000)
 
 extern int fastboot_init(void *base, unsigned size, struct usb_ep * in, struct usb_ep *out);
 
