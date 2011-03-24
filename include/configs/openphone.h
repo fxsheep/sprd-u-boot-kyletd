@@ -21,7 +21,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-
+#define CONFIG_GPIOLIB 1
 //#define NAND_DEBUG  
 /*#define DEBUG*/
 #define U_BOOT_SPRD_VER 1

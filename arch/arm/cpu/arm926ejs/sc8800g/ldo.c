@@ -409,10 +409,10 @@ void LDO_DeepSleepInit(void)
 	for(i=0; slp_ldo_ctl_tab[i].id != SLP_LDO_MAX; i++)
     	{
 		if(slp_ldo_ctl_tab[i].value == SLP_BIT_SET)
-			CHIP_REG_OR(slp_ldo_ctl_tab[i].ldo_reg, slp_ldo_ctl_tab[i].mask);
+			ANA_REG_OR(slp_ldo_ctl_tab[i].ldo_reg, slp_ldo_ctl_tab[i].mask);
 			//__raw_bits_or(slp_ldo_ctl_tab[i].mask, slp_ldo_ctl_tab[i].ldo_reg);
 		else
-			CHIP_REG_AND(slp_ldo_ctl_tab[i].ldo_reg, ~slp_ldo_ctl_tab[i].mask);
+			ANA_REG_AND(slp_ldo_ctl_tab[i].ldo_reg, ~slp_ldo_ctl_tab[i].mask);
 			//__raw_bits_and(~slp_ldo_ctl_tab[i].mask, slp_ldo_ctl_tab[i].ldo_reg);
     	}
 
@@ -446,4 +446,37 @@ int LDO_Init(void)
 	return LDO_ERR_OK;
 }
 
-//arch_initcall(LDO_Init);
+/*****************************************************************************/
+//  Description: turn off system core ldo
+//  Global resource dependence:
+//  Author: Mingwei.Zhang
+//  Note:
+/*****************************************************************************/
+static void LDO_TurnOffCoreLDO (void)
+{
+    ANA_REG_SET (ANA_LDO_PD_SET, ANA_LDO_PD_SET_MSK);   /// turn off system core ldo
+}
+
+/*****************************************************************************/
+//  Description: turn off all module ldo befor system core ldo
+//  Global resource dependence:
+//  Author: Mingwei.Zhang
+//  Note:
+/*****************************************************************************/
+
+static void LDO_TurnOffAllModuleLDO (void)
+{
+    ANA_REG_SET (ANA_LDO_PD_CTL, ANA_LDO_PD_CTL_MSK);               ///turn off all module ldo
+    ANA_REG_MSK_OR (ANA_PA_CTL, LDO_PA_SET, (LDO_PA_SET|LDO_PA_RST)); ///PA poweroff
+}
+/*****************************************************************************/
+//  Description:  Shut down all LDO when system poweroff
+//  Global resource dependence:
+//  Author: Mingwei.Zhang
+//  Note:
+/*****************************************************************************/
+void LDO_TurnOffAllLDO (void)
+{
+    LDO_TurnOffAllModuleLDO();
+    LDO_TurnOffCoreLDO();
+}

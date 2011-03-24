@@ -51,6 +51,7 @@ COBJS-y += normal_mode.o
 COBJS-y += recv_mode.o
 COBJS-y += fastboot_mode.o
 COBJS-y += charge_mode.o
+COBJS-y += alarm_mode.o
 COBJS-y += dloader_mode.o
 COBJS-y += android_boot.o
 
