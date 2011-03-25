@@ -223,6 +223,12 @@
 #define xstr(s)	str(s)
 #define str(s)	#s
 
+//nand partition table defination
+#define SYSTEM_PART_OFFSET 0x01520000
+#define SYSTEM_PART_SIZE 0x07800000
+#define USERDATA_PART_OFFSET 0x0fd60000
+#define USERDATA_PART_SIZE 0x102a0000
+
 #define MTDIDS_DEFAULT "nand0=sprd-nand"
 #ifdef CONFIG_G2PHONE
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
@@ -235,6 +241,7 @@
 #define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
+#ifdef CONFIG_CMD_NET
 #define CONFIG_IPADDR 192.168.10.2
 #define CONFIG_SERVERIP 192.168.10.5
 #define CONFIG_NETMASK 255.255.255.0
@@ -244,12 +251,12 @@
 #define CONFIG_USB_GADGET_SC8800G
 
 #define CONFIG_NET_MULTI
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_DNS
 #define CONFIG_CMD_NFS
 #define CONFIG_CMD_RARP
 #define CONFIG_CMD_PING
 /*#define CONFIG_CMD_SNTP */
+#endif
 
 #define CONFIG_USB_DWC
 #define CONFIG_USB_GADGET_DUALSPEED

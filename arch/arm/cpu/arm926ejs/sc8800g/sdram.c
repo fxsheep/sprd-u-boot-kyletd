@@ -93,7 +93,9 @@ void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
                (ARM400_EMC200_AHB100) :             // 8800G2
                ((1 == (REG32(GR_GEN3) & 0x3)) ?     
                (ARM256_EMC200_AHB64) :              // 8801G1
-               (ARM192_EMC200_AHB96));              // 8802G1 
+               ((2 == (REG32(GR_GEN3) & 0x3)) ?
+               (ARM192_EMC200_AHB96) :           // 8802G1
+               (ARM400_EMC200_AHB100)));              // 6810 
     //*/         
     
     mcuclk   = s_arm_emc_ahb_clk[clk_type].mcu_clk;
