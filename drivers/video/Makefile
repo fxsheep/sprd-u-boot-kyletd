@@ -41,6 +41,10 @@ COBJS-$(CONFIG_SED156X) += sed156x.o
 COBJS-$(CONFIG_VIDEO_SM501) += sm501.o
 COBJS-$(CONFIG_VIDEO_SMI_LYNXEM) += smiLynxEM.o videomodes.o
 COBJS-$(CONFIG_VIDEO_VCXK) += bus_vcxk.o
+#ifdef CONFIG_LCD
+COBJS-$(CONFIG_SC8800G) += sc8800g_fb.o
+COBJS-$(CONFIG_OPENPHONE) += sc8800g_lcd_hx8357.o
+#endif
 
 COBJS	:= $(COBJS-y)
 SRCS	:= $(COBJS:.o=.c)

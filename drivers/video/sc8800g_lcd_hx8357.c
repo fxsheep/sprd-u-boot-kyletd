@@ -1,0 +1,297 @@
+/* drivers/video/sc8800g/sc8800g_lcd_hx8357.c
+ *
+ * Support for HX8357 LCD device
+ *
+ * Copyright (C) 2010 Spreadtrum
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include <common.h>
+//#include <linux/delay.h>
+
+#include <asm/arch/sc8800g_lcd.h>
+#include <lcd.h>
+#define mdelay(a) udelay(a * 1000)
+#define printk printf
+
+//#define  LCD_DEBUG
+#ifdef LCD_DEBUG
+#define LCD_PRINT printk
+#else
+#define LCD_PRINT(...)
+#endif
+
+static int32_t hx8357_init(struct lcd_spec *self)
+{
+	LCD_PRINT("hx8357_init\n");
+
+	/* reset the lcd */
+	//self->ops->lcd_reset(self);
+	//mdelay(50);
+
+	self->info.mcu->ops->send_cmd_data(0x00ff, 0x00);  //Command page 0
+	mdelay(15);  //delay
+	self->info.mcu->ops->send_cmd_data(0x001a, 0x0004);  //VGH VGL VCL DDVDH
+	self->info.mcu->ops->send_cmd_data(0x001b, 0x001c);
+
+    /*power setting*/
+	self->info.mcu->ops->send_cmd_data(0x0023, 0x0091);// set VCOM offset,VMF=0x52
+	self->info.mcu->ops->send_cmd_data(0x0024, 0x0069);//set VCOMH voltage,VHH=0x64
+	self->info.mcu->ops->send_cmd_data(0x0025, 0x0063); //set VCOML voltage,VML=0x71
+	self->info.mcu->ops->send_cmd_data(0x0019, 0x0001);
+    mdelay(10);  //delay
+	self->info.mcu->ops->send_cmd_data(0x001a, 0x0001); //VGH VGL VCL DDVDH
+	self->info.mcu->ops->send_cmd_data(0x001f, 0x008a);
+	self->info.mcu->ops->send_cmd_data(0x0001, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x001c, 0x0005);
+	self->info.mcu->ops->send_cmd_data(0x001f, 0x0082);
+    mdelay(10); //delay
+	self->info.mcu->ops->send_cmd_data(0x001f, 0x0092);
+    mdelay(10); //delay
+	self->info.mcu->ops->send_cmd_data(0x001f, 0x00d4);
+
+	/* set GRAM area 320*480 */
+	self->info.mcu->ops->send_cmd_data(0x0002, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x0003, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x0004, 0x0001);
+	self->info.mcu->ops->send_cmd_data(0x0005, 0x003f);
+	self->info.mcu->ops->send_cmd_data(0x0006, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x0007, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x0008, 0x0001);
+
+	self->info.mcu->ops->send_cmd_data(0x0016, 0x0009); //set my mx mv bgr
+	self->info.mcu->ops->send_cmd_data(0x0017, 0x0005); //16-bit pixel
+	self->info.mcu->ops->send_cmd_data(0x0018, 0x0022); //Fosc=130%*5.2MHZ 21
+	self->info.mcu->ops->send_cmd_data(0x001d, 0x0000); //FS0[1:0]=01,set the operating frequency of the step-up circuit 1
+	self->info.mcu->ops->send_cmd_data(0x001e, 0x0000);
+
+	self->info.mcu->ops->send_cmd_data(0x0026, 0x0033);
+	self->info.mcu->ops->send_cmd_data(0x0027, 0x0001);
+	self->info.mcu->ops->send_cmd_data(0x0029, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x002a, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x002b, 0x0001); //0A
+	self->info.mcu->ops->send_cmd_data(0x002c, 0x000a);
+	self->info.mcu->ops->send_cmd_data(0x002d, 0x0020);
+	self->info.mcu->ops->send_cmd_data(0x002e, 0x00a3);
+	self->info.mcu->ops->send_cmd_data(0x002f, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x0031, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x0032, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x0033, 0x0008);
+	self->info.mcu->ops->send_cmd_data(0x0034, 0x0002);
+	self->info.mcu->ops->send_cmd_data(0x0036, 0x0002);  //REV
+	
+    /* Gamma  */
+    self->info.mcu->ops->send_cmd_data(0x0040, 0x0001);
+	self->info.mcu->ops->send_cmd_data(0x0041, 0x0012);
+	self->info.mcu->ops->send_cmd_data(0x0042, 0x0019);
+	self->info.mcu->ops->send_cmd_data(0x0043, 0x0026);
+	self->info.mcu->ops->send_cmd_data(0x0044, 0x002c);
+	self->info.mcu->ops->send_cmd_data(0x0045, 0x003c);
+	self->info.mcu->ops->send_cmd_data(0x0046, 0x000b);
+	self->info.mcu->ops->send_cmd_data(0x0047, 0x005f);
+	self->info.mcu->ops->send_cmd_data(0x0048, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x0049, 0x0008);
+	self->info.mcu->ops->send_cmd_data(0x004a, 0x000b);
+	self->info.mcu->ops->send_cmd_data(0x004b, 0x0010);
+	self->info.mcu->ops->send_cmd_data(0x004c, 0x0016);
+
+	self->info.mcu->ops->send_cmd_data(0x0050, 0x0001);
+	self->info.mcu->ops->send_cmd_data(0x0051, 0x001d);
+	self->info.mcu->ops->send_cmd_data(0x0052, 0x0021);
+	self->info.mcu->ops->send_cmd_data(0x0053, 0x0034);
+	self->info.mcu->ops->send_cmd_data(0x0054, 0x0037);
+	self->info.mcu->ops->send_cmd_data(0x0055, 0x003f);
+	self->info.mcu->ops->send_cmd_data(0x0056, 0x0029);
+	self->info.mcu->ops->send_cmd_data(0x0057, 0x007f);
+	self->info.mcu->ops->send_cmd_data(0x0058, 0x0001);
+	self->info.mcu->ops->send_cmd_data(0x0059, 0x0012);
+	self->info.mcu->ops->send_cmd_data(0x005a, 0x001b);
+	self->info.mcu->ops->send_cmd_data(0x005b, 0x001e);
+	self->info.mcu->ops->send_cmd_data(0x005c, 0x001a);
+	self->info.mcu->ops->send_cmd_data(0x005d, 0x0055);
+
+	self->info.mcu->ops->send_cmd_data(0x0060, 0x0008);
+	self->info.mcu->ops->send_cmd_data(0x00f2, 0x0000);
+	self->info.mcu->ops->send_cmd_data(0x00e4, 0x001f); //EQVCI_M1=0x00
+	self->info.mcu->ops->send_cmd_data(0x00e5, 0x001f); //EQGND_M1=0x1c
+	self->info.mcu->ops->send_cmd_data(0x00e6, 0x0020); //EQVCI_M0=0x1c
+	self->info.mcu->ops->send_cmd_data(0x00e7, 0x0000); //EQGND_M0=0x1c
+	self->info.mcu->ops->send_cmd_data(0x00e8, 0x00d1);
+	self->info.mcu->ops->send_cmd_data(0x00e9, 0x00c0);
+	self->info.mcu->ops->send_cmd_data(0x0028, 0x0038);
+    mdelay(80);  //delay
+	self->info.mcu->ops->send_cmd_data(0x0028, 0x003c); //GON=0,DTE=0,D[1:0]=01
+
+    self->info.mcu->ops->send_cmd_data(0x0080, 0x0000);
+    self->info.mcu->ops->send_cmd_data(0x0081, 0x0000);
+    self->info.mcu->ops->send_cmd_data(0x0082, 0x0000);
+    self->info.mcu->ops->send_cmd_data(0x0083, 0x0000);
+
+	self->info.mcu->ops->send_cmd(0x0022);
+
+    if(0){
+	    int i;
+	    for (i=0; i<320*480/2; i++)
+		    self->info.mcu->ops->send_data(0x1234);
+	    for (i=0; i< 320*480/2; i++)
+		    self->info.mcu->ops->send_data(0x4321);
+    }
+
+	return 0;
+}
+
+static int32_t hx8357_set_window(struct lcd_spec *self,
+		uint16_t left, uint16_t top, uint16_t right, uint16_t bottom)
+{
+	LCD_PRINT("hx8357_set_window\n");
+    
+    /* set window size  */
+	self->info.mcu->ops->send_cmd_data(0x0002, (left >> 8));
+	self->info.mcu->ops->send_cmd_data(0x0003, (left & 0xff));
+	self->info.mcu->ops->send_cmd_data(0x0004, (right >> 8));
+	self->info.mcu->ops->send_cmd_data(0x0005, (right & 0xff));
+
+	self->info.mcu->ops->send_cmd_data(0x0006, (top >> 8));
+	self->info.mcu->ops->send_cmd_data(0x0007, (top & 0xff));
+	self->info.mcu->ops->send_cmd_data(0x0008, (bottom >> 8));
+	self->info.mcu->ops->send_cmd_data(0x0009, (bottom & 0xff));
+
+	switch (self->direction) {
+	case LCD_DIRECT_NORMAL:
+    default:
+		self->info.mcu->ops->send_cmd_data(0x0080, (left >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0081, (left & 0xff));
+		self->info.mcu->ops->send_cmd_data(0x0082, (top >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0083, (top & 0xff));
+        break;
+	case LCD_DIRECT_ROT_90:
+		self->info.mcu->ops->send_cmd_data(0x0080, (top >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0081, (top & 0xff));
+		self->info.mcu->ops->send_cmd_data(0x0082, (left >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0083, (left & 0xff));
+	    break;
+    case LCD_DIRECT_ROT_180:
+	case LCD_DIRECT_MIR_HV:
+		self->info.mcu->ops->send_cmd_data(0x0080, (right >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0081, (right & 0xff));
+		self->info.mcu->ops->send_cmd_data(0x0082, (bottom >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0083, (bottom & 0xff));
+	    break;
+	case LCD_DIRECT_ROT_270:
+		self->info.mcu->ops->send_cmd_data(0x0080, (bottom >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0081, (bottom & 0xff));
+		self->info.mcu->ops->send_cmd_data(0x0082, (left >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0083, (left & 0xff));
+	    break;
+	case LCD_DIRECT_MIR_H:
+		self->info.mcu->ops->send_cmd_data(0x0080, (left >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0081, (left & 0xff));
+		self->info.mcu->ops->send_cmd_data(0x0082, (bottom >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0083, (bottom & 0xff));
+	    break;
+	case LCD_DIRECT_MIR_V:
+		self->info.mcu->ops->send_cmd_data(0x0080, (right >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0081, (right & 0xff));
+		self->info.mcu->ops->send_cmd_data(0x0082, (top >> 8));
+		self->info.mcu->ops->send_cmd_data(0x0083, (top & 0xff));
+	    break;
+	}
+	
+	self->info.mcu->ops->send_cmd(0x0022);
+
+	return 0;
+}
+
+static int32_t hx8357_invalidate(struct lcd_spec *self)
+{
+	LCD_PRINT("hx8357_invalidate\n");
+
+	return self->ops->lcd_set_window(self, 0, 0, 
+			self->width-1, self->height-1);
+	
+}
+
+static int32_t hx8357_set_direction(struct lcd_spec *self, uint16_t direction)
+{
+	LCD_PRINT("hx8357_set_direction\n");
+
+	switch (direction) {
+	case LCD_DIRECT_NORMAL:
+		self->info.mcu->ops->send_cmd_data(0x0016, 0x0009);
+		break;
+	case LCD_DIRECT_ROT_90:
+		self->info.mcu->ops->send_cmd_data(0x0016, 0x0069);
+		break;
+	case LCD_DIRECT_ROT_180:
+		self->info.mcu->ops->send_cmd_data(0x0016, 0x00c9);
+		break;
+	case LCD_DIRECT_ROT_270:
+		self->info.mcu->ops->send_cmd_data(0x0016, 0x00a9);
+		break;
+	case LCD_DIRECT_MIR_H:
+		self->info.mcu->ops->send_cmd_data(0x0016, 0x00c8);
+		break;
+	case LCD_DIRECT_MIR_V:
+		self->info.mcu->ops->send_cmd_data(0x0016, 0x0008);
+		break;
+	case LCD_DIRECT_MIR_HV:
+		self->info.mcu->ops->send_cmd_data(0x0016, 0x0048);
+		break;
+	default:
+		LCD_PRINT("unknown lcd direction!\n");
+		self->info.mcu->ops->send_cmd_data(0x0016, 0x0009);
+		direction = LCD_DIRECT_NORMAL;
+		break;
+	}
+
+	self->direction = direction;
+	
+	return 0;
+}
+
+static struct lcd_operations lcd_hx8357_operations = {
+	.lcd_init = hx8357_init,
+	.lcd_set_window = hx8357_set_window,
+	.lcd_invalidate = hx8357_invalidate,
+	.lcd_set_direction = hx8357_set_direction,
+};
+
+static struct timing_mcu lcd_hx8357_timing = {
+	.rcss = 360,
+	.rlpw = 90,
+	.rhpw = 360,
+	.wcss = 35,
+	.wlpw = 20,
+	.whpw = 20,
+};
+
+static struct info_mcu lcd_hx8357_info = {
+	.bus_mode = LCD_BUS_8080,
+	.bus_width = 16,
+	.timing = &lcd_hx8357_timing,
+	.ops = NULL,
+};
+
+struct lcd_spec lcd_panel = {
+	.width = 320,
+	.height = 480,
+	.mode = LCD_MODE_MCU,
+	.direction = LCD_DIRECT_NORMAL,
+	.info = {.mcu = &lcd_hx8357_info},
+	.ops = &lcd_hx8357_operations,
+};
+
+vidinfo_t panel_info = {
+    .vl_col = 320,
+    .vl_bpix = 4,
+    .vl_row = 480,
+};
+

@@ -23,7 +23,7 @@
 
 #define CONFIG_GPIOLIB 1
 //#define NAND_DEBUG  
-/*#define DEBUG*/
+//#define DEBUG
 #define U_BOOT_SPRD_VER 1
 /*#define SPRD_EVM_TAG_ON 1*/
 #ifdef SPRD_EVM_TAG_ON
@@ -128,7 +128,7 @@
  * Memory Info
  */
 /* malloc() len */
-#define CONFIG_SYS_MALLOC_LEN		(1 << 20)	/* 1 MiB */
+#define CONFIG_SYS_MALLOC_LEN		(2 << 20)	/* 1 MiB */
 /*
  * Board has 2 32MB banks of DRAM but there is a bug when using
  * both so only the first is configured
@@ -238,7 +238,7 @@
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 
-#define CONFIG_BOOTCOMMAND "cboot normal"
+//#define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
 #ifdef CONFIG_CMD_NET
@@ -270,4 +270,22 @@
 #define CONFIG_SYS_MAX_FLASH_BANKS 1
 #define CONFIG_SYS_MAX_FLASH_SECT 128
 */
+#define CONFIG_LCD
+#ifdef CONFIG_LCD
+#define CONFIG_SPLASH_SCREEN
+#define LCD_BPP LCD_COLOR16
+//#define CONFIG_LCD_INFO
+//#define LCD_TEST_PATTERN
+#define CONFIG_LCD_LOGO
+#ifdef LCD_TEST_PATTERN
+#define CONSOLE_COLOR_RED 0xf800 
+#define CONSOLE_COLOR_GREEN 0x07e0
+#define CONSOLE_COLOR_YELLOW 0x07e0
+#define CONSOLE_COLOR_BLUE 0x001f
+#define CONSOLE_COLOR_MAGENTA 0x001f
+#define CONSOLE_COLOR_CYAN 0x001f
+#endif
+#endif // CONFIG_LCD
+
+
 #endif /* __CONFIG_H */
