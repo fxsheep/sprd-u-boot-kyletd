@@ -373,7 +373,9 @@ static int lcd_clear (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[]
 	lcd_setfgcolor (CONSOLE_COLOR_BLACK);
 	lcd_setbgcolor (CONSOLE_COLOR_WHITE);
 #else
-	lcd_setfgcolor (CONSOLE_COLOR_WHITE);
+	//lcd_setfgcolor (CONSOLE_COLOR_WHITE);
+#define CONSOLE_COLOR_RED (0x1f<<11)
+	lcd_setfgcolor (CONSOLE_COLOR_RED);
 	lcd_setbgcolor (CONSOLE_COLOR_BLACK);
 #endif	/* CONFIG_SYS_WHITE_ON_BLACK */
 

@@ -21,6 +21,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#define CONFIG_SILENT_CONSOLE
 #define CONFIG_GPIOLIB 1
 //#define NAND_DEBUG  
 //#define DEBUG
@@ -234,7 +235,7 @@
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #elif defined CONFIG_OPENPHONE
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),256k(params),256k(pt),10m(boot),10m(recovery),120m(system),60m(sps),10m(factory),2m(cache),256k(misc),20m(fota),20m(cp),-(userdata)"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),256k(params),256k(pt),10m(boot),10m(recovery),120m(system),60m(sps),10m(factory),2m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),18m(fota),20m(cp),-(userdata)"
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 
@@ -276,7 +277,8 @@
 #define LCD_BPP LCD_COLOR16
 //#define CONFIG_LCD_INFO
 //#define LCD_TEST_PATTERN
-#define CONFIG_LCD_LOGO
+//#define CONFIG_LCD_LOGO
+#define CONFIG_SYS_WHITE_ON_BLACK
 #ifdef LCD_TEST_PATTERN
 #define CONSOLE_COLOR_RED 0xf800 
 #define CONSOLE_COLOR_GREEN 0x07e0

@@ -37,7 +37,7 @@ void normal_mode(void)
 	}
 
 #ifdef CONFIG_SPLASH_SCREEN 
-#define SPLASH_PART "fota"
+#define SPLASH_PART "boot_logo"
 
 	ret = find_dev_and_part(SPLASH_PART, &dev, &pnum, &part);
 	if(ret){
