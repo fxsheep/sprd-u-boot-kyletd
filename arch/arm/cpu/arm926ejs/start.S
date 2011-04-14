@@ -183,7 +183,7 @@ time:	subs	r1,r1,#0x1
 	 * not when booting from ram!
 	 */
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
-	@bl	cpu_init_crit
+	bl	cpu_init_crit
 	bl cpu_spec
 	@bl MMU_Init
 #endif
