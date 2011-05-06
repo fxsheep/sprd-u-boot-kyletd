@@ -33,7 +33,10 @@
 
 #define BOOT_DEBUG 1
 
-#define BOOT_PART "boot"
+#define CONFIG_YAFFS2 1
+
+//#define BOOT_PART "boot"
+#define BOOT_PART "kernel"
 #define RECOVERY_PART "recovery"
 /*
  * SPREADTRUM BIGPHONE board - SoC Configuration
@@ -228,11 +231,14 @@
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #elif defined CONFIG_OPENPHONE
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),256k(params),256k(pt),10m(boot),10m(recovery),120m(system),60m(sps),10m(factory),2m(cache),256k(misc),20m(fota),20m(cp),-(userdata)"
+/*#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),256k(params),256k(pt),10m(boot),10m(recovery),120m(system),60m(sps),10m(factory),2m(cache),256k(misc),20m(fota),20m(cp),-(userdata)"*/
+
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),128k(params),512k(vmjaluna),6016k(modem),7680k(kernel),5120k(dsp),1280k(fixnv),2560k(runtimenv),6400k(recovery),100m(system),200m(userdata),2m(cache),256k(misc)"
+
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 
-#define CONFIG_BOOTCOMMAND "cboot normal"
+#define CONFIG_BOOTCOMMAND "cboot vlx"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
 #define CONFIG_IPADDR 192.168.10.2

@@ -90,6 +90,13 @@ void yaffsfs_LocalInitialisation(void)
 
 static int isMounted = 0;
 #define MOUNT_POINT "/flash"
+
+#define SPRD_MOUNT_PARTITION	1
+#ifdef  SPRD_MOUNT_PARTITION
+#define MOUNT_POINT1 "/fixnv"
+#define MOUNT_POINT2 "/runtimenv"
+#endif
+
 extern nand_info_t nand_info[];
 
 /* XXX U-BOOT XXX */
@@ -107,6 +114,10 @@ static yaffsfs_DeviceConfiguration yaffsfs_config[] = {
 	{ "/flash", &flashDev},
 #else
 	{ MOUNT_POINT, 0},
+#ifdef  SPRD_MOUNT_PARTITION
+	{ MOUNT_POINT1, 0},
+	{ MOUNT_POINT2, 0},
+#endif
 #endif
 	{(void *)0,(void *)0}
 };
@@ -119,10 +130,23 @@ int yaffs_StartUp(void)
 	int nBlocks;
 
 	yaffs_Device *flashDev = calloc(1, sizeof(yaffs_Device));
+#ifdef  SPRD_MOUNT_PARTITION
+	yaffs_Device *fixnvDev = calloc(1, sizeof(yaffs_Device));
+	yaffs_Device *runtimenvDev = calloc(1, sizeof(yaffs_Device));
+#endif
+
 	yaffsfs_config[0].dev = flashDev;
+#ifdef  SPRD_MOUNT_PARTITION
+	yaffsfs_config[1].dev = fixnvDev;
+	yaffsfs_config[2].dev = runtimenvDev;
+#endif
 
 	/* store the mtd device for later use */
 	flashDev->genericDevice = mtd;
+#ifdef  SPRD_MOUNT_PARTITION
+	fixnvDev->genericDevice = mtd;
+	runtimenvDev->genericDevice = mtd;
+#endif
 
 	// Stuff to configure YAFFS
 	// Stuff to initialise anything special (eg lock semaphore).
@@ -163,10 +187,9 @@ int yaffs_StartUp(void)
 
 		// /flash
 	flashDev->nReservedBlocks = 5;
-//  flashDev->nShortOpCaches = (options.no_cache) ? 0 : 10;
+	//flashDev->nShortOpCaches = (options.no_cache) ? 0 : 10;
 	flashDev->nShortOpCaches = 10; // Use caches
 	flashDev->useNANDECC = 0; // do not use YAFFS's ECC
-
 	if (yaffsVersion == 2)
 	{
 		flashDev->writeChunkWithTagsToNAND = nandmtd2_WriteChunkWithTagsToNAND;
@@ -183,10 +206,19 @@ int yaffs_StartUp(void)
 		flashDev->nChunksPerBlock = mtd->erasesize / mtd->oobblock;
 #endif
 		nBlocks = mtd->size / mtd->erasesize;
+		printf("nBlocks = %d\n", nBlocks);
 
 		flashDev->nCheckpointReservedBlocks = 10;
+
+#if 0
 		flashDev->startBlock = 0;
 		flashDev->endBlock = nBlocks - 1;
+#else
+		/* fcj test */
+		flashDev->startBlock = 237;
+		flashDev->endBlock = flashDev->startBlock + 800  - 1;	
+#endif
+		printf("\n\nflash device from %d to %d\n\n", flashDev->startBlock, flashDev->endBlock);
 	}
 	else
 	{
@@ -204,17 +236,107 @@ int yaffs_StartUp(void)
 	flashDev->eraseBlockInNAND = nandmtd_EraseBlockInNAND;
 	flashDev->initialiseNAND = nandmtd_InitialiseNAND;
 
+#ifdef  SPRD_MOUNT_PARTITION
+	// /fixnv
+	fixnvDev->nReservedBlocks = 5;
+	fixnvDev->nShortOpCaches = 10; // Use caches
+	fixnvDev->useNANDECC = 0; // do not use YAFFS's ECC
+	if (yaffsVersion == 2)
+	{
+		fixnvDev->writeChunkWithTagsToNAND = nandmtd2_WriteChunkWithTagsToNAND;
+		fixnvDev->readChunkWithTagsFromNAND = nandmtd2_ReadChunkWithTagsFromNAND;
+		fixnvDev->markNANDBlockBad = nandmtd2_MarkNANDBlockBad;
+		fixnvDev->queryNANDBlock = nandmtd2_QueryNANDBlock;
+		fixnvDev->spareBuffer = YMALLOC(mtd->oobsize);
+		fixnvDev->isYaffs2 = 1;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17))
+		fixnvDev->nDataBytesPerChunk = mtd->writesize;
+		fixnvDev->nChunksPerBlock = mtd->erasesize / mtd->writesize;
+#else
+		fixnvDev->nDataBytesPerChunk = mtd->oobblock;
+		fixnvDev->nChunksPerBlock = mtd->erasesize / mtd->oobblock;
+#endif
+		nBlocks = mtd->size / mtd->erasesize;
+		printf("nBlocks = %d\n", nBlocks);
+
+		fixnvDev->nCheckpointReservedBlocks = 10;
+		fixnvDev->startBlock = 157;
+		fixnvDev->endBlock = fixnvDev->startBlock + 10  - 1;	
+		printf("\n\nfixnv device from %d to %d\n\n", fixnvDev->startBlock, fixnvDev->endBlock);
+	}
+	else
+	{
+		fixnvDev->writeChunkToNAND = nandmtd_WriteChunkToNAND;
+		fixnvDev->readChunkFromNAND = nandmtd_ReadChunkFromNAND;
+		fixnvDev->isYaffs2 = 0;
+		nBlocks = mtd->size / (YAFFS_CHUNKS_PER_BLOCK * YAFFS_BYTES_PER_CHUNK);
+		fixnvDev->startBlock = 320;
+		fixnvDev->endBlock = nBlocks - 1;
+		fixnvDev->nChunksPerBlock = YAFFS_CHUNKS_PER_BLOCK;
+		fixnvDev->nDataBytesPerChunk = YAFFS_BYTES_PER_CHUNK;
+	}
+
+	/* ... and common functions */
+	fixnvDev->eraseBlockInNAND = nandmtd_EraseBlockInNAND;
+	fixnvDev->initialiseNAND = nandmtd_InitialiseNAND;
+
+	// /runtimenv
+	runtimenvDev->nReservedBlocks = 5;
+	runtimenvDev->nShortOpCaches = 10; // Use caches
+	runtimenvDev->useNANDECC = 0; // do not use YAFFS's ECC
+	if (yaffsVersion == 2)
+	{
+		runtimenvDev->writeChunkWithTagsToNAND = nandmtd2_WriteChunkWithTagsToNAND;
+		runtimenvDev->readChunkWithTagsFromNAND = nandmtd2_ReadChunkWithTagsFromNAND;
+		runtimenvDev->markNANDBlockBad = nandmtd2_MarkNANDBlockBad;
+		runtimenvDev->queryNANDBlock = nandmtd2_QueryNANDBlock;
+		runtimenvDev->spareBuffer = YMALLOC(mtd->oobsize);
+		runtimenvDev->isYaffs2 = 1;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17))
+		runtimenvDev->nDataBytesPerChunk = mtd->writesize;
+		runtimenvDev->nChunksPerBlock = mtd->erasesize / mtd->writesize;
+#else
+		runtimenvDev->nDataBytesPerChunk = mtd->oobblock;
+		runtimenvDev->nChunksPerBlock = mtd->erasesize / mtd->oobblock;
+#endif
+		nBlocks = mtd->size / mtd->erasesize;
+		printf("nBlocks = %d\n", nBlocks);
+
+		runtimenvDev->nCheckpointReservedBlocks = 10;
+		runtimenvDev->startBlock = 167;
+		runtimenvDev->endBlock = runtimenvDev->startBlock + 20  - 1;
+		printf("\n\nruntimenv device from %d to %d\n\n", runtimenvDev->startBlock, runtimenvDev->endBlock);
+	}
+	else
+	{
+		runtimenvDev->writeChunkToNAND = nandmtd_WriteChunkToNAND;
+		runtimenvDev->readChunkFromNAND = nandmtd_ReadChunkFromNAND;
+		runtimenvDev->isYaffs2 = 0;
+		nBlocks = mtd->size / (YAFFS_CHUNKS_PER_BLOCK * YAFFS_BYTES_PER_CHUNK);
+		runtimenvDev->startBlock = 320;
+		runtimenvDev->endBlock = nBlocks - 1;
+		runtimenvDev->nChunksPerBlock = YAFFS_CHUNKS_PER_BLOCK;
+		runtimenvDev->nDataBytesPerChunk = YAFFS_BYTES_PER_CHUNK;
+	}
+
+	/* ... and common functions */
+	runtimenvDev->eraseBlockInNAND = nandmtd_EraseBlockInNAND;
+	runtimenvDev->initialiseNAND = nandmtd_InitialiseNAND;
+#endif
+
 	yaffs_initialise(yaffsfs_config);
 
 	return 0;
 }
 
 
-void make_a_file(char *yaffsName,char bval,int sizeOfFile)
+//void make_a_file(char *yaffsName,char bval,int sizeOfFile)
+void make_a_file(char *yaffsName,unsigned long bval,int sizeOfFile)
 {
 	int outh;
 	int i;
 	unsigned char buffer[100];
+	int aaa;
 
 	outh = yaffs_open(yaffsName, O_CREAT | O_RDWR | O_TRUNC, S_IREAD | S_IWRITE);
 	if (outh < 0)
@@ -223,16 +345,25 @@ void make_a_file(char *yaffsName,char bval,int sizeOfFile)
 		return;
 	}
 
+#if 1
 	memset(buffer,bval,100);
+	for (aaa = 0; aaa < 100; aaa ++) {
+		//printf("buffer[%d] = 0x%x\n", aaa, buffer[aaa]);
+		buffer[aaa] = aaa;
+	}
 
 	do{
 		i = sizeOfFile;
 		if(i > 100) i = 100;
 		sizeOfFile -= i;
-
 		yaffs_write(outh,buffer,i);
-
 	} while (sizeOfFile > 0);
+#else
+	
+	printf("bval = 0x%08x\n", bval);
+	yaffs_write(outh,&bval,4);
+	
+#endif
 
 
 	yaffs_close(outh);
@@ -253,12 +384,12 @@ void read_a_file(char *fn)
 
 	while(yaffs_read(h,&b,1)> 0)
 	{
-		printf("%02x ",b);
+		printf(" %02x",b);
 		i++;
-		if(i > 32)
+		if(i > 15)
 		{
 		   printf("\n");
-		   i = 0;;
+		   i = 0;
 		 }
 	}
 	printf("\n");
@@ -290,8 +421,10 @@ void cmd_yaffs_umount(char *mp)
 		printf("Error umounting %s, return value: %d\n", mp, yaffsfs_GetError());
 }
 
-void cmd_yaffs_write_file(char *yaffsName,char bval,int sizeOfFile)
+//void cmd_yaffs_write_file(char *yaffsName,char bval,int sizeOfFile)
+void cmd_yaffs_write_file(char *yaffsName,unsigned long bval,int sizeOfFile)
 {
+	printf("bval = 0x%08x  sizeOfFile = %d\n", bval, sizeOfFile);
 	checkMount();
 	make_a_file(yaffsName,bval,sizeOfFile);
 }
@@ -304,7 +437,7 @@ void cmd_yaffs_read_file(char *fn)
 }
 
 
-void cmd_yaffs_mread_file(char *fn, char *addr)
+void cmd_yaffs_mread_file(char *fn, unsigned char *addr)
 {
 	int h;
 	struct yaffs_stat s;
@@ -320,7 +453,7 @@ void cmd_yaffs_mread_file(char *fn, char *addr)
 		printf("File not found\n");
 		return;
 	}
-
+	printf("st_size = %d\n", (int)s.st_size);
 	yaffs_read(h,addr,(int)s.st_size);
 	printf("\t[DONE]\n");
 

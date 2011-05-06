@@ -53,13 +53,18 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     ret = recovery_init();
     if(ret == 1)
       recovery_mode();
-
+	
 	if(argc == 1){
 		normal_mode();
 		return 1;
 	}
 
     if(argc == 2){
+	if(strcmp(argv[1],"vlx") == 0){
+            vlx_mode();
+            return 1;
+        }
+
         if(strcmp(argv[1],"normal") == 0){
             normal_mode();
             return 1;
@@ -94,7 +99,7 @@ usage:
 U_BOOT_CMD(
 	cboot, CONFIG_SYS_MAXARGS, 1, do_cboot,
 	"choose boot mode",
-	"mode: \nrecovery, fastboot, dloader, charge, normal.\n"
+	"mode: \nrecovery, fastboot, dloader, charge, normal, vlx.\n"
 	"cboot could enter a mode specified by the mode descriptor.\n"
 	"it also could enter a proper mode automatically depending on "
 	"the environment\n"
