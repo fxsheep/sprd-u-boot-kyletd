@@ -27,7 +27,6 @@
 /* ** HEADER FILES							*/
 /************************************************************************/
 
-/* #define DEBUG */
 
 #include <config.h>
 #include <common.h>
@@ -84,6 +83,7 @@ static void *lcd_logo (void);
 static int lcd_getbgcolor (void);
 static void lcd_setfgcolor (int color);
 static void lcd_setbgcolor (int color);
+
 
 char lcd_is_enabled = 0;
 
@@ -327,7 +327,7 @@ static void test_pattern (void)
 int drv_lcd_init (void)
 {
 	struct stdio_dev lcddev;
-	int rc;
+	int rc = 0;
 
 	lcd_base = (void *)(gd->fb_base);
 
@@ -373,7 +373,9 @@ static int lcd_clear (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[]
 	lcd_setfgcolor (CONSOLE_COLOR_BLACK);
 	lcd_setbgcolor (CONSOLE_COLOR_WHITE);
 #else
-	lcd_setfgcolor (CONSOLE_COLOR_WHITE);
+	//lcd_setfgcolor (CONSOLE_COLOR_WHITE);
+#define CONSOLE_COLOR_RED (0x1f<<11)
+	lcd_setfgcolor (CONSOLE_COLOR_RED);
 	lcd_setbgcolor (CONSOLE_COLOR_BLACK);
 #endif	/* CONFIG_SYS_WHITE_ON_BLACK */
 

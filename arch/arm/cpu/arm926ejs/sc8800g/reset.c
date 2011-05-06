@@ -36,6 +36,7 @@
 #include <asm/io.h>
 #include <asm/arch/sci_types.h>
 #include <asm/arch/chip_drv_config_extern.h>
+#include <asm/arch/ldo.h>
 /*
  * Reset the cpu by setting up the watchdog timer and let it time out
  */
@@ -43,4 +44,9 @@ void reset_cpu (ulong ignored)
 {
 	start_watchdog(5);
 	while (1) ;
+}
+
+void power_down_cpu(ulong ignored)
+{
+    LDO_TurnOffAllLDO();
 }

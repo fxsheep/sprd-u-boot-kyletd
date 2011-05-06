@@ -9,6 +9,17 @@
 
 #define COMMAND_MAX 128
 
+//#define DEBUG
+#ifdef DEBUG
+#define DBG(fmt...) printf(fmt)
+#else
+#define DBG(fmt...) 
+#endif
+
+extern int power_button_pressed(void);
+extern int charger_connected(void);
+extern int alarm_triggered(void);
+
 int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	uint32_t key_code = 0;
@@ -16,6 +27,21 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 
     if(argc > 2)
 	  goto usage;
+    //find the power up trigger
+    if(!power_button_pressed()){
+        DBG("%s: power button press\n", __FUNCTION__);
+        //do nothing, let it down
+    }else if(charger_connected()){
+        DBG("%s: charger connected\n", __FUNCTION__);
+        charge_mode();
+    }else if(alarm_triggered()){
+        DBG("%s: alarm triggered\n", __FUNCTION__);
+        alarm_mode();
+    }else{
+        DBG("%s: power done again\n", __FUNCTION__);
+        power_down_devices();
+    }
+
 
     board_keypad_init();
     for(i=0; i<0x50000;i++){
@@ -32,7 +58,8 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         recovery_mode();
         break;
     case KEY_CAMERA:
-        charge_mode();
+        //charge_mode();
+        return; //back to normal boot
         break;
     case KEY_SEND:
         dloader_mode();

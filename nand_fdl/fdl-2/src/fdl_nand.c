@@ -3,6 +3,8 @@
 #include "asm/arch/nand_controller.h"
 #include <linux/mtd/mtd.h>
 #include <nand.h>
+#include <linux/mtd/nand.h>
+#include <jffs2/jffs2.h>
 
 //#define FDL2_DEBUG 1
 typedef struct {
@@ -124,6 +126,29 @@ int nand_start_write(unsigned int addr, unsigned int size)
 	nand_write_addr = addr;
 	cur_write_pos = addr;
 	nand_write_size = size;
+
+    nand_erase_options_t opts;
+    memset(&opts, 0, sizeof(opts));
+
+    if(SYSTEM_PART_OFFSET == addr)
+    {
+        opts.offset = SYSTEM_PART_OFFSET;
+        opts.length = SYSTEM_PART_SIZE;
+        opts.jffs2 = 0;
+        opts.quiet = 1;
+        opts.scrub = 1;
+        nand_erase_opts(&nand_info[nand_curr_device], &opts);
+    }
+
+    if(USERDATA_PART_OFFSET == addr)
+    {
+        opts.offset = USERDATA_PART_OFFSET;
+        opts.length = USERDATA_PART_SIZE;
+        opts.jffs2 = 0;
+        opts.quiet = 1;
+        opts.scrub = 1;
+        nand_erase_opts(&nand_info[nand_curr_device], &opts);
+    }
 	return NAND_SUCCESS;
 }
 int nand_do_write_ops(struct mtd_info *mtd, loff_t to,struct mtd_oob_ops *ops);

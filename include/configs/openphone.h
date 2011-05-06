@@ -21,9 +21,10 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-
+#define CONFIG_SILENT_CONSOLE
+#define CONFIG_GPIOLIB 1
 //#define NAND_DEBUG  
-/*#define DEBUG*/
+//#define DEBUG
 #define U_BOOT_SPRD_VER 1
 /*#define SPRD_EVM_TAG_ON 1*/
 #ifdef SPRD_EVM_TAG_ON
@@ -131,7 +132,7 @@
  * Memory Info
  */
 /* malloc() len */
-#define CONFIG_SYS_MALLOC_LEN		(1 << 20)	/* 1 MiB */
+#define CONFIG_SYS_MALLOC_LEN		(2 << 20)	/* 1 MiB */
 /*
  * Board has 2 32MB banks of DRAM but there is a bug when using
  * both so only the first is configured
@@ -226,6 +227,12 @@
 #define xstr(s)	str(s)
 #define str(s)	#s
 
+//nand partition table defination
+#define SYSTEM_PART_OFFSET 0x01520000
+#define SYSTEM_PART_SIZE 0x07800000
+#define USERDATA_PART_OFFSET 0x0fd60000
+#define USERDATA_PART_SIZE 0x102a0000
+
 #define MTDIDS_DEFAULT "nand0=sprd-nand"
 #ifdef CONFIG_G2PHONE
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
@@ -233,7 +240,7 @@
 #elif defined CONFIG_OPENPHONE
 /*#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),256k(params),256k(pt),10m(boot),10m(recovery),120m(system),60m(sps),10m(factory),2m(cache),256k(misc),20m(fota),20m(cp),-(userdata)"*/
 
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),128k(params),512k(vmjaluna),6016k(modem),7680k(kernel),5120k(dsp),1280k(fixnv),2560k(runtimenv),6400k(recovery),100m(system),200m(userdata),2m(cache),256k(misc)"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(2ndbl),128k(params),512k(vmjaluna),6016k(modem),7680k(kernel),5120k(dsp),1280k(fixnv),2560k(runtimenv),6400k(recovery),100m(system),198m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"
 
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
@@ -241,22 +248,23 @@
 #define CONFIG_BOOTCOMMAND "cboot vlx"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
+#ifdef CONFIG_CMD_NET
 #define CONFIG_IPADDR 192.168.10.2
 #define CONFIG_SERVERIP 192.168.10.5
 #define CONFIG_NETMASK 255.255.255.0
 #define CONFIG_USBNET_DEVADDR 26:03:ee:00:87:9f
 #define CONFIG_USBNET_HOSTADDR 9a:04:c7:d6:30:d0
 
-#define CONFIG_USB_GADGET_SC8800G
 
 #define CONFIG_NET_MULTI
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_DNS
 #define CONFIG_CMD_NFS
 #define CONFIG_CMD_RARP
 #define CONFIG_CMD_PING
 /*#define CONFIG_CMD_SNTP */
+#endif
 
+#define CONFIG_USB_GADGET_SC8800G
 #define CONFIG_USB_DWC
 #define CONFIG_USB_GADGET_DUALSPEED
 //#define CONFIG_USB_ETHER
@@ -269,4 +277,23 @@
 #define CONFIG_SYS_MAX_FLASH_BANKS 1
 #define CONFIG_SYS_MAX_FLASH_SECT 128
 */
+#define CONFIG_LCD
+#ifdef CONFIG_LCD
+#define CONFIG_SPLASH_SCREEN
+#define LCD_BPP LCD_COLOR16
+//#define CONFIG_LCD_INFO
+//#define LCD_TEST_PATTERN
+//#define CONFIG_LCD_LOGO
+#define CONFIG_SYS_WHITE_ON_BLACK
+#ifdef LCD_TEST_PATTERN
+#define CONSOLE_COLOR_RED 0xf800 
+#define CONSOLE_COLOR_GREEN 0x07e0
+#define CONSOLE_COLOR_YELLOW 0x07e0
+#define CONSOLE_COLOR_BLUE 0x001f
+#define CONSOLE_COLOR_MAGENTA 0x001f
+#define CONSOLE_COLOR_CYAN 0x001f
+#endif
+#endif // CONFIG_LCD
+
+
 #endif /* __CONFIG_H */

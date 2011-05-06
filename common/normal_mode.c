@@ -36,6 +36,43 @@ void normal_mode(void)
 		return;
 	}
 
+#ifdef CONFIG_SPLASH_SCREEN 
+#define SPLASH_PART "boot_logo"
+
+	ret = find_dev_and_part(SPLASH_PART, &dev, &pnum, &part);
+	if(ret){
+		printf("No partition named %s\n", SPLASH_PART);
+		return;
+	}else if(dev->id->type != MTD_DEV_TYPE_NAND){
+		printf("Partition %s not a NAND device\n", SPLASH_PART);
+		return;
+	}
+
+	off=part->offset;
+	nand = &nand_info[dev->id->num];
+	//read boot image header
+	size = 1<<20;
+    char * bmp_img = malloc(size);
+    if(!bmp_img){
+        printf("not enough memory for splash image\n");
+        return;
+    }
+	ret = nand_read_offset_ret(nand, off, &size, (void *)bmp_img, &off);
+	if(ret != 0){
+		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
+		return;
+	}
+    extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
+    extern lcd_display(void);
+    extern void set_backlight(uint32_t value);
+    lcd_display_bitmap((ulong)bmp_img, 0, 0);
+    lcd_display();
+    set_backlight(50);
+    //char img_addr[9];
+    //sprintf(img_addr, "%x\n", bmp_img);
+    //setenv("splashimage", img_addr);
+
+#endif
 	ret = find_dev_and_part(BOOT_PART, &dev, &pnum, &part);
 	if(ret){
 		printf("No partition named %s\n", BOOT_PART);

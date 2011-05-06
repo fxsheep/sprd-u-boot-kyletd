@@ -539,8 +539,9 @@ void cmd_continue(const char *arg, void *data, unsigned sz)
 void cmd_reboot(const char *arg, void *data, unsigned sz)
 {
 	fastboot_okay("");
-	udc_power_off();
-    reboot_devices(0);
+	//udc_power_off();
+    //reboot_devices(0);
+    power_down_devices(0);
 }
 
 void cmd_reboot_bootloader(const char *arg, void *data, unsigned sz)
@@ -553,6 +554,7 @@ void cmd_reboot_bootloader(const char *arg, void *data, unsigned sz)
 void cmd_powerdown(const char *arg, void *data, unsigned sz)
 {
 	fastboot_okay("");
+    power_down_devices(0);
 
 }
 

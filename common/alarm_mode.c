@@ -18,7 +18,7 @@ extern unsigned char raw_header[2048];
 #endif
 #define FLASH_PAGE_SIZE 2048
 
-void charge_mode(void)
+void alarm_mode(void)
 {
 	boot_img_hdr *hdr = (void *)raw_header;
 	struct mtd_info *nand;
@@ -92,7 +92,7 @@ void charge_mode(void)
 	}else{
 		cmdline = getenv("bootargs");
 	}
-    strcat(cmdline, " android.mode=charge");
+    strcat(cmdline, " android.mode=alarm");
 #ifdef BOOT_DEBUG
 	printf("cmdline %s\n", cmdline);
 #endif

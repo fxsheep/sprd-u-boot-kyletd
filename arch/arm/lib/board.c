@@ -569,6 +569,8 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	/* Initialize API */
 	api_init ();
 #endif
+    char fake[4]="fak";
+    setenv("splashimage", fake);
 
 	console_init_r ();	/* fully init console as a device */
 
@@ -665,6 +667,9 @@ void board_init_r (gd_t *id, ulong dest_addr)
 #ifdef SPRD_EVM_TAG_ON
 		SPRD_EVM_TAG(11);
 #endif
+    extern int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]);
+
+    do_cboot(NULL, 0, 1, NULL);
 	/* main_loop() can return to retry autoboot, if so just run it again. */
 	for (;;) {
 		main_loop ();

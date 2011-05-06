@@ -37,6 +37,7 @@ typedef uint32  DRV_ADDRWORD;
 
 
 //Bit def
+#ifndef BIT_0
 #define BIT_0               0x00000001
 #define BIT_1               0x00000002
 #define BIT_2               0x00000004
@@ -69,6 +70,7 @@ typedef uint32  DRV_ADDRWORD;
 #define BIT_29              0x20000000
 #define BIT_30              0x40000000
 #define BIT_31              0x80000000
+#endif
 #define BIT_(__n)       (1<<(__n))
 #define MASK_(__n,__w)  (((1<<(__w))-1)<<(__n))
 #define VALUE_(__n,__v) ((__v)<<(__n))

@@ -109,6 +109,7 @@ typedef uint32          BLOCK_ID;
 /*
 	Bit define
 */
+#ifndef BIT_0
 #define BIT_0               0x00000001
 #define BIT_1               0x00000002
 #define BIT_2               0x00000004
@@ -141,6 +142,7 @@ typedef uint32          BLOCK_ID;
 #define BIT_29              0x20000000
 #define BIT_30              0x40000000 
 #define BIT_31              0x80000000
+#endif
 
 #ifdef WIN32
     #define PACK
