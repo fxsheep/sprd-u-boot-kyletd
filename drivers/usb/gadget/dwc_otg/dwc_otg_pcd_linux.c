@@ -596,7 +596,10 @@ void udc_disable(void)
         usb_enable_module(0);
         usb_ldo_switch(0);
 }
-
+void udc_power_on(void)
+{
+	udc_enable();
+}
 void udc_power_off(void)
 {
 	udc_disable();
@@ -1087,12 +1090,13 @@ int pcd_init(
 /**
  * Cleanup the PCD.
  */
-#if 0
+
 void pcd_remove(
-struct platform_device *_dev
+	struct dwc_otg_device *_dev
+
 	)
 {
-       dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
+       dwc_otg_device_t *otg_dev = _dev;
 	dwc_otg_pcd_t *pcd = otg_dev->pcd;
 
 	DWC_DEBUGPL(DBG_PCDV, "%s(%p)\n", __func__, _dev);
@@ -1105,7 +1109,7 @@ struct platform_device *_dev
 	free_wrapper(gadget_wrapper);
 	otg_dev->pcd = 0;
 }
-#endif
+
 /**
  * This function registers a gadget driver with the PCD.
  *

@@ -61,6 +61,7 @@
 #include "dwc_otg_driver.h"
 #include "dwc_otg_core_if.h"
 #include "dwc_otg_pcd_if.h"
+#include <ubi_uboot.h>
 
 #define DWC_DRIVER_VERSION	"2.81a 04-FEB-2009"
 #define DWC_DRIVER_DESC		"HS OTG USB Controller driver"
@@ -496,12 +497,11 @@ static irqreturn_t dwc_otg_common_irq(int irq, void *dev)
  *
  * @param[in] _dev
  */
- #if 0
-static int dwc_otg_driver_remove(
-	struct platform_device *_dev
-)
+ dwc_otg_device_t *dwc_otg_device;
+static int dwc_otg_driver_remove(void)
 
 {
+#if 0
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
 
 
@@ -512,9 +512,10 @@ static int dwc_otg_driver_remove(
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev NULL!\n", __func__);
 		return -1;
 	}
+#endif
 #ifndef DWC_DEVICE_ONLY
-	if (otg_dev->hcd) {
-		hcd_remove(_dev);
+	if (dwc_otg_device->hcd) {
+		hcd_remove(dwc_otg_device);
 	} else {
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev->hcd NULL!\n", __func__);
 		return -1;
@@ -522,8 +523,8 @@ static int dwc_otg_driver_remove(
 #endif
 
 #ifndef DWC_HOST_ONLY
-	if (otg_dev->pcd) {
-		pcd_remove(_dev);
+	if (dwc_otg_device->pcd) {
+		pcd_remove(dwc_otg_device);
 	}
 #endif
 	/*
@@ -534,31 +535,30 @@ static int dwc_otg_driver_remove(
 		free_irq(_dev->irq, otg_dev);
 	}
 #endif
-	if (otg_dev->core_if) {
-		dwc_otg_cil_remove(otg_dev->core_if);
+	if (dwc_otg_device->core_if) {
+		dwc_otg_cil_remove(dwc_otg_device->core_if);
 	}
 
 	/*
 	 * Remove the device attributes
 	 */
-	dwc_otg_attr_remove(_dev);
+	//dwc_otg_attr_remove(_dev);
 
 	/*
 	 * Return the memory.
 	 */
-	if (otg_dev->base) {
-		iounmap(otg_dev->base);
-	}
-	dwc_free(otg_dev);
+	//if (otg_dev->base) {
+	//	iounmap(otg_dev->base);
+	//}
+	dwc_free(dwc_otg_device);
 
 	/*
 	 * Clear the drvdata pointer.
 	 */
-	platform_set_drvdata(_dev, 0);
+	//platform_set_drvdata(_dev, 0);
 	return 0;
 }
 
- #endif
 void dwc_power_on(void);
 #define USB_PHYS            0x20300000
 /**
@@ -575,7 +575,7 @@ void dwc_power_on(void);
 static int dwc_otg_driver_probe(void)
 {
 	int retval = 0;
-	dwc_otg_device_t *dwc_otg_device;
+	//dwc_otg_device_t *dwc_otg_device;
 	int irq;
 
 	dwc_debug("dwc_otg_driver_probe(%p)\n", dwc_otg_device);
@@ -781,6 +781,18 @@ int dwc_otg_driver_init(void)
 	error = driver_create_file(&dwc_otg_driver.driver, &driver_attr_debuglevel);
 */
 	return retval;
+}
+ void dwc_otg_driver_cleanup(void)
+{
+	dwc_debug(KERN_DEBUG "dwc_otg_driver_cleanup()\n");
+
+	dwc_otg_driver_remove();
+
+	//driver_remove_file(&dwc_otg_driver.driver, &driver_attr_debuglevel);
+	//driver_remove_file(&dwc_otg_driver.driver, &driver_attr_version);
+	//platform_driver_unregister(&dwc_otg_driver);
+
+	dwc_debug(KERN_INFO "%s module removed\n", dwc_driver_name);
 }
 
 #if 0
