@@ -30,6 +30,7 @@ ifdef CONFIG_USB_ETHER
 COBJS-y += ether.o epautoconf.o config.o usbstring.o
 else
 COBJS-y += f_fastboot.o fastboot.o epautoconf.o config.o usbstring.o
+COBJS-y += serial.o
 # Devices not related to the new gadget layer depend on CONFIG_USB_DEVICE
 ifdef CONFIG_USB_DEVICE
 COBJS-y += core.o

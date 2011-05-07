@@ -114,7 +114,13 @@ typedef int	spinlock_t;
 typedef int	wait_queue_head_t;
 #define spin_lock_init(...)
 #define spin_lock(...)
+#define spin_lock_irqsave(...)
+#define spin_lock_irq(...)
 #define spin_unlock(...)
+#define spin_unlock_irqrestore(...)
+#define spin_unlock_irq(...)
+
+typedef enum { false = 0, true = 1 } bool;
 
 #define mutex_init(...)
 #define mutex_lock(...)
@@ -148,6 +154,8 @@ struct kmem_cache { int i; };
 #define __init
 #define __exit
 
+#define __initdata
+
 #define kthread_create(...)	__builtin_return_address(0)
 #define kthread_stop(...)	do { } while (0)
 #define wake_up_process(...)	do { } while (0)
@@ -161,6 +169,7 @@ struct device {
 	char	bus_id[BUS_ID_SIZE];	/* position on parent bus */
 	dev_t			devt;	/* dev_t, creates the sysfs "dev" */
 	void	(*release)(struct device *dev);
+    void        *driver_data;   /* data private to the driver */
 };
 struct mutex { int i; };
 struct kernel_param { int i; };
@@ -203,6 +212,7 @@ static inline long IS_ERR(const void *ptr)
 #define EXPORT_SYMBOL(...)
 #define EXPORT_SYMBOL_GPL(...)
 #define module_param_call(...)
+#define module_param(...)
 #define MODULE_PARM_DESC(...)
 #define MODULE_VERSION(...)
 #define MODULE_DESCRIPTION(...)

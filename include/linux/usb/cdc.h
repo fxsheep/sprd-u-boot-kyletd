@@ -151,6 +151,14 @@ struct usb_cdc_mdlm_detail_desc {
 	__u8	bDetailData[0];
 } __attribute__ ((packed));
 
+struct usb_cdc_obex_desc {
+    __u8    bLength;
+    __u8    bDescriptorType;
+    __u8    bDescriptorSubType;
+
+    __le16  bcdVersion;
+} __attribute__ ((packed));
+
 /*-------------------------------------------------------------------------*/
 
 /*

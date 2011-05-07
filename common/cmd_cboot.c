@@ -58,7 +58,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         recovery_mode();
         break;
     case KEY_CAMERA:
-        //charge_mode();
+        charge_mode();
         return; //back to normal boot
         break;
     case KEY_SEND:
