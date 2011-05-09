@@ -1203,6 +1203,14 @@ bigphone_config	: unconfig
 openphone_config	: unconfig
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs openphone spreadtrum sc8800g
+
+sp6810a_config	: unconfig
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm arm926ejs sp6810a spreadtrum sc8800g
+
+sp8805ga_config	: unconfig
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm arm926ejs sp8805ga spreadtrum sc8800g
 #########################################################################
 #########################################################################
 
