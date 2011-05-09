@@ -24,7 +24,7 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(SOC).o
 
-COBJS	= generic.o timer.o reset.o ldo.o adi_drv.o sprd_kp.o mfp_sprd.o check_reboot.o gpio_phy.o gpio.o
+COBJS	= generic.o timer.o reset.o ldo.o adi_drv.o mfp_sprd.o check_reboot.o gpio_phy.o gpio.o
 ifndef CONFIG_SKIP_LOWLEVEL_INIT
 COBJS   += lowlevel_init.o sdram.o remap.o sdram_prod.o mmu.o chip_cfg.o 
 SOBJS   = cpu_spec.o mmu_asm.o

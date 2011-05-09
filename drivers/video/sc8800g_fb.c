@@ -140,7 +140,7 @@ static void __raw_bits_or(unsigned int v, unsigned int a)
 static int32_t lcm_send_cmd (uint32_t cmd)
 {
 	/* busy wait for ahb fifo full sign's disappearance */
-	while(__raw_readl(LCM_STATUS) & 0x1);
+	while(__raw_readl(LCM_STATUS) & 0x2);
 
 	__raw_writel(cmd, LCM_CD0);
 
@@ -150,12 +150,12 @@ static int32_t lcm_send_cmd (uint32_t cmd)
 static int32_t lcm_send_cmd_data (uint32_t cmd, uint32_t data)
 {
 	/* busy wait for ahb fifo full sign's disappearance */
-	while(__raw_readl(LCM_STATUS) & 0x1);
+	while(__raw_readl(LCM_STATUS) & 0x2);
 
 	__raw_writel(cmd, LCM_CD0);
 
 	/* busy wait for ahb fifo full sign's disappearance */
-	while(__raw_readl(LCM_STATUS) & 0x1);
+	while(__raw_readl(LCM_STATUS) & 0x2);
 
 	__raw_writel(data, LCM_DATA0);
 
@@ -165,7 +165,7 @@ static int32_t lcm_send_cmd_data (uint32_t cmd, uint32_t data)
 static int32_t lcm_send_data (uint32_t data)
 {
 	/* busy wait for ahb fifo full sign's disappearance */
-	while(__raw_readl(LCM_STATUS) & 0x1);
+	while(__raw_readl(LCM_STATUS) & 0x2);
 
 	__raw_writel(data, LCM_DATA0);
 
@@ -205,7 +205,7 @@ static void set_pins(void)
 	/*LCDC pin config*/
     static unsigned long lcd_func_cfg[] = {
 
-    MFP_CFG_X(LCD_CSN1,AF0,DS1,F_PULL_NONE,S_PULL_NONE,IO_Z),//LCD_CSN1
+    //MFP_CFG_X(LCD_CSN1,AF0,DS1,F_PULL_NONE,S_PULL_NONE,IO_Z),//LCD_CSN1
     MFP_CFG_X(LCD_RSTN,AF0,DS1,F_PULL_NONE,S_PULL_UP,IO_Z),//LCD_RSTN
     MFP_CFG_X(LCD_CD,AF0,DS1,F_PULL_NONE,S_PULL_DOWN,IO_Z),//LCD_CD
     MFP_CFG_X(LCD_D0,AF0,DS1,F_PULL_NONE,S_PULL_DOWN,IO_Z),//LCD_D[0]
