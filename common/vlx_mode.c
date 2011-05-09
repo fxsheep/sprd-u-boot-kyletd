@@ -45,6 +45,8 @@ extern void cmd_yaffs_read_file(char *fn);
 extern void cmd_yaffs_ls(const char *mountpt, int longlist);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 
+extern unsigned int caliberate_mode;
+
 void array_value(unsigned char * array, int len)
 {
 	int aaa;
@@ -243,6 +245,16 @@ void vlx_mode(void)
 	}
 
 	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
+    //check caliberation mode
+#ifdef CONFIG_MODEM_CALIBERATE
+#define VLX_TAG_ADDR 0x5100000 //after initrd
+    printf("caliberate mode is %d\n", caliberate_mode);
+    if(caliberate_mode){
+        char buf[20];
+        sprintf(buf, "caliberation=%d", caliberate_mode);
+        creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
+    }
+#endif
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
 	entry();

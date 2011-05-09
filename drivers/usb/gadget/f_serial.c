@@ -129,6 +129,41 @@ static struct usb_gadget_strings *gser_strings[] = {
 };
 
 /*-------------------------------------------------------------------------*/
+static int gser_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
+{
+	struct usb_composite_dev *cdev = f->config->cdev;
+    u16			w_length = le16_to_cpu(ctrl->wLength);
+	int			value = -EOPNOTSUPP;
+
+	DBG(cdev, "%s\n", __func__);
+	/* Handle Bulk-only class-specific requests */
+	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_CLASS) {
+		switch (ctrl->bRequest) {
+		case 0x22:
+            value = 0;
+            break;
+		}
+	}
+
+		/* respond with data transfer or status phase? */
+	if (value >= 0) {
+		int rc;
+		cdev->req->zero = value < w_length;
+		cdev->req->length = value;
+		rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
+		if (rc < 0)
+			printk("%s setup response queue error\n", __func__);
+	}
+
+	if (value == -EOPNOTSUPP)
+		VDBG(cdev,
+			"unknown class-specific control req "
+			"%02x.%02x v%04x i%04x l%u\n",
+			ctrl->bRequestType, ctrl->bRequest,
+			le16_to_cpu(ctrl->wValue), le16_to_cpu(ctrl->wIndex), 
+            le16_to_cpu(ctrl->wLength));
+	return value;
+}
 
 static int gser_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 {
@@ -292,6 +327,7 @@ int __init gser_bind_config(struct usb_configuration *c, u8 port_num)
 	gser->port.func.unbind = gser_unbind;
 	gser->port.func.set_alt = gser_set_alt;
 	gser->port.func.disable = gser_disable;
+	gser->port.func.setup = gser_setup;
 
 	status = usb_add_function(c, &gser->port.func);
 	if (status)
