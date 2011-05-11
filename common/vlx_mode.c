@@ -251,7 +251,7 @@ void vlx_mode(void)
     printf("caliberate mode is %d\n", caliberate_mode);
     if(caliberate_mode){
         char buf[20];
-        sprintf(buf, "caliberation=%d", caliberate_mode);
+        sprintf(buf, "calibration=%d", caliberate_mode);
         creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
     }
 #endif
