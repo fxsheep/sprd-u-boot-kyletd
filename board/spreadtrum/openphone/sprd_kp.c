@@ -7,6 +7,7 @@
 #error "no keypad definition file included"
 #endif
 #include <asm/arch/mfp.h>
+#include <boot_mode.h>
 
 struct key_map_info * sprd_key_map = 0;
 
@@ -53,11 +54,6 @@ void board_keypad_init(void)
 
     if(sprd_key_map->total_size % sprd_key_map->keycode_size){
         printf("%s: board_key_map config error, it should be %d aligned\n", __FUNCTION__, sprd_key_map->keycode_size);
-        return;
-    }
-
-    if(sprd_key_map->total_size < sprd_key_map->total_row * sprd_key_map->total_col * sprd_key_map->keycode_size){
-        printf("%s: board_key_map too small\n", __FUNCTION__);
         return;
     }
 
@@ -137,4 +133,18 @@ unsigned char board_key_scan(void)
     if(s_int_status)
         REG_KPD_INT_CLR = KPD_INT_ALL;
     return key_code;
+}
+
+unsigned int check_key_boot(unsigned char key)
+{
+    if(KEY_MENU == key)
+      return BOOT_CHARGE;
+    else if(KEY_HOME == key)
+      return BOOT_FASTBOOT;
+    else if(KEY_BACK == key)
+      return BOOT_RECOVERY;
+    else if(KEY_VOLUMEUP== key)
+      return BOOT_DLOADER;
+    else 
+      return 0;
 }

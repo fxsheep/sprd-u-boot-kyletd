@@ -1,5 +1,6 @@
 #include <common.h>
 #include <malloc.h>
+#include <asm/arch/sc8800g_reg_global.h>
 #include "key_map.h"
 #ifdef CONFIG_SC8800G
 #include <asm/arch/sc8800g_keypad.h>
@@ -7,26 +8,22 @@
 #error "no keypad definition file included"
 #endif
 #include <asm/arch/mfp.h>
+#include <boot_mode.h>
 
+#define mdelay(_ms) udelay(_ms*1000)
 struct key_map_info * sprd_key_map = 0;
 
 static unsigned long keypad_func_cfg[] = {
-        MFP_CFG_X(KEYOUT0, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT1, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT2, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT3, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT4, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT5, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT6, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT7, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYIN0,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN1,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN2,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN3,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN4,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN5,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN6,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN7,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYOUT0, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT1, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT2, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT3, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT4, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYIN0,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN1,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN2,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN3,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN4,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
 };
 
 static void sprd_config_keypad_pins(void)
@@ -55,11 +52,10 @@ void board_keypad_init(void)
         printf("%s: board_key_map config error, it should be %d aligned\n", __FUNCTION__, sprd_key_map->keycode_size);
         return;
     }
-
-    if(sprd_key_map->total_size < sprd_key_map->total_row * sprd_key_map->total_col * sprd_key_map->keycode_size){
-        printf("%s: board_key_map too small\n", __FUNCTION__);
-        return;
-    }
+    /* init sprd keypad controller */
+    *(volatile unsigned *)GR_SOFT_RST |= 0x2;
+    mdelay(10);
+    *(volatile unsigned *)GR_SOFT_RST &= ~0x2;
 
     /* init sprd keypad controller */
     REG_INT_DIS = (1 << IRQ_KPD_INT);
@@ -137,4 +133,16 @@ unsigned char board_key_scan(void)
     if(s_int_status)
         REG_KPD_INT_CLR = KPD_INT_ALL;
     return key_code;
+}
+
+unsigned int check_key_boot(unsigned char key)
+{
+    if(KEY_MENU == key)
+      return BOOT_CHARGE;
+    else if(KEY_BACK == key)
+      return BOOT_RECOVERY;
+    else if(KEY_HOME == key)
+      return BOOT_FASTBOOT;
+    else
+      return 0;
 }

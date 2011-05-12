@@ -23,15 +23,16 @@
 
 #define ARCH_NR_GPIOS	GPIO_MAX_PIN_NUM
 
-#define gpio_get_value __gpio_get_value
-#define gpio_set_value __gpio_set_value
-#define gpio_to_irq  __gpio_to_irq
+//#define gpio_get_value __gpio_get_value
+//#define gpio_set_value __gpio_set_value
+//#define gpio_to_irq  __gpio_to_irq
 
 //extern __must_check int sprd_alloc_gpio_irq(unsigned gpio);
 extern int sprd_alloc_gpio_irq(unsigned gpio);
 extern int irq_to_gpio(unsigned long irq);
 extern void sprd_free_gpio_irq(int irq);
-#include "asm_generic_gpio.h"
+#include <asm/arch/asm_generic_gpio.h>
+#include <asm/arch/gpio_phy.h>
 
 //extern void __init sprd_gpio_init(void);
 #endif

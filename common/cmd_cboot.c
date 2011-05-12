@@ -22,6 +22,7 @@ extern int alarm_triggered(void);
 
 int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
+    uint32_t key_mode = 0;
 	uint32_t key_code = 0;
     volatile int i;
 
@@ -50,18 +51,20 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
           break;
     }
 
-    switch(key_code){
-    case KEY_MENU:
+    key_mode = check_key_boot(key_code);
+
+    switch(key_mode){
+    case BOOT_FASTBOOT:
         fastboot_mode();
         break;
-    case KEY_HOME:
+    case BOOT_RECOVERY:
         recovery_mode();
         break;
-    case KEY_CAMERA:
+    case BOOT_CHARGE:
         charge_mode();
         return; //back to normal boot
         break;
-    case KEY_SEND:
+    case BOOT_DLOADER:
         dloader_mode();
         break;
     default:

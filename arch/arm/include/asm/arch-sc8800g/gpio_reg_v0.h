@@ -80,23 +80,6 @@ extern   "C"
 #define GPIO_IC                                 0x0024    //Interrupt clear, "1" clears edge detection interrupt. "0" has no effect.
 
 //GPIO ARM Control.
-typedef struct gpio_ctl_tag
-{
-    VOLATILE uint32 data;
-    VOLATILE uint32 dmsk;
-    VOLATILE uint32 dir;
-    VOLATILE uint32 is;
-    VOLATILE uint32 ibe;
-    VOLATILE uint32 iev;
-    VOLATILE uint32 ie;
-    VOLATILE uint32 ris;
-    VOLATILE uint32 mis;
-    VOLATILE uint32 ic;
-    VOLATILE uint32 itcr;
-    VOLATILE uint32 itop1;
-    VOLATILE uint32 itop2;
-} gpio_ctl_s;
-
 /**----------------------------------------------------------------------------*
 **                         Local Function Prototype                           **
 **----------------------------------------------------------------------------*/
