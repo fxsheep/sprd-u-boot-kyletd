@@ -28,8 +28,8 @@ unsigned char vlx_raw_header[2048];
 #define VMJALUNA_SIZE	(0x40000)
 #define MODEM_SIZE	(5973388)
 #define KERNEL_SIZE	(7474533)
-#define FIXNV_SIZE	(42076)
-#define RUNTIMENV_SIZE	(42076)
+#define FIXNV_SIZE	(64 * 1024)
+#define RUNTIMENV_SIZE	(512 * 1024)
 #define DSP_SIZE	(4063232)
 
 #define VMJALUNA_ADR	0x00400000
@@ -133,6 +133,45 @@ void vlx_mode(void)
 	memcpy((unsigned char *)FIXNV_ADR, (unsigned char *)DSP_ADR, FIXNV_SIZE);
 #endif
 	//array_value((unsigned char *)FIXNV_ADR, FIXNV_SIZE);
+
+	///////////////////////////////////////////////////////////////////////
+	/* RUNTIMEVN_PART */
+	printf("Reading runtimenv to 0x%08x\n", RUNTIMENV_ADR);
+#if 1
+	/* mtd nv */
+	ret = find_dev_and_part(RUNTIMEVN_PART, &dev, &pnum, &part);
+	if (ret) {
+		printf("No partition named %s\n", RUNTIMEVN_PART);
+		return;
+	} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
+		printf("Partition %s not a NAND device\n", RUNTIMEVN_PART);
+		return;
+	}
+
+	off = part->offset;
+	nand = &nand_info[dev->id->num];
+
+	size = (RUNTIMENV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+	if(size <= 0) {
+		printf("runtimenv image should not be zero\n");
+		return;
+	}
+	ret = nand_read_offset_ret(nand, off, &size, (void*)RUNTIMENV_ADR, &off);
+	if (ret != 0) {
+		printf("runtimenv nand read error %d\n", ret);
+		return;
+	}
+#else
+	/* runtimenv */
+    	cmd_yaffs_mount(runtimenvpoint);
+	/* there is need RUNTIMENV_ADR instead of DSP_ADR, but RUNTIMENV_ADR is 0x00000000, 
+	 * yaffs_read occur error at first page, so i use DSP_ADR, then copy data from DSP_ADR to RUNTIMENV_ADR.
+	*/
+    	cmd_yaffs_mread_file(runtimvenvfilename, (unsigned char *)DSP_ADR);
+	cmd_yaffs_umount(runtimenvpoint);
+	memcpy((unsigned char *)RUNTIMENV_ADR, (unsigned char *)DSP_ADR, RUNTIMENV_SIZE);
+#endif
+	//array_value((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE);
 
 	////////////////////////////////////////////////////////////////
 	/* DSP_PART */
