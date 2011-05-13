@@ -18,8 +18,8 @@
 /**---------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **---------------------------------------------------------------------------*/ 
-#include "asm/arch/sci_types.h"
-#include "asm/arch/sdram_cfg.h"
+#include <asm/arch/sci_types.h>
+#include <asm/arch/sdram_cfg.h>
 
 /**---------------------------------------------------------------------------*
  **                         Debugging Flag                                    *
@@ -115,31 +115,15 @@
 //   sdram_parameters[] is used to config SDRAM controller according to variable
 //sdram. The unit is ns. The end of array is marked with 0xffffffff at the last element. 
 /*******************************************************************************/
-#if (DRAM_TYPE == SDR_SDRAM)
-LOCAL const SDRAM_TIMING_PARA_T s_sdram_timing_param =
-{
-	7800,            //ROW_REFRESH_TIME,Refresh interval time , ns, tREF-max = 7800 ns
-    30,              //ROW_PRECHARGE_TIME , ns, tRP-min = 27 ns.
-    69,              //ROW_CYCLE_TIME
-    30,              // T_RCD,ACTIVE to READ or WRITE delay  , ns, tRCD-min = 27 ns
-    30,              // T_WR  ,WRITE recovery time  , ns, tWR-min = 15 ns.
-    2,               //T_MRD , 2 cycles, tMRD-min = 2 cycles.
-    110,             //T_RFC, AUTO REFRESH command period , ns, tRFC-min = 80 ns.
-    150,             //T_XSR  , ns, tXSR-min = 120 ns.
-    90               //T_RAS_MIN , row active time, ns, tRAS-min = 50ns
-};
-#else
 LOCAL CONST SDRAM_TIMING_PARA_T s_sdram_timing_param =
 //  ms    ns   ns    ns            ns    ns       ns    ns  clk   clk
-//  //  tREF, tRP, tRCD, tWR/tRDL/tDPL,tRFC,tXSR,     tRAS,tRRD,tMRD, tWTR(wtr is only for ddr)
-      {64,   30,  30,   15,          110, 140,      50,  15,  2,    2   };
+//  tREF, tRP, tRCD, tWR/tRDL/tDPL,tRFC,tXSR,     tRAS,tRRD,tMRD, tWTR(wtr is only for ddr)
+    {64,   30,  30,   20,          110, 150,      60,  20,  2,    2   };
 
-#endif
-//
 /*******************************************************************************/
 //   sdram_cofig_info is used to config sdram controller when to init sdram
 /*******************************************************************************/
-LOCAL const SDRAM_CFG_INFO_T s_sdram_config_info =
+LOCAL CONST SDRAM_CFG_INFO_T s_sdram_config_info =
 {
 	BK_MODE,
 	SDRAM_ROW_MODE,
@@ -148,8 +132,7 @@ LOCAL const SDRAM_CFG_INFO_T s_sdram_config_info =
 	BURST_LEN,
 	CAS_LATENCY,
 	SDRAM_EXT_MODE_VALUE,
-	SDRAM_SIZE,
-	SDRAM_CLK_DLY
+	SDR_SDRAM
 };
 
 /**---------------------------------------------------------------------------*
