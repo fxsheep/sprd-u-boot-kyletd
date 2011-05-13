@@ -5,7 +5,7 @@
 
 static unsigned char board_key_map[]={
     0x27, KEY_HOME,
-    0x17, KEY_BACK,
+    0x42, KEY_BACK,
     0x41, KEY_VOLUMEUP,
     0x30, KEY_MENU,
 };

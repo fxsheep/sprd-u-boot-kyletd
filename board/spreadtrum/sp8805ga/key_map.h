@@ -3,7 +3,7 @@
 
 #include <linux/key_code.h>
 
-#define KEYPAD_DEBUG
+//#define KEYPAD_DEBUG
 static unsigned char board_key_map[]={
     0x01, KEY_HOME,
     0x10, KEY_BACK,
