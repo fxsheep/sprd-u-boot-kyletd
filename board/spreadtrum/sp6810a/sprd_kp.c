@@ -1,37 +1,60 @@
 #include <common.h>
 #include <malloc.h>
 #include "key_map.h"
+#include <asm/arch/sc8800g_reg_global.h>
+#include <asm/arch/gpio.h>
 #ifdef CONFIG_SC8800G
 #include <asm/arch/sc8800g_keypad.h>
 #else
 #error "no keypad definition file included"
 #endif
 #include <asm/arch/mfp.h>
+#include <boot_mode.h>
 
+#define mdelay(_ms) udelay(_ms*1000)
 struct key_map_info * sprd_key_map = 0;
 
 static unsigned long keypad_func_cfg[] = {
-        MFP_CFG_X(KEYOUT0, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT1, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT2, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT3, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT4, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT5, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT6, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYOUT7, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
-        MFP_CFG_X(KEYIN0,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN1,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN2,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN3,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN4,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN5,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN6,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
-        MFP_CFG_X(KEYIN7,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYOUT0, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT1, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT2, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT3, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT4, AF0, DS1, F_PULL_NONE, S_PULL_NONE, IO_OE),
+    MFP_CFG_X(KEYOUT5, AF3, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN0,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN1,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN2,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN3,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN4,  AF0, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_CFG_X(KEYIN5,  AF3, DS1, F_PULL_UP,   S_PULL_UP,   IO_IE),
+    MFP_ANA_CFG_X(PBINT, AF0, DS1, F_PULL_UP,S_PULL_UP, IO_IE),
 };
 
 static void sprd_config_keypad_pins(void)
 {
         sprd_mfp_config(keypad_func_cfg, ARRAY_SIZE(keypad_func_cfg));
+}
+
+static void gpio_key_init(int gpio)
+{
+    struct gpio_chip gpio_key;
+
+    sprd_gpio_request(&gpio_key, gpio);
+    sprd_gpio_direction_input(&gpio_key,gpio);
+#ifdef KEYPAD_DEBUG
+    int val = sprd_gpio_get(&gpio_key, gpio);
+    printf("func: %s, key: %d val: %d\n", __func__, gpio, val);
+#endif
+}
+
+static int gpio_get_value(int gpio)
+{
+    struct gpio_chip gpio_key;
+    int val = sprd_gpio_get(&gpio_key, gpio);
+#ifdef KEYPAD_DEBUG
+    printf("func: %s, key: %d val: %d\n", __func__, gpio, val);
+#endif
+    return val;
 }
 
 void board_keypad_init(void)
@@ -56,10 +79,10 @@ void board_keypad_init(void)
         return;
     }
 
-    if(sprd_key_map->total_size < sprd_key_map->total_row * sprd_key_map->total_col * sprd_key_map->keycode_size){
-        printf("%s: board_key_map too small\n", __FUNCTION__);
-        return;
-    }
+    /* init sprd keypad controller */
+    *(volatile unsigned *)GR_SOFT_RST |= 0x2;
+    mdelay(10);
+    *(volatile unsigned *)GR_SOFT_RST &= ~0x2;
 
     /* init sprd keypad controller */
     REG_INT_DIS = (1 << IRQ_KPD_INT);
@@ -75,6 +98,11 @@ void board_keypad_init(void)
     
     //open all press & release & long key operation flags
     REG_KPD_INT_EN = KPD_INT_ALL;
+
+    //init all gpio keys
+    sprd_gpio_init();
+    gpio_key_init(CONFIG_HOME_GPIO);
+    gpio_key_init(CONFIG_VOLUMEUP_GPIO);
 #if 0
     for(;;){
         if(REG_KPD_INT_RAW_STATUS){
@@ -132,9 +160,25 @@ unsigned char board_key_scan(void)
     }else if((s_int_status & KPD_PRESS_INT3) || (s_int_status & KPD_LONG_KEY_INT3)){
         scan_code = (s_key_status & (KPD4_ROW_CNT | KPD4_COL_CNT))>>24;
         key_code = handle_scan_code(scan_code);
+    }else if(!gpio_get_value(CONFIG_HOME_GPIO)){
+        return KEY_HOME;
+    }else if(!gpio_get_value(CONFIG_VOLUMEUP_GPIO)){
+        return KEY_VOLUMEUP;
     }
 
     if(s_int_status)
         REG_KPD_INT_CLR = KPD_INT_ALL;
     return key_code;
+}
+
+unsigned int check_key_boot(unsigned char key)
+{
+    if(KEY_HOME==key)
+      return BOOT_FASTBOOT;
+    else if(KEY_BACK==key)
+      return BOOT_RECOVERY;
+    else if(KEY_MENU==key)
+      return BOOT_CALIBRATE;
+    else 
+      return 0;
 }

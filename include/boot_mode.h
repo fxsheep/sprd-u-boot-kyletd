@@ -13,4 +13,12 @@ void caliberation_mode(void);
 #define RECOVERY_MODE   0x77665502
 #define FASTBOOT_MODE   0x77665500
 
+#define BOOT_NORAML 0xf1
+#define BOOT_FASTBOOT 0xf2
+#define BOOT_RECOVERY 0xf3
+#define BOOT_CALIBRATE 0xf4
+#define BOOT_DLOADER 0xf5
+#define BOOT_CHARGE 0xf6
+
+extern unsigned int check_key_boot(unsigned char key);
 #endif

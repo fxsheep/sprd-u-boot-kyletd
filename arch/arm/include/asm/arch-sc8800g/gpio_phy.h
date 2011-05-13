@@ -1,165 +1,104 @@
-/******************************************************************************
- ** File Name:      gpio_phy.h                                                *
- ** Author:         Xueliang.Wang                                             *
- ** DATE:           03/14/2003                                                *
- ** Copyright:      2003 Spreatrum, Incoporated. All Rights Reserved.         *
- ** Description:    This file defines the basic operation interfaces of   GPIO device. *
- **                                                                                                                                    *
- ******************************************************************************
+#ifndef __GPIO_PHY_H__
+#define __GPIO_PHY_H__
 
- ******************************************************************************
- **                        Edit History                                       *
- ** ------------------------------------------------------------------------- *
- ** DATE            NAME                DESCRIPTION                           *
- ******************************************************************************/
-#ifndef _GPIO_PHY_H_
-#define _GPIO_PHY_H_
+#include <linux/types.h>
+
+//#include <mach/gpio.h>
+//#include <mach/adi_hal_internal.h>
+#include <asm/arch/adi_hal_internal.h>
+#include <asm/arch/sc8800g_module_config.h>
+#define GPIO_DBG(fmt...) printf(fmt)
+
+enum gpio_section_type {
+    GPIO_SECTION_GPI = 0x0,
+    GPIO_SECTION_GPO,
+    GPIO_SECTION_GPIO,
+    GPIO_SECTION_INVALID
+};
 
 
-typedef struct
+struct gpio_section
+{
+    u32 page_base;
+    u32 page_size;
+    enum gpio_section_type  section_type;
+};
+
+enum gpio_die {
+	A_DIE = 0,
+	D_DIE = 1,
+};
+
+#define NR_D_DIE_GPIOS 160
+
+/*
+	gpio is locate in Digital Die(D die) or Analog Die(A die),
+ */
+static __inline int __get_gpio_die( u32 gpio)
+{
+	if (gpio < NR_D_DIE_GPIOS)
+		return D_DIE;
+	else if (gpio < GPIO_MAX_PIN_NUM)
+		return A_DIE;
+	else {
+		WARN(1, "wrong gpio %d\r\n", gpio);
+		return -1;
+	}
+}
+static __inline u32 __get_base_addr (u32 gpio_id)
+{
+    if (gpio_id >= NR_D_DIE_GPIOS)
+    {
+       return ( (gpio_id - NR_D_DIE_GPIOS) >>4) * 0x80 + ANA_GPIO_BASE;
+    }
+
+    return (gpio_id>>4) * 0x80 + (u32) GPIO_BASE;
+}
+
+static __inline u32 __get_bit_num (u32 gpio_id)
+{
+    return (gpio_id & 0xF);
+}
+static __inline void gpio_reg_set (u32 reg_addr, int die, u32 value)
+{
+//  GPIO_DBG("set %s die reg:%x, value %x\r\n",
+//			(die == D_DIE) ? "D die" : "A die", reg_addr, value);
+    if (die == D_DIE) {
+        __raw_writel(value, reg_addr);
+    }
+    else
+    {
+        ANA_REG_SET (reg_addr,value);
+    }
+    return;
+}
+
+static __inline u32 gpio_reg_get (u32 reg_addr, int die)
+{
+//   	GPIO_DBG("read %s die reg:%x\r\n",
+//   			(die == D_DIE) ? "D die" : "A die", reg_addr);
+   	if (die == D_DIE)
+		return __raw_readl (reg_addr);
+	else
+		return ANA_REG_GET (reg_addr);
+}
+static __inline void gpio_reg_and (u32 reg_addr, int die, u32 value)
+{
+	if (die == D_DIE)
+		__raw_bits_and(value, reg_addr);
+    	else
+		ANA_REG_AND (reg_addr,value);
+}
+static __inline void gpio_reg_or (u32 reg_addr, int die, u32 value)
 {
 
-    GPIO_SECTION_E gpio_type;
-    uint32 baseAddr;
-    uint16 bit_num;
+	if (die == D_DIE)
+		__raw_bits_or(value, reg_addr);
+	else
+		ANA_REG_OR (reg_addr,value);
+}
 
-} GPIO_INFO_T;
-
-
-/*****************************************************************************/
-//  Description:    This function get gpio module base info.
-//  Dependency:     Gpio_GetCfgSectionTable(uint32 *table)
-//  Author:         Steve.Zhan
-//  Note:
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_GetBaseInfo (uint32 gpio_id, GPIO_INFO_T *gpio_info);
-
-/*****************************************************************************/
-//  Description:    This function used to get the state of a gpio gpi gpo pin
-//  Author:         Zhemin.Lin
-//  retread by:     Steve.Zhan
-//  Note:
-/*****************************************************************************/
-PUBLIC BOOLEAN GPIO_PHY_GetPinData (GPIO_INFO_T *pGpio_info);
-/*****************************************************************************/
-//  Description:    This function used to get the state of a gpio pin
-//  Author:         Yiyue.He
-//  Note:
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_SetPinData (GPIO_INFO_T *pGpio_info ,BOOLEAN b_on);
-
-/*****************************************************************************/
-//  Description:    This function used to know whether the gpio port is enabled.
-//  notes:
-/*****************************************************************************/
-PUBLIC BOOLEAN GPIO_PHY_GetDataMask (GPIO_INFO_T *pGpio_info);
-
-/*****************************************************************************/
-//  Description:    This function used to know whether the gpio port is enabled.
-//  Note:              0 - disable
-//                     1 - enable
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_SetDataMask (GPIO_INFO_T *pGpio_info, BOOLEAN b_on);
-
-/*****************************************************************************/
-//  Description:    This function used to know whether the gpio int mask is enabled.
-//                  Interrupt mask register, "1" corresponding pin is not masked.
-//                  "0" corresponding pin interrupt is masked
-//  Author:         Benjamin.Wang
-//  Retreat by:     Steve.Zhan
-//  Note:           SCI_FALSE - disable
-//                  SCI_TRUE - enable
-/*****************************************************************************/
-PUBLIC BOOLEAN GPIO_PHY_GetIntIsMask (GPIO_INFO_T *pGpio_info);
-
-/*****************************************************************************/
-//  Description:    This function used to Set GPIO IE.
-//  Note:              0 - disable
-//                     1 - enable
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_SetIntMask (GPIO_INFO_T *pGpio_info);
-
-/*****************************************************************************/
-//  Description:    This function used to Set GPIO IE.
-//  Note:              0 - disable
-//                     1 - enable
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_CleanIntMask (GPIO_INFO_T *pGpio_info);
-/*****************************************************************************/
-//  Description:    This function used to get the direction of a gpio pin
-//  Note:              0 - Input
-//                     1 - Output
-/*****************************************************************************/
-PUBLIC BOOLEAN GPIO_PHY_GetDirection (GPIO_INFO_T *pGpio_info);
-
-
-/*****************************************************************************/
-//  Description:    This function used to set the direction of a gpio pin
-//  Note:              0 - Input
-//                        1 - Output
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_SetDirection (GPIO_INFO_T *pGpio_info, BOOLEAN directions);
-
-/*****************************************************************************/
-//  Description:    This function used to get the intr state of a gpio pin
-//  Author:         Zhemin.Lin
-//  retread by:    Yiyue.He
-//  Retreat by:     Steve.Zhan
-//  Note:
-/*****************************************************************************/
-PUBLIC BOOLEAN GPIO_PHY_GetIntState (GPIO_INFO_T *pGpio_info);
-
-/*****************************************************************************/
-//  Description:    This function used to clear the given interrupt status bit.
-//  Author:           Benjamin.Wang
-// retread by:        Yiyue.He
-//  Retreat by:     Steve.Zhan
-//  Note:
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_ClearIntStatus (GPIO_INFO_T *pGpio_info);
-
-/*****************************************************************************/
-//  Description:    This function used to set gpio Interrupt sense type.
-//  Author:         Benjamin.Wang
-//  Retreat by:     Steve.Zhan
-//  Note:
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_SetInterruptSense (GPIO_INFO_T *pGpio_info, GPIO_INT_TYPE sensetype);
-
-/*****************************************************************************/
-//  Description:    This function used to set gpin Debounce time.
-//  Author:         Steve.Zhan
-//  Note:
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_SetGPIDebounce (GPIO_INFO_T *pGpio_info, uint8 debounce_period);
-
-/*****************************************************************************/
-//  Description:    This function used to set  gpi  Interrupt Trigering
-//  Author:         Steve.Zhan
-//  Note:
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_TrigGPIDetect (GPIO_INFO_T *pGpio_info);
-
-/*****************************************************************************/
-//  Description:    This function used to Enable gpi Detect function
-//  Author:         Steve.Zhan
-//  Note:
-/*****************************************************************************/
-PUBLIC void GPIO_PHY_EnableGPIDetect (GPIO_INFO_T *pGpio_info);
-
-#ifdef GPIO_DRV_DEBUG
-#define GPIO_PRINT(_x_)       SCI_TRACE_LOW _x_
-#define GPIO_ASSERT(_x_)     SCI_ASSERT(_x_)
-#else
-#define GPIO_PRINT(_x_)
-#define GPIO_ASSERT(_x_)
-#endif  // GPIO_DRV_DEBUG
-
-#ifdef GPIO_ASSERT_IF_WRONG_SECTION
-#define GPIO_SECTION_ASSERT SCI_ASSERT
-#else
-#define GPIO_SECTION_ASSERT
-#endif
+struct gpio_section *gpio_get_section_table(u32 * table_size);
 
 #endif
 

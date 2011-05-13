@@ -2,9 +2,9 @@
 #include <asm/arch/sc_reg.h>
 #include <asm/arch/adi_hal_internal.h>
 #include <boot_mode.h>
-#include "gpio.h"
-#include "asm_generic_gpio.h"
-#include "gpio_phy.h"
+#include <asm/arch/gpio.h>
+#include <asm/arch/asm_generic_gpio.h>
+#include <asm/arch/gpio_phy.h>
 #include <asm/arch/rtc_reg_v3.h>
 #include <asm/arch/mfp.h>
 

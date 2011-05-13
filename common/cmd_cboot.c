@@ -23,11 +23,12 @@ extern int alarm_triggered(void);
 
 int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
-	uint32_t key_code = 0;
+    uint32_t key_mode = 0;
+    uint32_t key_code = 0;
     volatile int i;
 
     if(argc > 2)
-	  goto usage;
+      goto usage;
 
     board_keypad_init();
 
@@ -41,7 +42,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         DBG("func: %s line: %d\n", __func__, __LINE__);
         fastboot_mode();
     }
-        DBG("func: %s line: %d\n", __func__, __LINE__);
+    DBG("func: %s line: %d\n", __func__, __LINE__);
 
     int recovery_init(void);
     int ret =0;
@@ -62,26 +63,23 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
             if(key_code != KEY_RESERVED)
               break;
         }
+        key_mode = check_key_boot(key_code);
 
-        switch(key_code){
-            case KEY_MENU:
-                DBG("func: %s line: %d\n", __func__, __LINE__);
+        switch(key_mode){
+            case BOOT_FASTBOOT:
                 fastboot_mode();
                 break;
-            case KEY_HOME:
-                DBG("func: %s line: %d\n", __func__, __LINE__);
+            case BOOT_RECOVERY:
                 recovery_mode();
                 break;
-            case KEY_CAMERA:
-                DBG("func: %s line: %d\n", __func__, __LINE__);
+            case BOOT_CALIBRATE:
                 caliberation_mode();
+                return; //back to normal boot
                 break;
-            case KEY_SEND:
-                DBG("func: %s line: %d\n", __func__, __LINE__);
+            case BOOT_DLOADER:
                 dloader_mode();
                 break;
             default:
-                DBG("func: %s line: %d\n", __func__, __LINE__);
                 break;
         }
     }else if(charger_connected()){
@@ -94,12 +92,11 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         DBG("%s: power done again\n", __FUNCTION__);
         power_down_devices();
     }
-        DBG("func: %s line: %d\n", __func__, __LINE__);
-	
-	if(argc == 1){
-		normal_mode();
-		return 1;
-	}
+
+    if(argc == 1){
+        normal_mode();
+        return 1;
+    }
 
     if(argc == 2){
         DBG("func: %s line: %d\n", __func__, __LINE__);
@@ -114,7 +111,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
             return 1;
         }
         DBG("func: %s line: %d\n", __func__, __LINE__);
-        
+
         if(strcmp(argv[1],"recovery") == 0){
             recovery_mode();
             return 1;
@@ -138,25 +135,25 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
             return 1;
         }
         DBG("func: %s line: %d\n", __func__, __LINE__);
-        
+
         if(strcmp(argv[1],"caliberation") == 0){
             caliberation_mode();
             return 1;
         }
         DBG("func: %s line: %d\n", __func__, __LINE__);
     }
-        DBG("func: %s line: %d\n", __func__, __LINE__);
+    DBG("func: %s line: %d\n", __func__, __LINE__);
 
 usage:
-	cmd_usage(cmdtp);
-	return 1;
+    cmd_usage(cmdtp);
+    return 1;
 }
 
 U_BOOT_CMD(
-	cboot, CONFIG_SYS_MAXARGS, 1, do_cboot,
-	"choose boot mode",
-	"mode: \nrecovery, fastboot, dloader, charge, normal, vlx, caliberation.\n"
-	"cboot could enter a mode specified by the mode descriptor.\n"
-	"it also could enter a proper mode automatically depending on "
-	"the environment\n"
-);
+            cboot, CONFIG_SYS_MAXARGS, 1, do_cboot,
+            "choose boot mode",
+            "mode: \nrecovery, fastboot, dloader, charge, normal, vlx, caliberation.\n"
+            "cboot could enter a mode specified by the mode descriptor.\n"
+            "it also could enter a proper mode automatically depending on "
+            "the environment\n"
+          );

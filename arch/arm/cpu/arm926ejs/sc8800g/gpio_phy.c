@@ -1,3 +1,4 @@
+#include <common.h>
 #include <asm/io.h>
 //#include <linux/kernel.h>
 
@@ -5,7 +6,7 @@
 #include <asm/arch/sc8800g_reg_global.h>
 #include <asm/arch/sc8800g_reg_base.h>
 #include <asm/arch/gpio_reg_v0.h>
-#include "gpio_phy.h"
+#include <asm/arch/gpio_phy.h>
 
 const static struct gpio_section  s_gpio_section_table[] = {
     {   (GPIO_BASE + 0*0x80),    0x8,    GPIO_SECTION_GPI    },
