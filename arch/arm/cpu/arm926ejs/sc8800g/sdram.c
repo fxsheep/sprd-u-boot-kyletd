@@ -8,23 +8,65 @@ SC6600I    -D_BL_NF_SC6600I_
 SC6800     -gtp -cpu ARM926EJ-S -D_REF_SC6800_ -D_BL_NF_SC6800_
 ******************************************************************************/
 
-#include "asm/arch/sci_types.h"
-#include "asm/arch/arm_reg.h"
-#include "asm/arch/sdram_cfg.h"
-#include "asm/arch/chng_freq.h"
-#include "asm/arch/sc_reg.h"
-#include "asm/arch/sdram.h"
-#include "asm/arch/bl_trace.h"
-#include "asm/arch/chip.h"
-#include "asm/arch/bl_mmu.h"
+#include <common.h>
+#include <asm/arch/sci_types.h>
+#include <asm/arch/arm_reg.h>
+#include <asm/arch/sdram_cfg.h>
+#include <asm/arch/chng_freq.h>
+#include <asm/arch/sc_reg.h>
+#include <asm/arch/sdram.h>
+#include <asm/arch/chip.h>
+
+/*lint -e760 -e547 ,because pclint error e63 e26 with REG32()*/
+#define REG32(x)   (*((volatile uint32 *)(x)))
+/*lint +e760 +e547 ,because pclint error e63 e26 with REG32()*/
+
+/*lint -e765*/
+
 #define  SDRAM_EXT_INVALID     0xffffffff       //@David.Jia 2008.1.7
 
-uint32 g_ahb_clk;
-unsigned int g_emc_clk;
+#if defined(PLATFORM_SC8800G)
+uint32 g_emc_clk;
+uint32 s_colum;
+#endif //defined(PLATFORM_SC8800G) && defined(CHIP_VER_8800G2)
 
-extern SYS_CLK_CFG_INFO *Get_system_clk_cfg (void);
+uint32 g_ahb_clk; 
+SDRAM_TIMING_PARA_T_PTR sdram_parameters;
 
-#ifdef CHIP_VER_8800G2
+#ifdef PLATFORM_SC8800G
+#define SDRAM_AUTODETECT_SUPPORT
+#endif
+#define _BL_NF_NBL_
+
+#ifdef SDRAM_AUTODETECT_SUPPORT
+#define MEM_REF_DATA0       0x12345678
+#define MEM_REF_DATA1       0x55AA9889
+#ifdef _BL_NF_NBL_
+#define ZERO_ADDR           0x00000000UL
+#else
+#define ZERO_ADDR           0x30000000UL
+#endif
+#define STATE_SDRAM_TYPE    0UL
+#define STATE_BIT_WIDTH     1UL
+#define STATE_COLUM         2UL
+#define STATE_ROW           3UL
+#define STATE_REINIT        4UL
+#define STATE_END           5UL
+
+#define BYTE_OFFSET         3UL   // 1BYTE = 8BIT = 2^3
+#define WIDTH16_OFFSET      4UL   // 16BIT = 2^4
+#define WIDTH32_OFFSET      5UL   // 32BIT = 2^5
+#define BANK_OFFSET         2UL   // 4BANK = 2^2
+
+#define SDRAM_MIN_COLUM     8UL
+#define SDRAM_MAX_COLUM     12UL
+#define SDRAM_MIN_ROW       11UL
+#define SDRAM_MAX_ROW       14UL
+
+SDRAM_CFG_INFO_T s_sdram_raw_cfg;
+#endif
+
+#ifdef PLATFORM_SC8800G
 #define INTERFACE_CLK_MAX   ARM_CLK_200M
 typedef struct ARM_EMC_AHB_CLK_TAG 
 {
@@ -32,8 +74,7 @@ typedef struct ARM_EMC_AHB_CLK_TAG
     uint32 arm_clk;
     uint32 emc_clk;
     uint32 ahb_clk;
-}
-ARM_EMC_AHB_CLK_T;
+} ARM_EMC_AHB_CLK_T;
 
 typedef enum MCU_CLK_TYPE_TAG
 {
@@ -45,8 +86,7 @@ typedef enum MCU_CLK_TYPE_TAG
     ARM192_EMC192_AHB96,
 
     MCU_CLK_TYPE_MAX   
-}
-MCU_CLK_TYPE_E;
+} MCU_CLK_TYPE_E;
 
 LOCAL CONST ARM_EMC_AHB_CLK_T s_arm_emc_ahb_clk[] = 
 {
@@ -59,14 +99,14 @@ LOCAL CONST ARM_EMC_AHB_CLK_T s_arm_emc_ahb_clk[] =
     {ARM_CLK_384M, ARM_CLK_192M, ARM_CLK_192M, ARM_CLK_96M},
 };
 
-uint32 CHIP_GetMPllClk (void)
+uint32 __GetMPllClk (void)
 {
     return ( ARM_CLK_26M
                / ( (REG32(GR_MPLL_MN) & 0x003F0000) >>16)
                * (REG32(GR_MPLL_MN) & 0x00000FFF) );
 }
 
-void CHIP_SetMPllClk (uint32 clk)
+LOCAL void __SetMPllClk (uint32 clk)
 {
     uint32 M, N, tmp_mn;
 
@@ -81,7 +121,7 @@ void CHIP_SetMPllClk (uint32 clk)
     REG32(GR_GEN1) &= ~BIT_9;       // MPLL Write Dis
 }
 
-void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
+LOCAL void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
 {
     uint32 tmp_clk, mcuclk, armclk;
     uint32 mcu_div, if_div;
@@ -89,13 +129,21 @@ void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
     MCU_CLK_TYPE_E clk_type = ARM400_EMC200_AHB100;
 
     ///*
-    clk_type = (0 == (REG32(GR_GEN3) & 0x3)) ?      
-               (ARM400_EMC200_AHB100) :             // 8800G2
-               ((1 == (REG32(GR_GEN3) & 0x3)) ?     
-               (ARM256_EMC200_AHB64) :              // 8801G1
-               ((2 == (REG32(GR_GEN3) & 0x3)) ?
-               (ARM192_EMC200_AHB96) :           // 8802G1
-               (ARM400_EMC200_AHB100)));              // 6810 
+    switch(REG32(GR_GEN3) & 0x3)
+    {
+    	case 0:
+    		clk_type = ARM400_EMC200_AHB100; // 8800G2
+    		break;
+    	case 1:
+    		clk_type = ARM256_EMC200_AHB64;  // 8801G1
+    		break;
+    	case 2:
+    		clk_type = ARM192_EMC200_AHB96;  // 8802G1 
+    		break;
+    	default:
+    		clk_type = 	ARM400_EMC200_AHB100;
+    		break;
+    }           
     //*/         
     
     mcuclk   = s_arm_emc_ahb_clk[clk_type].mcu_clk;
@@ -103,15 +151,15 @@ void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
     *emcclk  = s_arm_emc_ahb_clk[clk_type].emc_clk;
     *ahbclk  = s_arm_emc_ahb_clk[clk_type].ahb_clk;
     
-    is_mpll  = ((0 == (REG32(GR_GEN3) & 0x3)) ? (SCI_TRUE) : (SCI_FALSE));
+    is_mpll  = (((0 == (REG32(GR_GEN3) & 0x3)) || (3 == (REG32(GR_GEN3) & 0x3))) ? (SCI_TRUE) : (SCI_FALSE));
     is_async = ((0 == (armclk%(*emcclk)))     ? (SCI_FALSE) : (SCI_TRUE));  
 
     mcu_div = 0;    
     if(is_mpll)
     {
-        if(CHIP_GetMPllClk() != mcuclk)
+        if(__GetMPllClk() != mcuclk)
         {
-            CHIP_SetMPllClk(mcuclk);
+            __SetMPllClk(mcuclk);
         }
         if(armclk != mcuclk)
         {
@@ -173,9 +221,6 @@ void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
 }
 #endif
 
-#if defined(PLATFORM_SC8800H)
-
-
 /**---------------------------------------------------------------------------*
  ** FUNCTION                                                                  *
  **     void SDRAM_GenMemCtlCfg(SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)           *
@@ -194,329 +239,7 @@ void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
-void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
-{
-    uint32 reg_val;
-    uint32 rburst_length = sdram_cfg_ptr->burst_length;
-    uint32 wburst_length = sdram_cfg_ptr->burst_length;
-    uint32 data_width    = sdram_cfg_ptr->data_width;
-
-    rburst_length &= 0x3;
-    wburst_length &= 0x3;
-
-    //Config channel2
-    //Enable ch2, no switch
-    REG32 (EXT_MEM_CFG0) |= (BIT_2|BIT_12|BIT_13);//lint !e718
-
-    //Config channel0 big endian
-    REG32 (EXT_MEM_CFG0) |= BIT_4;
-
-    //Disable all channel eburst_hit_en
-    REG32 (EXT_MEM_CFG0) &= ~ (BIT_20|BIT_21|BIT_22|BIT_23);
-
-    //DMEM enable, (CS0)-->DMEM
-    REG32 (EXT_MEM_CFG1) |= (BIT_0|BIT_10);   //DMEM enable
-    REG32 (EXT_MEM_CFG1) &= ~ (BIT_12);       //Clear smem_only_en
-    REG32 (EXT_MEM_CFG1) &= ~ (BIT_9);        //SDRAM mode
-
-    // CS [1:0] map to HADDR [28:27]
-#if defined (BB_DRAM_TYPE_128MB_32BIT)
-    REG32 (EXT_MEM_CFG1) &= ~ (BIT_4 | BIT_5);
-    REG32 (EXT_MEM_CFG1) |= BIT_5;
-#endif
-
-    if (data_width == DATA_WIDTH_16)
-    {
-        //Config read/write latency for cs0 here...
-        if (rburst_length == BURST_LEN_8)
-        {
-            rburst_length = BURST_LEN_4;
-        }
-        else if (rburst_length == BURST_LEN_4)
-        {
-            rburst_length = BURST_LEN_2;
-        }
-
-        if (wburst_length == BURST_LEN_8)
-        {
-            wburst_length = BURST_LEN_4;
-        }
-        else if (wburst_length == BURST_LEN_4)
-        {
-            wburst_length = BURST_LEN_2;
-        }
-
-        reg_val = REG32 (EXT_MEM_CFG2);
-        reg_val &= ~ (0x3 | (0x3<<8));
-        reg_val |= (rburst_length | (wburst_length<<8));
-        REG32 (EXT_MEM_CFG2) = reg_val;
-
-    }
-    else if (data_width == DATA_WIDTH_32)
-    {
-        //Config read/write latency for cs0 here...
-        reg_val = REG32 (EXT_MEM_CFG2);
-        reg_val &= ~ (0x3 | (0x3<<8));
-        reg_val |= (rburst_length | (wburst_length<<8));
-        REG32 (EXT_MEM_CFG2) = reg_val;
-    }
-    else
-    {
-        while (1);
-    }
-}
-
-
-/**---------------------------------------------------------------------------*
- ** FUNCTION                                                                  *
- **     void SDRAM_DMemCtlCfg(uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)  *
- **                                                                           *
- ** DESCRIPTION                                                               *
- **     set emc dmem mode,timing parameters                                   *
- **                                                                           *
- ** INPUT                                                                     *
- **     sdram_clk,sdram_cfg_ptr                                               *
- **                                                                           *
- ** OUTPUT                                                                    *
- **     None                                                                  *
- **                                                                           *
- ** RETURN VALUE                                                              *
- **                                                                           *
- ** DEPENDENCIES                                                              *
- **                                                                           *
-**---------------------------------------------------------------------------*/
-void SDRAM_DMemCtlCfg (uint32 clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
-{
-    uint32 i=0,clk_liv=0,j=0;
-    uint32 t_rtw = 0;
-
-    //initialize dmem mode parameters
-    uint32 row_mode      = sdram_cfg_ptr->row_mode;
-    uint32 col_mode      = sdram_cfg_ptr->col_mode;
-    uint32 data_width    = sdram_cfg_ptr->data_width;
-    uint32 cas_latency   = sdram_cfg_ptr->cas_latency;
-    uint32 write_latency = 0;
-    uint32 sdram_cycle_ns = 1000/ (clk);
-    uint32 row_number     = 0xFFFFFFFF;
-    SDRAM_TIMING_PARA_T_PTR sdram_parameters = SDRAM_GetTimingPara();
-
-    //initialize dmem timing parameters
-    uint32 t_ras = sdram_parameters->ras_min    /sdram_cycle_ns;
-    uint32 t_xsr = sdram_parameters->xsr_min    /sdram_cycle_ns;
-    uint32 t_rfc = sdram_parameters->rfc_min    /sdram_cycle_ns;
-    uint32 t_mrd = sdram_parameters->mrd_min    /sdram_cycle_ns;
-    uint32 t_wr  = sdram_parameters->wr_min     /sdram_cycle_ns;
-    uint32 t_rcd = sdram_parameters->rcd_min    /sdram_cycle_ns;
-    uint32 t_rp  = sdram_parameters->row_pre_min/sdram_cycle_ns;
-    uint32 t_ref = sdram_parameters->row_ref_max/sdram_cycle_ns;
-    uint32 t_wtr = 0x0;
-
-    //calculate t_rtw by cas_latnecy
-    if (cas_latency == 3)
-    {
-        t_rtw = 3;
-    }
-    else if (cas_latency == 2)
-    {
-        t_rtw = 2;
-    }
-    else
-        while (1);
-
-    //calculate row_mode by row_mode
-    if (row_mode == ROW_MODE_11)
-    {
-        row_number = 11;
-    }
-    else if (row_mode == ROW_MODE_12)
-    {
-        row_number = 12;
-    }
-    else if (row_mode == ROW_MODE_13)
-    {
-        row_number = 13;
-    }
-    else
-    {
-        row_number = 13;
-    }
-
-    //set dmem dcfg0 mode paramters
-    REG32 (EXT_MEM_DCFG0) = (DCFG0_BKPOS_HADDR_24_23     |   \
-                             (data_width<<3)             |   \
-                             (row_mode<<4)               |   \
-                             DCFG0_AUTO_PRE_POSITION_A10 |   \
-                             (col_mode<<8)               |   \
-                             DCFG0_CLKDMEM_OUT_EN        |   \
-                             DCFG0_ALTERNATIVE_EN        |   \
-                             DCFG0_ROWHIT_EN             |   \
-                             (t_ref<<20)                     \
-                            );
-
-    //set dmem dcfg1 timing parameters
-    REG32 (EXT_MEM_DCFG1) = ( (t_rp <<0) |        \
-                              (t_rcd<<2) |        \
-                              (t_wr <<4) |        \
-                              (t_rfc<<8) |        \
-                              (t_xsr<<12) |        \
-                              (t_ras<<16) |        \
-                              (t_rtw<<20) |        \
-                              (t_wtr<<24) |        \
-                              (t_mrd<<28)         \
-                            );
-
-    //set dmem dcfg2 refresh cnt parameters
-    REG32 (EXT_MEM_DCFG2) = ( (1<<row_number) |DCFG2_REF_CNT_RST);
-    REG32 (EXT_MEM_DCFG4) = (cas_latency | (write_latency<<4));
-    REG32 (EXT_MEM_CFG1)  &= ~BIT_14;
-
-    //enable emc clock out
-    REG32 (EXT_MEM_DCFG0) |=  BIT_14;
-
-    if (cas_latency == 3)
-    {
-        REG32 (EXT_MEM_DCFG4) = 0x00800209;
-        REG32 (EXT_MEM_DCFG6) = 0x00400100;
-    }
-    else if (cas_latency == 2)
-    {
-        REG32 (EXT_MEM_DCFG4) = 0x00600007;
-        REG32 (EXT_MEM_DCFG6) = 0x00100100;
-    }
-    else
-    {
-        while (1);
-    }
-}
-
-
-/**---------------------------------------------------------------------------*
- ** FUNCTION                                                                  *
- **     void SDRAM_Device_Init(SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)            *
- **                                                                           *
- ** DESCRIPTION                                                               *
- **     set emc dmem mode/ext mode register parameters                        *
- **                                                                           *
- ** INPUT                                                                     *
- **     sdram_cfg_ptr                                                         *
- **                                                                           *
- ** OUTPUT                                                                    *
- **     None                                                                  *
- **                                                                           *
- ** RETURN VALUE                                                              *
- **                                                                           *
- ** DEPENDENCIES                                                              *
- **                                                                           *
-**---------------------------------------------------------------------------*/
-void SDRAM_Device_Init (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
-{
-    uint8 mode_reg_bl     = 0xFF;
-    uint8 mode_reg_bt     = MODE_REG_BT_SEQ;   //sequencial mode burst.
-    uint8 mode_reg_cl     = 0xFF;
-    uint8 mode_reg_opmode = MODE_REG_OPMODE;
-    uint8 mode_reg_wb     = MODE_REG_WB_PRORAM;  //Programming burst length for write.
-    uint32 ex_mode_reg    = 0;
-    uint16 mode_reg       = 0;
-    uint8  dsoft_cs       = 0; // command for CS0
-
-    //calculate mode reg burst length
-    switch (sdram_cfg_ptr->burst_length)
-    {
-        case BURST_LEN_2:
-            mode_reg_bl = MODE_REG_BL_2;
-            break;
-        case BURST_LEN_4:
-            mode_reg_bl = MODE_REG_BL_4;
-            break;
-        case BURST_LEN_8:
-            mode_reg_bl = MODE_REG_BL_8;
-            break;
-        default:
-            mode_reg_bl = MODE_REG_BL_8;
-            break;
-    }
-
-    //calculate mode reg cas latency
-    switch (sdram_cfg_ptr->cas_latency)
-    {
-        case CAS_LATENCY_1:
-            mode_reg_cl = MODE_REG_CL_1;
-            break;
-        case CAS_LATENCY_2:
-            mode_reg_cl = MODE_REG_CL_2;
-            break;
-        case CAS_LATENCY_3:
-            mode_reg_cl = MODE_REG_CL_3;
-            break;
-        default:
-            mode_reg_cl = MODE_REG_CL_3;
-            break;
-    }
-
-    //get mode reg parameter
-    mode_reg = ( (mode_reg_wb<<9) | (mode_reg_opmode<<7)
-                 | (mode_reg_cl<<4) | (mode_reg_bt<<3) | mode_reg_bl);
-
-    //get ext-mode reg parameter
-    ex_mode_reg = sdram_cfg_ptr->ext_mode_val;
-
-    // Precharge all banks.
-    REG32 (EXT_MEM_DCFG3) |= BIT_16 | (dsoft_cs<<28);
-
-    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_16);
-
-    //Auto_ref
-    REG32 (EXT_MEM_DCFG3) |= BIT_17 | (dsoft_cs<<28);
-
-    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_17);
-
-    //Auto_ref again
-    REG32 (EXT_MEM_DCFG3) |= BIT_17 | (dsoft_cs<<28);
-
-    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_17);
-
-    //mode register load.
-    REG32 (EXT_MEM_DCFG3) &= ~ (0xFFFF);
-    REG32 (EXT_MEM_DCFG3) |= (mode_reg | BIT_18 | (dsoft_cs<<28));
-
-    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_18);
-
-    //extended mode register load.
-    if (ex_mode_reg != SDRAM_EXT_MODE_INVALID)
-    {
-        REG32 (EXT_MEM_DCFG3) &= ~ (0xFFFF);
-        //REG32 (EXT_MEM_DCFG3) |= (uint32)(ex_mode_reg | BIT_18 | (dsoft_cs<<28));
-        CHIP_REG_OR (EXT_MEM_DCFG3, (ex_mode_reg | BIT_18 | (dsoft_cs<<28))); //lint !e718
-
-        while ( (REG32 (EXT_MEM_DCFG3)) & BIT_18);
-    }
-}
-
-
-
-
-
-#elif defined(PLATFORM_SC6800H) || defined(PLATFORM_SC8800G)
-
-/**---------------------------------------------------------------------------*
- ** FUNCTION                                                                  *
- **     void SDRAM_GenMemCtlCfg(SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)           *
- **                                                                           *
- ** DESCRIPTION                                                               *
- **     set emc channel parameters                                            *
- **                                                                           *
- ** INPUT                                                                     *
- **     sdram_cfg_ptr                                                         *
- **                                                                           *
- ** OUTPUT                                                                    *
- **     None                                                                  *
- **                                                                           *
- ** RETURN VALUE                                                              *
- **                                                                           *
- ** DEPENDENCIES                                                              *
- **                                                                           *
-**---------------------------------------------------------------------------*/
-void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
+LOCAL void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
 {
     uint32 burst_length = sdram_cfg_ptr->burst_length;
     uint32 data_width   = sdram_cfg_ptr->data_width;
@@ -574,30 +297,31 @@ void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     }
     else
     {
-        while (1);
+        for (;;){}
     }
+    REG32 (EXT_MEM_CFG0) = (BIT_0|BIT_1|BIT_3|BIT_6|BIT_8|BIT_9|BIT_10|BIT_11); //software address mapping
 
+#ifdef CHIP_ENDIAN_BIG
     REG32 (EXT_MEM_CFG0) |= BIT_12; /*lint !e718*/ //big endian
+#endif
+
     //set dmem parameter
     /*lint -save -e506 -e774*/
-    if ( (SDR_SDRAM == DRAM_TYPE))
+    if ( (SDR_SDRAM == sdram_cfg_ptr->sdram_type))
     {
-        REG32 (EXT_MEM_CFG0) |= (BIT_1|BIT_3|BIT_6|BIT_9|BIT_10|BIT_11); //software address mapping
         REG32 (EXT_MEM_CFG1) = 0x00000008; //EMC phy set
-        REG32 (EXT_MEM_CFG0_CS0) = ( (0x1<<12) | (dburst_wlength<<8) | (dburst_rlength<<4) | (0x3)); //EMC cs set
     }
-    else if (DDR_SDRAM == DRAM_TYPE)
+    else if (DDR_SDRAM == sdram_cfg_ptr->sdram_type)
     {
-        //REG32 (EXT_MEM_CFG0) |= (BIT_1|BIT_3|BIT_6|BIT_9|BIT_10|BIT_11); //software address mapping
-        REG32(EXT_MEM_CFG0) |= (BIT_0|BIT_1|BIT_6|BIT_9|BIT_10|BIT_11); //software address mapping, 64M memory.
-        REG32 (EXT_MEM_CFG0) |= (BIT_5);
+        REG32 (EXT_MEM_CFG0) |= (BIT_5);   // ddr select
         REG32 (EXT_MEM_CFG1) = 0x01080000; //EMC phy set
-        REG32 (EXT_MEM_CFG0_CS0) = ( (0x1<<12) | (dburst_wlength<<8) | (dburst_rlength<<4) | (0x3)); //0x1113;
     }
     else
     {
-        while (1);
+        for (;;){}
     }
+
+    REG32 (EXT_MEM_CFG0_CS0) = ( (0x1<<12) | (dburst_wlength<<8) | (dburst_rlength<<4) | (0x3)); 
 
     //config channel 0-15
     REG32 (EXT_MEM_CFG0_CH0)  = 0x0003c31c;//0x0001c31c;
@@ -608,9 +332,9 @@ void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     REG32 (EXT_MEM_CFG0_CH5)  = 0x0003c31c;
 
 #if defined(PLATFORM_SC8800G)
-    REG32 (EXT_MEM_CFG0_CH5 + 4)  = 0x0001c31c; //for sc8800g emc sleep bug.
-    REG32 (EXT_MEM_CFG0_CH5 + 8)  = 0x0001c31c;
-    REG32 (EXT_MEM_CFG0_CH5 + 12)  = 0x0001c31c;
+    REG32 (EXT_MEM_CFG0_CH6)  = 0x0001c31c; //for sc8800g emc sleep bug.
+    REG32 (EXT_MEM_CFG0_CH7)  = 0x0001c31c;
+    REG32 (EXT_MEM_CFG0_CH8)  = 0x0001c31c;
 #endif
 }
 
@@ -632,7 +356,7 @@ void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
-void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
+LOCAL void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
 {
     //initialize dmem mode parameters
     uint32 row_mode       = sdram_cfg_ptr->row_mode;
@@ -640,69 +364,50 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     uint32 data_width     = sdram_cfg_ptr->data_width;
     uint32 cas_latency    = sdram_cfg_ptr->cas_latency;
     uint32 sdram_cycle_ns = 1000/ (sdram_clk/1000000);
-    uint32 row_number     = 0xFFFFFFFF;
+    uint32 row_num;
+    
+    uint32 t_ras = (sdram_parameters->ras_min/sdram_cycle_ns+1)>0xF ? 0xF : (sdram_parameters->ras_min/sdram_cycle_ns+1);
+    uint32 t_xsr = (sdram_parameters->xsr_min/sdram_cycle_ns)>0xF ? 0xF : (sdram_parameters->xsr_min/sdram_cycle_ns);
+    uint32 t_rfc = (sdram_parameters->rfc_min/sdram_cycle_ns)>0xF ? 0xF : (sdram_parameters->rfc_min/sdram_cycle_ns);
+    uint32 t_wr  = sdram_parameters->wr_min/sdram_cycle_ns+2; //note: twr should add 2 for ddr
+    uint32 t_rcd = (sdram_parameters->rcd_min/sdram_cycle_ns)>3 ? 3:(sdram_parameters->rcd_min/sdram_cycle_ns);
+    uint32 t_rp  = (sdram_parameters->row_pre_min/sdram_cycle_ns)>3 ? 3:(sdram_parameters->row_pre_min/sdram_cycle_ns);
+    uint32 t_rrd = (sdram_parameters->rrd_min/sdram_cycle_ns) >3 ? 3:(sdram_parameters->rrd_min/sdram_cycle_ns);
+    uint32 t_mrd = (sdram_parameters->mrd_min) > 3 ? 3:(sdram_parameters->mrd_min);
+    uint32 t_wtr = sdram_parameters->wtr_min;
+    uint32 t_ref;
+    uint32 t_rtw = sdram_cfg_ptr->cas_latency;
 
-    uint32 t_ref          = 0;
-    uint32 t_rfc          = 0;
-    uint32 t_rp           = 0;
-    uint32 t_rcd          = 0;
-    uint32 t_rrd          = 0;
-    uint32 t_wr           = 0;
-    uint32 t_xsr          = 0;
-    uint32 t_ras          = 0;
-    uint32 t_rtw          = 0;  //t_rtw is only for ddr
-    uint32 t_wtr          = 0;  //t_wtr is only for ddr
-    uint32 t_rtr          = 0;  //t_rtr is only for ddr
-    uint32 t_mrd          = 0;
-
-    SDRAM_TIMING_PARA_T_PTR sdram_parameters = SDRAM_GetTimingPara();
-
-
-    //calculate row_mode by row_mode
-    if (row_mode == ROW_MODE_11)
+    switch(row_mode)
     {
-        row_number = 11;
+    case ROW_MODE_14:
+        row_num = 14;
+        break;
+    case ROW_MODE_13:
+        row_num = 13;
+        break;
+    case ROW_MODE_12:
+        row_num = 12;
+        break;
+    case ROW_MODE_11:
+        row_num = 11;
+        break;
+    default:
+        for (;;){}
     }
-    else if (row_mode == ROW_MODE_12)
-    {
-        row_number = 12;
-    }
-    else if (row_mode == ROW_MODE_13)
-    {
-        row_number = 13;
-    }
-    else if(row_mode == ROW_MODE_14)
-    {
-        row_number = 14;
-    }
-    else
-    {
-        while (1);
-    }
-
-
-    if (cas_latency == 3)
-    {
-        t_rtw = 3;
-    }
-    else if (cas_latency == 2)
-    {
-        t_rtw = 2;
-    }
-    else
-    {
-        while (1);
-    }
-
-    //set row_hit,clk_out,clk_sel,mode0_en,mode1_en,auto_ref_en,auto_allcs_en
-    REG32 (EXT_MEM_DCFG0) = 0x0000FE00;
+    
+    t_ref = ((sdram_parameters->row_ref_max*6000)>>row_num) - 1; // t_ref*(1/6.5MHz)*2^row <= tREF
 
     //set data width mode
     if (data_width == DATA_WIDTH_32)
     {
-        REG32 (EXT_MEM_DCFG0) = 0x0000FF00;
+        REG32 (EXT_MEM_DCFG0) = 0x0000BF00;
     }
-
+    else
+    {
+        REG32 (EXT_MEM_DCFG0) = 0x0000BE00;
+    }
+        
     //set row mode
     REG32 (EXT_MEM_DCFG0) |= row_mode;/*lint !e737*/
 
@@ -712,36 +417,21 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     //set precharge bit
     REG32 (EXT_MEM_DCFG0) &= ~ (BIT_2|BIT_3); //A[10]
 
-    #if (SDR_SDRAM == DRAM_TYPE)
+    //set t_rfc and t_ref
+    REG32 (EXT_MEM_DCFG0) |= ( (t_rfc<<16) | (t_ref<<20)); /*lint !e737*/
+    
+    REG32(EXT_MEM_DCFG1) = (    (t_rp <<0) |       
+                                (t_rcd<<2) |        
+                                (t_rrd<<4) |        
+                                (t_wr <<8) |        
+                                (t_xsr<<12)|        
+                                (t_ras<<16)|        
+                                (t_rtw<<20)|
+                                (t_mrd<<30)         
+                            );
+    
+    if (SDR_SDRAM == sdram_cfg_ptr->sdram_type)
     {
-        //initialize dmem timing parameters
-        t_ref = sdram_parameters->row_ref_max/ (1000/6); // t_ref*(1/6.5MHz)*8192 <= tREF
-        t_rfc = sdram_parameters->rfc_min    /sdram_cycle_ns-1;
-        t_rp  = sdram_parameters->row_pre_min/sdram_cycle_ns;
-        t_rcd = sdram_parameters->rcd_min    /sdram_cycle_ns;
-        t_rrd = 20/sdram_cycle_ns;//sdram_parameters->rrd_min    /sdram_cycle_ns;
-        t_wr  = sdram_parameters->wr_min     /sdram_cycle_ns;
-        t_xsr = sdram_parameters->xsr_min    /sdram_cycle_ns-1;
-        t_ras = sdram_parameters->ras_min    /sdram_cycle_ns;
-        t_wtr = 0;//sdram_parameters->wtr_min;
-        t_mrd = sdram_parameters->mrd_min;
-
-        //set t_rfc and t_ref
-        REG32 (EXT_MEM_DCFG0) |= ( (t_rfc<<16) | (t_ref<<20)); /*lint !e737*/
-
-        //set other timing parameters
-        REG32 (EXT_MEM_DCFG1) = ( (t_rp <<0) |
-                                  (t_rcd<<2) |
-                                  (t_rrd<<4) |
-                                  (t_wr <<8) |
-                                  (t_xsr<<12) |
-                                  (t_ras<<16) |
-                                  (t_rtw<<20) |
-                                  (t_wtr<<24) |
-                                  (t_rtr<<28) |
-                                  (t_mrd<<30)
-                                );
-
         //read data and write data timing
         if (cas_latency == 3)
         {
@@ -755,35 +445,19 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
         }
         else
         {
-            while (1);
+            for (;;){}
         }
+        
+        //config delay lines.
+        REG32 (EXT_MEM_DL24) = 0x2;
+        REG32 (EXT_MEM_DL25) = 0x2;
+        REG32 (EXT_MEM_DL26) = 0x2;
+        REG32 (EXT_MEM_DL27) = 0x2;
     }
-    #elif (DDR_SDRAM == DRAM_TYPE)
+    else if (DDR_SDRAM == sdram_cfg_ptr->sdram_type)
     {
-        t_ras = sdram_parameters->ras_min/sdram_cycle_ns+1;//sdram_parameters[T_RAS_MIN]/sdram_cycle_ns ;
-        t_xsr = sdram_parameters->xsr_min/sdram_cycle_ns+1;
-        t_rfc = sdram_parameters->rfc_min/sdram_cycle_ns+1;
-        t_wr  = sdram_parameters->wr_min/sdram_cycle_ns+1+2; //note: twr should add 2 for ddr
-        t_rcd = (sdram_parameters->rcd_min/sdram_cycle_ns+1)>3 ? 3:(sdram_parameters->rcd_min/sdram_cycle_ns+1);
-        t_rp  = (sdram_parameters->row_pre_min/sdram_cycle_ns+1)>3 ? 3:(sdram_parameters->row_pre_min/sdram_cycle_ns+1);
-        t_rrd = (sdram_parameters->rrd_min/sdram_cycle_ns+1) >3 ? 3:(sdram_parameters->rrd_min/sdram_cycle_ns+1);
-        t_mrd = (sdram_parameters->mrd_min+1) > 3 ? 3:(sdram_parameters->mrd_min+1);
-        t_wtr = sdram_parameters->wtr_min+1;
-        t_ref = sdram_parameters->row_ref_max*13/2*1000/(1<<row_number) - 1; // t_ref*(1/6.5MHz)*8192 <= tREF
-
-        //set t_rfc and t_ref
-        REG32 (EXT_MEM_DCFG0) |= ( (t_rfc<<16) | (t_ref<<20)); /*lint !e737*/
-
-        REG32(EXT_MEM_DCFG1) = (    (t_rp <<0) |        \
-                                    (t_rcd<<2) |        \
-                                    (t_rrd<<4) |        \
-                                    (t_wr <<8) |        \
-                                    (t_xsr<<12)|        \
-                                    (t_ras<<16)|        \
-                                    (t_rtw<<20)|        \
-                                    (t_wtr<<24)|        \
-                                    (t_mrd<<30)         \
-                                );
+        // wtr is only for ddr
+        REG32(EXT_MEM_DCFG1) |= (t_wtr<<24);
         
         //read data and write data timing
         if (cas_latency == 3)
@@ -802,36 +476,28 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
         }
         else
         {
-            while (1);
+            for (;;){}
         }
 
         //config delay lines.
-        REG32 (EXT_MEM_DL0)  = 0;
-        REG32 (EXT_MEM_DL1)  = 0;
-        REG32 (EXT_MEM_DL2)  = 0;
-        REG32 (EXT_MEM_DL3)  = 0;
-        REG32 (EXT_MEM_DL4)  = 0;
-        REG32 (EXT_MEM_DL5)  = 0;
-        REG32 (EXT_MEM_DL6)  = 0;
         REG32 (EXT_MEM_DL7)  = 0x6;
-        REG32 (EXT_MEM_DL16) = 0x4;
-        REG32 (EXT_MEM_DL17) = 0x4;
-        REG32 (EXT_MEM_DL18) = 0x4;
-        REG32 (EXT_MEM_DL19) = 0x4;
-        REG32 (EXT_MEM_DL20) = 0x4;
-        REG32 (EXT_MEM_DL21) = 0x4;
-        REG32 (EXT_MEM_DL22) = 0x4;
-        REG32 (EXT_MEM_DL23) = 0x4;
-        REG32 (EXT_MEM_DL24) = 0x6;
-        REG32 (EXT_MEM_DL25) = 0x6;
-        REG32 (EXT_MEM_DL26) = 0x6;
-        REG32 (EXT_MEM_DL27) = 0x6;
+        REG32 (EXT_MEM_DL16) = 0x3;
+        REG32 (EXT_MEM_DL17) = 0x3;
+        REG32 (EXT_MEM_DL18) = 0x3;
+        REG32 (EXT_MEM_DL19) = 0x3;
+        REG32 (EXT_MEM_DL20) = 0x3;
+        REG32 (EXT_MEM_DL21) = 0x3;
+        REG32 (EXT_MEM_DL22) = 0x3;
+        REG32 (EXT_MEM_DL23) = 0x3;
+        REG32 (EXT_MEM_DL24) = 0x7;
+        REG32 (EXT_MEM_DL25) = 0x7;
+        REG32 (EXT_MEM_DL26) = 0x7;
+        REG32 (EXT_MEM_DL27) = 0x7;
     }
-    #else
+    else
     {
-        #error sdram type err
+        for (;;){}
     }
-    #endif
 
     return;
 }
@@ -854,13 +520,12 @@ void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
-void SDRAM_Device_Init (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
+LOCAL void SDRAM_Device_Init (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
 {
     uint8 mode_reg_bl = 0xFF;
     uint8 mode_reg_bt = MODE_REG_BT_SEQ;
     uint8 mode_reg_cl = 0xFF;
     uint8 mode_reg_opmode = MODE_REG_OPMODE;
-    //    uint8 mode_reg_wb = MODE_REG_WB_PRORAM;  //Programming burst length for write.
     uint32 ex_mode_reg = 0;
     uint16 mode_reg = 0;
 
@@ -910,23 +575,23 @@ void SDRAM_Device_Init (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     // Precharge all banks.
     REG32 (EXT_MEM_DCFG3) = 0x40010000;
 
-    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_16);
+    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_16){}
 
     //Auto_ref
     REG32 (EXT_MEM_DCFG3) = 0x40020000;
 
-    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_17);
+    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_17){}
 
     //Auto_ref
     REG32 (EXT_MEM_DCFG3) = 0x40020000;
 
-    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_17);
+    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_17){}
 
     //mode register load.
     REG32 (EXT_MEM_DCFG3) &= ~ (0xFFFF);
     REG32 (EXT_MEM_DCFG3) |= (mode_reg | 0x40040000);
 
-    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_18);
+    while ( (REG32 (EXT_MEM_DCFG3)) & BIT_18){}
 
     //extended mode register load.
     if (ex_mode_reg != SDRAM_EXT_MODE_INVALID)
@@ -934,12 +599,228 @@ void SDRAM_Device_Init (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
         REG32 (EXT_MEM_DCFG3) &= ~ (0xFFFF);
         REG32 (EXT_MEM_DCFG3) |= (ex_mode_reg | 0x40040000);/*lint !e737*/
 
-        while ( (REG32 (EXT_MEM_DCFG3)) & BIT_18);
+        while ( (REG32 (EXT_MEM_DCFG3)) & BIT_18){}
+    }
+    
+}
+
+LOCAL void __sdram_set_param(uint32 clk, SDRAM_CFG_INFO_T_PTR pCfg)
+{
+    volatile uint32 i;
+    
+    //step 1. Disable auto refresh.
+    REG32 (EXT_MEM_DCFG0) &= ~ BIT_14;
+
+    //step 2. sdram init: config registers, precharege all banks, auto ref for 2 times, load mode register.
+    SDRAM_GenMemCtlCfg (pCfg);
+    SDRAM_DMemCtlCfg (clk,pCfg);
+    SDRAM_Device_Init (pCfg);
+
+    //step3. enable auto refresh.
+    REG32 (EXT_MEM_DCFG2) |= BIT_15; //clear refresh count.
+    REG32 (EXT_MEM_DCFG0) |= BIT_14; //Enable auto refresh.
+   
+    for (i=0; i<1000; i++){}
+}
+#ifdef SDRAM_AUTODETECT_SUPPORT
+LOCAL uint32 __colum_to_mode(uint32 colum)
+{
+    uint32 col_mode;
+    switch(colum)
+    {
+        case 8:
+            col_mode = COL_MODE_8;
+            break;
+        case 9:
+            col_mode = COL_MODE_9;
+            break;
+        case 10:
+            col_mode = COL_MODE_10;
+            break;
+        case 11:
+            col_mode = COL_MODE_11;
+            break;
+        case 12:
+            col_mode = COL_MODE_12;
+            break;
+        default:
+            for( ; ; ) {}
+            //break;          
+    }
+    return col_mode;
+}
+LOCAL uint32 __row_to_mode(uint32 row)
+{
+    uint32 row_mode;
+    switch(row)
+    {
+        case 11:
+            row_mode = ROW_MODE_11;
+            break;
+        case 12:
+            row_mode = ROW_MODE_12;
+            break;
+        case 13:
+            row_mode = ROW_MODE_13;
+            break;
+        case 14:
+            row_mode = ROW_MODE_14;
+            break;
+        default:
+            for( ; ; ) {}
+            //break;          
+    }
+    return row_mode;
+}
+
+LOCAL BOOLEAN __is_rw_ok(uint32 addr, uint32 val)
+{
+    volatile uint32 i;
+    
+    REG32(addr) = val;
+    REG32(addr+4) = (~val);
+    
+    for(i=0;i<0xff;i++) {}
+
+    if((REG32(addr) == val) && (REG32(addr+4) == (~val)))
+        return ((BOOLEAN)SCI_TRUE);
+    else
+        return ((BOOLEAN)SCI_FALSE);
+    //return ((val == REG32(addr))? ((BOOLEAN)SCI_TRUE) : ((BOOLEAN)SCI_FALSE));
+}
+
+// ADDR: |-BANK -|------------ COLUM 12 ---------------|
+//       |A13|A12|A11|A10|A9|A8|A7|A6|A5|A4|A3|A2|A1|A0|
+//
+//       |------------------- ROW 14-------------------|   
+//       |A13|A12|A11|A10|A9|A8|A7|A6|A5|A4|A3|A2|A1|A0|
+LOCAL uint32 __col_row_detect(BOOLEAN is_col, SDRAM_CFG_INFO_T_PTR pCfg)
+{
+    uint32 num, max, min;
+    uint32 offset, addr;
+    uint32 width_offset = (DATA_WIDTH_16 == pCfg->data_width)?(WIDTH16_OFFSET):(WIDTH32_OFFSET);
+
+    if(is_col)
+    {
+        max = SDRAM_MAX_COLUM;
+        min = SDRAM_MIN_COLUM;
+    }
+    else
+    {
+        max = SDRAM_MAX_ROW;
+        min = SDRAM_MIN_ROW;
+    }
+    for(num = max; num >= min; num--)
+    {
+        // init 0 address
+        REG32(ZERO_ADDR) = MEM_REF_DATA0;               /*lint !e413*/
+
+        if(is_col)
+        {
+            offset = num + width_offset - BYTE_OFFSET;    // colum+width-byteoff
+        }
+        else
+        {
+            offset = num + BANK_OFFSET + (uint32)s_colum +  width_offset -  BYTE_OFFSET;    // row+bank+colum+width-byteoff
+        }
+        addr   = (1 << (offset - 1)) + ZERO_ADDR;
+        if(__is_rw_ok(addr, MEM_REF_DATA1))
+        {
+            // if 0addr not changed, row is ok
+            if(MEM_REF_DATA0 == REG32(ZERO_ADDR))       /*lint !e413*/
+            {
+                break;
+            }
+            // 0addr changed, row is too big
+            else if(MEM_REF_DATA1 == REG32(ZERO_ADDR))  /*lint !e413*/
+            {
+                continue;
+            }
+        }
+    }
+
+    return (num); 
+}
+
+LOCAL void __sdram_detect(uint32 clk)
+{
+    SDRAM_CFG_INFO_T_PTR pCfg = &s_sdram_raw_cfg;
+    uint32 state = STATE_SDRAM_TYPE;
+    uint32 colum, row;
+
+    pCfg->bank_mode    = BK_MODE_4;
+    pCfg->row_mode     = ROW_MODE_14;
+    pCfg->col_mode     = COL_MODE_12;
+    pCfg->data_width   = DATA_WIDTH_16;
+    pCfg->burst_length = BURST_LEN_2;
+    pCfg->cas_latency  = CAS_LATENCY_3;
+    pCfg->ext_mode_val = SDRAM_EXT_MODE_REG;
+    pCfg->sdram_type   = SDR_SDRAM;
+        
+    while(STATE_END != state)
+    {
+        __sdram_set_param(clk, pCfg);
+        switch(state)
+        {
+        case STATE_SDRAM_TYPE:
+            if(__is_rw_ok(ZERO_ADDR, MEM_REF_DATA0))           // 16bit sdr/ddr detect ok, try 32bit
+            {
+                pCfg->data_width = DATA_WIDTH_32;
+                state = STATE_BIT_WIDTH;
+                //break;
+            }
+            else                        // 16bit sdr failed, try 16bit ddr
+            {
+                if(DDR_SDRAM == pCfg->sdram_type)   
+                {
+                    for( ; ; ) {}          // all failed
+                }
+                pCfg->sdram_type = DDR_SDRAM;
+                state = STATE_SDRAM_TYPE;
+                //break;
+            }
+            break;
+        case STATE_BIT_WIDTH:
+            if(__is_rw_ok(ZERO_ADDR, MEM_REF_DATA0))           // 32bit sdr/ddr detect ok, try colum
+            {
+                state = STATE_COLUM;
+                //break;
+            }
+            else                        // 32bit sdr/ddr detect failed, fix 16bit and try colum
+            {
+                pCfg->data_width = DATA_WIDTH_16;
+                state = STATE_COLUM;
+                //break;
+            }
+            break;
+        case STATE_COLUM:
+            if(__is_rw_ok(ZERO_ADDR, MEM_REF_DATA0))           
+            {
+                colum = __col_row_detect(SCI_TRUE, pCfg);
+                pCfg->col_mode = __colum_to_mode(colum);
+                s_colum = colum;//lint !e63
+                state = STATE_ROW;
+                //break;
+            }
+            else                        
+            {
+                for( ; ; ) {}           // should not come here
+            }
+            break;
+        case STATE_ROW:
+            row = __col_row_detect(SCI_FALSE, pCfg);
+            pCfg->row_mode = __row_to_mode(row);
+            state = STATE_REINIT;
+            break;
+        case STATE_REINIT:
+            state = STATE_END;  
+            break;
+        default:
+            break;
+        }
     }
 }
 #endif
-
-
 /**---------------------------------------------------------------------------*
  ** FUNCTION                                                                  *
  **     void SDRAM_Init(uint32 sdram_clk)                                     *
@@ -958,30 +839,15 @@ void SDRAM_Device_Init (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
-void SDRAM_Init (uint32 clk)
+LOCAL void SDRAM_Init (uint32 clk)
 {
-    SDRAM_CFG_INFO_T_PTR pCfg = NULL;
+    sdram_parameters = SDRAM_GetTimingPara();
 
-    Userdef_before_sdram_init();
-
-#if defined(PLATFORM_SC8800H)
-    clk = clk/1000000;
-#endif
-    pCfg = SDRAM_GetCfg();
-
-    //step 1. Disable auto refresh.
-    REG32 (EXT_MEM_DCFG0) &= ~ (DCFG0_AUTOREF_EN);
-
-    //step 2. sdram init: config registers, precharege all banks, auto ref for 2 times, load mode register.
-    SDRAM_GenMemCtlCfg (pCfg);
-    SDRAM_DMemCtlCfg (clk,pCfg);
-    SDRAM_Device_Init (pCfg);
-
-    //step3. enable auto refresh.
-    REG32 (EXT_MEM_DCFG2) |= DCFG2_REF_CNT_RST; //clear refresh count.
-    REG32 (EXT_MEM_DCFG0) |= (DCFG0_AUTOREF_EN); //Enable auto refresh.
-
-    Userdef_after_sdram_init();
+    #ifdef SDRAM_AUTODETECT_SUPPORT
+    __sdram_detect(clk);
+    #else
+    __sdram_set_param(clk, SDRAM_GetCfg());
+    #endif
 
 }
 
@@ -1004,29 +870,54 @@ void SDRAM_Init (uint32 clk)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
-void SDRAM_PinDrv_Set (void)
+LOCAL void SDRAM_PinDrv_Set (void)
 {
-    uint32 i;
-#if defined(PLATFORM_SC8800H)
-
-    for (i = 0x8C0000EC; i <= 0x8C0001F0; i+=4)
-    {
-        REG32 (i) = 0x31;       //sdram_mode
-    }
-
-    // If use SDRAM/DDR, EMBA[1]'S default function is NOR-FLASH'S reset£¬so we should change it
-    REG32 (0x8C0001A0) |= BIT_6;
-
-#endif
 #if defined(PLATFORM_SC8800G)
-    * (volatile uint32 *) PIN_CTL_REG = 0X1FFF00; //set nf_rb keyin[0-7] wpus
+	uint32 i = 0;
+	uint32 clk_drv = 0x200;
+	uint32 ctl_drv = 0x100;
+	uint32 dat_drv = 0x100;
+	
+	REG32(PIN_CTL_REG) = 0X1FFF00; //set nf_rb keyin[0-7] wpus
+
+	REG32(PINMAP_REG_BASE + 0X27c) = clk_drv;	
+	REG32(PINMAP_REG_BASE + 0X280) = clk_drv;		
+	
+	for(i = 0; i<15; i++)
+	{
+		REG32(PINMAP_REG_BASE + 0x019c + i*4) = ctl_drv;
+	}
+	
+	REG32(PINMAP_REG_BASE + 0X1d8) = ctl_drv;
+	REG32(PINMAP_REG_BASE + 0X2a8) = ctl_drv;				
+	REG32(PINMAP_REG_BASE + 0X1FC) = ctl_drv;
+	REG32(PINMAP_REG_BASE + 0X200) = ctl_drv;
+	REG32(PINMAP_REG_BASE + 0X224) = ctl_drv;
+	REG32(PINMAP_REG_BASE + 0X228) = ctl_drv;
+	REG32(PINMAP_REG_BASE + 0X24c) = ctl_drv;	
+	REG32(PINMAP_REG_BASE + 0X250) = ctl_drv;		
+	REG32(PINMAP_REG_BASE + 0X274) = ctl_drv;		
+	REG32(PINMAP_REG_BASE + 0X278) = ctl_drv;		
+
+	for(i = 0; i<9; i++)
+		REG32(PINMAP_REG_BASE + 0x0284 + i*4) = ctl_drv;
+	
+
+	for(i = 0; i<8; i++)
+	{	
+		REG32(PINMAP_REG_BASE + 0x1DC + i*4) = dat_drv;
+		REG32(PINMAP_REG_BASE + 0x204 + i*4) = dat_drv;
+		REG32(PINMAP_REG_BASE + 0x22c + i*4) = dat_drv;
+		REG32(PINMAP_REG_BASE + 0x254 + i*4) = dat_drv;
+	}	
+
 #endif
 }
 
 
 /**---------------------------------------------------------------------------*
  ** FUNCTION                                                                  *
- **     void Chip_ConfigClk(SYS_CLK_CFG_INFO* p_system_clk_cfg)               *
+ **     void Chip_ConfigClk(void)                                             *
  **                                                                           *
  ** DESCRIPTION                                                               *
  **     set pll, arm clock,ahb clock,emc clock                                *
@@ -1042,58 +933,11 @@ void SDRAM_PinDrv_Set (void)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
-uint32 Chip_ConfigClk (SYS_CLK_CFG_INFO *p_system_clk_cfg)
+LOCAL uint32 Chip_ConfigClk (void)
 {
-    volatile uint32 i,ext_clk,arm_ahb_clk;
-    ext_clk=* (volatile unsigned long *) GR_GEN1;
+    volatile uint32 i,arm_ahb_clk;
 
-#if defined (PLATFORM_SC8800H)
-
-    if ( (ext_clk & (0x1<<15)) == 0x0)  //The external crystal is 13mhz
-    {
-        switch (p_system_clk_cfg->pll_mn)
-        {
-
-            default:
-                BL_TRACE0 ("error1 r\n");
-
-                for (;;)
-                    ;
-        }
-    }
-    else                                //The external crystal is 26mhz
-    {
-        switch (p_system_clk_cfg->pll_mn)
-        {
-
-            case MPLL_MN_160M_EX26M:
-                arm_ahb_clk = ARM_CLK_80M;
-                break;
-            case MPLL_MN_164M_EX26M:
-                arm_ahb_clk = 82000000;
-                break;
-            default:
-                BL_TRACE0 ("error1 \r\n");
-
-                while (1);
-        }
-
-
-        //enable pll_mn
-        * (volatile uint32 *) GR_GEN1 |= (0x1<<9);
-        //Set pll clk
-        * (volatile uint32 *) GR_MPLL_MN = p_system_clk_cfg->pll_mn;
-        //Disable pll_mn
-        * (volatile uint32 *) GR_GEN1 &= ~ (0x1<<9);
-
-        //Delay some time
-        for (i=0; i<100; i++);
-
-        //set arm,ahb,emc clock
-        * (volatile uint32 *) AHB_AHB_ARM_CLK = p_system_clk_cfg->dsp_arm_div;
-    }
-
-#elif defined(PLATFORM_SC6800H)
+#if defined(PLATFORM_SC6800H)
 #ifdef _BL_NF_NBL_
 
     //support dual pll, mpll 400mhz, bpll 480mhz
@@ -1101,34 +945,34 @@ uint32 Chip_ConfigClk (SYS_CLK_CFG_INFO *p_system_clk_cfg)
         volatile uint32 is_pll_done = 0;
 
         //clear the protect control
-        * (volatile uint32 *) (GR_MCU_PORT) = PLL_MCU_PROT_VALUE;
+        CHIP_REG_SET(GR_MCU_PORT, PLL_MCU_PROT_VALUE);
 
         //disable pll
-        * (volatile uint32 *) (GR_MISC1) &= ~MISC1_MCU_PLL_EN;
+        CHIP_REG_AND(GR_MISC1, ~ MISC1_MCU_PLL_EN);
 
         //set mpll to 400MHz
-        * (volatile uint32 *) (GR_MPLL_MN) = MPLL_MN_400M;
+        CHIP_REG_SET(GR_MPLL_MN, MPLL_MN_400M);
         //clk_48M source select to bpll
-        * (volatile uint32 *) (AHB_CLK_CFG1) |= AHB_CLK_CFG1_SRCSEL48M;
+        CHIP_REG_OR(AHB_CLK_CFG1, AHB_CLK_CFG1_SRCSEL48M);
 
         //open bpll
-        * (volatile uint32 *) (GR_MISC1) &= ~MISC1_MCU_BPLL_FORCE_PD_EN;
+        CHIP_REG_AND(GR_MISC1, ~MISC1_MCU_BPLL_FORCE_PD_EN);
         //select bpll controlled by hw and release bpll output
-        * (volatile uint32 *) (GR_MISC1) |= (MISC1_BPLL_SEL|MISC1_BPLL_CONT_DONE);
+        CHIP_REG_OR(GR_MISC1, (MISC1_BPLL_SEL|MISC1_BPLL_CONT_DONE));
 
         //enable pll
-        * (volatile uint32 *) (GR_MISC1) |= MISC1_MCU_PLL_EN;
+        CHIP_REG_OR (GR_MISC1, MISC1_MCU_PLL_EN);
 
         //wait pll count done
-        is_pll_done = (* (volatile uint32 *) (GR_STATUS)) & APB_STATUS_PLL_CNT_DONE;
+        is_pll_done = CHIP_REG_GET(GR_STATUS) & ((uint32) APB_STATUS_PLL_CNT_DONE);
 
         while (0 == is_pll_done)
         {
-            is_pll_done = (* (volatile uint32 *) (GR_STATUS)) & APB_STATUS_PLL_CNT_DONE;
+            is_pll_done = CHIP_REG_GET(GR_STATUS) & ((uint32) APB_STATUS_PLL_CNT_DONE);
         }
 
         //set the protect control
-        * (volatile uint32 *) (GR_MCU_PORT) = 0;
+        CHIP_REG_SET(GR_MCU_PORT, 0);
     }
 #endif
 
@@ -1147,35 +991,14 @@ uint32 Chip_ConfigClk (SYS_CLK_CFG_INFO *p_system_clk_cfg)
     i |= BIT_0;
     REG32 (AHB_CLK_CFG0) = i;
 
-    for (i=0; i<100; i++);
+    for (i=0; i<100; i++){}
 
 #elif defined(PLATFORM_SC8800G)
-    #ifdef CHIP_VER_8800G1
-    arm_ahb_clk = (* (volatile uint32 *) (0x20900224));
-    arm_ahb_clk &=  ~ (3 << 23);
-    arm_ahb_clk |= (1 << 23);  //CLK_MCU_SEL set 192M
-
-    arm_ahb_clk &=  ~ (3 << 12);
-    arm_ahb_clk |= (1 << 12); //CLK_EMC_SEL set 192M
-
-    arm_ahb_clk &=  ~ (0x7 << 14); //CLK_EMC_DIV set 0
-    //arm_ahb_clk |= (1 << 14); //96 M
-
-    arm_ahb_clk &=  ~ (7 << 4);
-    arm_ahb_clk |= (1 << 4); //CLK_AHB_DIV set 1
-
-    arm_ahb_clk &=  ~ (7 << 0); //CLK_ARM_DIV set 0
-
-    (* (volatile uint32 *) (0x20900224)) = arm_ahb_clk;
-    arm_ahb_clk = ARM_CLK_96M;
-    
-    #elif defined(CHIP_VER_8800G2)
-    __ClkConfig(&g_emc_clk, &arm_ahb_clk);
-    #endif
+    __ClkConfig(&g_emc_clk, (uint32*)&arm_ahb_clk);
 #endif
 
     //Delay some time
-    for (i=0; i<1000; i++);
+    for (i=0; i<1000; i++) {}
 
     return arm_ahb_clk;
 }
@@ -1199,25 +1022,22 @@ uint32 Chip_ConfigClk (SYS_CLK_CFG_INFO *p_system_clk_cfg)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
-void Chip_Init (void)
+PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
-    uint32 ahb_clk;
-    uint32 i = 0;
-    SYS_CLK_CFG_INFO *pSysClkCfg = NULL;
+    volatile uint32 i = 0;
 
     //step1, SDRAM pin set up
     SDRAM_PinDrv_Set();
 
     //step2, config AHB CLK and PLL clk
-    pSysClkCfg = Get_system_clk_cfg();
-    g_ahb_clk = Chip_ConfigClk (pSysClkCfg);
+    g_ahb_clk = Chip_ConfigClk();
 
     //step3, initialize SDRAM init
-    #ifdef CHIP_VER_8800G2
+    #ifdef PLATFORM_SC8800G
     SDRAM_Init (g_emc_clk/2);
     #else
     SDRAM_Init (g_ahb_clk);
     #endif
 
-    for (i=0; i<5000; i++);
+    for (i=0; i<5000; i++) {}
 }
