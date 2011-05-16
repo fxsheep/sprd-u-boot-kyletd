@@ -852,16 +852,45 @@ wait the read or write done
 direct: 1 for output, 0 for input
 */
 extern int usb_gadget_handle_interrupts(void);
-void usb_wait_trans_done(int direct){
+void usb_wait_trans_done(int direct)
+{
 	if(direct){
 		while(!usb_write_done)
 			usb_gadget_handle_interrupts();
-		usb_write_done = 0;
+		 usb_write_done = 0;
 	}else{
 		while(!usb_read_done)
 			usb_gadget_handle_interrupts();
 		usb_read_done = 0;
 	}
+}
+int usb_is_trans_done(int direct)
+{
+	if(direct){
+		if(!usb_write_done)
+			usb_gadget_handle_interrupts();
+		if(usb_write_done){
+            usb_write_done = 0;
+            return 1;
+        }
+	}else{
+		if(!usb_read_done)
+			usb_gadget_handle_interrupts();
+		if(usb_read_done){
+            usb_read_done = 0;
+            return 1;
+        }
+	}
+    return 0;
+}
+
+extern int usb_serial_configed;
+int usb_is_configured(void)
+{
+   if(!usb_serial_configed)
+     usb_gadget_handle_interrupts();
+
+   return usb_serial_configed;
 }
 #endif
 

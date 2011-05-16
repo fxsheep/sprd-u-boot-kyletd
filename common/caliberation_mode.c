@@ -28,6 +28,8 @@ extern int gs_close(void);
 extern int gs_read(const unsigned char *buf, int *count);
 extern int gs_write(const unsigned char *buf, int count);
 extern void usb_wait_trans_done(int direct);
+extern int usb_is_trans_done(int direct);
+extern int usb_is_configured(void);
 extern void udc_power_on(void);
 extern void udc_power_off(void);
 
@@ -50,6 +52,8 @@ extern void udc_power_off(void);
 #define CALIBERATE_HEAD 0x7e
 #define CALIBERATE_COMMOND_T 0xfe
 
+#define CALIBERATE_DETECT_MS 1000
+
 unsigned int caliberate_mode = 0; 
 
 int check_caliberate(char * buf, int len)
@@ -66,18 +70,31 @@ int check_caliberate(char * buf, int len)
 	}
 	return command;
 }
+
+int is_timeout(void)
+{
+    static int count_ms = CALIBERATE_DETECT_MS * 1000;
+    if(count_ms <= 0)
+      return 1;
+    else{
+        count_ms--;
+        udelay(1);
+        return 0;
+    }
+}
+    
 void caliberation_mode(void)
 {
 	int ret;
 	int i ;
 	loff_t off = 0;
-    printf("%s\n", __func__);
+    printf("%s\n", "calibrate detecting");
 
-    extern lcd_display(void);
-    extern void set_backlight(uint32_t value);
-    lcd_printf("   caliberation mode");
-    lcd_display();
-    set_backlight(50);
+   // extern lcd_display(void);
+   // extern void set_backlight(uint32_t value);
+   // lcd_printf("   caliberation mode");
+   // lcd_display();
+   // set_backlight(50);
 
 #ifdef CONFIG_MODEM_CALIBERATE
 	char buf[20];
@@ -85,11 +102,11 @@ void caliberation_mode(void)
 		buf[i] = i+'a';
 	dwc_otg_driver_init();
 	usb_serial_init();
+#if IO_DEBUG 
 	while(!usb_serial_configed)
 		usb_gadget_handle_interrupts();
 	printf("USB SERIAL CONFIGED\n");
 	gs_open();
-#if IO_DEBUG 
 #if WRITE_DEBUG
 	while(1){
 		ret = gs_write(buf, 20);
@@ -116,34 +133,53 @@ void caliberation_mode(void)
 
 #endif
 #endif
+	while(!usb_is_configured() && !is_timeout())
+        ;	
+    if(!usb_is_configured()){
+        printf("usb calibrate configuration timeout\n");
+        return;
+    }
+	printf("USB SERIAL CONFIGED\n");
+	gs_open();
 //code for caliberate detect
 	int got = 0;
 	int count = CALIBERATE_STRING_LEN;
 	dprintf("start to calberate\n");
 	
-	while(got < CALIBERATE_STRING_LEN){
-		usb_wait_trans_done(0);		
-		if(usb_trans_status)
-			printf("func: %s line %d usb trans with error %d\n", __func__, __LINE__, usb_trans_status);
-		ret = gs_read(buf + got, &count);
-		if(usb_trans_status)
-			printf("func: %s line %d usb trans with error %d\n", __func__, __LINE__, usb_trans_status);
-        for(i=0; i<count; i++)
-          dprintf("0x%x \n", buf[got+i]);
-        dprintf("\n");
-		got+=count;
-		if(got<CALIBERATE_STRING_LEN){
-			count=CALIBERATE_STRING_LEN-got;
-			continue;
-		}else{
-			break;
-		}
+	while(got < CALIBERATE_STRING_LEN && !is_timeout()){
+		if(usb_is_trans_done(0))		
+//	while(got < CALIBERATE_STRING_LEN){
+//		usb_wait_trans_done(0);
+        {		
+            if(usb_trans_status)
+              printf("func: %s line %d usb trans with error %d\n", __func__, __LINE__, usb_trans_status);
+            ret = gs_read(buf + got, &count);
+            if(usb_trans_status)
+              printf("func: %s line %d usb trans with error %d\n", __func__, __LINE__, usb_trans_status);
+            for(i=0; i<count; i++)
+              dprintf("0x%x \n", buf[got+i]);
+            dprintf("\n");
+            got+=count;
+        }
+
+        if(got<CALIBERATE_STRING_LEN){
+            count=CALIBERATE_STRING_LEN-got;
+            continue;
+        }else{
+            break;
+        }
 	}
+
+    if(is_timeout()){
+        printf("usb read timeout\n");
+        return;
+    }
 
 	printf("caliberate:what got from host total %d is \n", got);
 	for(i=0; i<got;i++)
 		printf("0x%x ", buf[i]);
 	printf("\n");
+
 	ret = check_caliberate(buf, CALIBERATE_STRING_LEN);
 	dprintf("check_caliberate return is 0x%x\n", ret);
 	if(!ret){
@@ -162,6 +198,6 @@ void caliberation_mode(void)
 	}	
     
     //nerver come to here
-    while(1);
+    return;
 #endif
 }

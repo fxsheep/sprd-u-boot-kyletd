@@ -1001,6 +1001,7 @@ static void composite_disconnect(struct usb_gadget *gadget)
 		; //schedule_work(&cdev->switch_work);
 //		composite_switch_work(&cdev->switch_work);
 	spin_unlock_irqrestore(&cdev->lock, flags);
+    usb_serial_configed = 0;
 }
 
 /*-------------------------------------------------------------------------*/

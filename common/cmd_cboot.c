@@ -89,6 +89,8 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         DBG("%s: alarm triggered\n", __FUNCTION__);
         alarm_mode();
     }else{
+        caliberation_mode();
+        //if calibrate success, it will here
         DBG("%s: power done again\n", __FUNCTION__);
         power_down_devices();
     }
