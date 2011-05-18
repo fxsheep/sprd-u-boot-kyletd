@@ -88,6 +88,7 @@ void vlx_mode(void)
 	char *fixnvfilename = "/fixnv/nvitem.bin";
 	char *runtimvnvpoint = "/runtimenv";
 	char *runtimenvfilename = "/runtime/runtimenvitem.bin";
+    unsigned char *array;
 
 	ret = mtdparts_init();
 	if (ret != 0){
@@ -117,6 +118,8 @@ void vlx_mode(void)
 		printf("fixnv image should not be zero\n");
 		return;
 	}
+    array = (unsigned char *)FIXNV_ADR;
+    memset(array, 0xff, FIXNV_SIZE);
 	ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
 	if (ret != 0) {
 		printf("fixnv nand read error %d\n", ret);
