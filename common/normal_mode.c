@@ -28,7 +28,11 @@ unsigned char raw_header[2048];
 #define VMJALUNA_SIZE	(0x40000)
 #define MODEM_SIZE	(5973388)
 #define KERNEL_SIZE	(7474533)
+#ifdef CONFIG_SP6810A
+#define FIXNV_SIZE	(26076)
+#else
 #define FIXNV_SIZE	(64 * 1024)
+#endif
 #define RUNTIMENV_SIZE	(512 * 1024)
 #define DSP_SIZE	(4063232)
 
@@ -155,11 +159,20 @@ void normal_mode(void)
 	}
     array = (unsigned char *)FIXNV_ADR;
     memset(array, 0xff, FIXNV_SIZE);
+    memset(array, 0xff, size);
 	ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
 	if (ret != 0) {
 		printf("fixnv nand read error %d\n", ret);
 		return;
 	}
+#ifdef CONFIG_SP6810A
+    if (FIXNV_SIZE == 26076) {
+            array[FIXNV_SIZE + 0] = 0xff;
+            array[FIXNV_SIZE + 1] = 0xff;
+            array[FIXNV_SIZE + 2] = 0xff;
+            array[FIXNV_SIZE + 3] = 0xff;
+    }
+#endif
 #else
 	/* fixnv */
     	cmd_yaffs_mount(fixnvpoint);

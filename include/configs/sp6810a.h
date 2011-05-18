@@ -45,6 +45,7 @@
 #define CONFIG_ARM926EJS			/* arm926ejs CPU core */
 #define CONFIG_SC8800G
 #define CONFIG_OPENPHONE
+#define CONFIG_SP6810A
 
 #ifdef CONFIG_SC8800G
 #define PLATFORM_SC8800G
