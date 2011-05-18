@@ -102,11 +102,6 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 
     if(argc == 2){
         DBG("func: %s line: %d\n", __func__, __LINE__);
-        if(strcmp(argv[1],"vlx") == 0){
-            vlx_mode();
-            return 1;
-        }
-        DBG("func: %s line: %d\n", __func__, __LINE__);
 
         if(strcmp(argv[1],"normal") == 0){
             normal_mode();

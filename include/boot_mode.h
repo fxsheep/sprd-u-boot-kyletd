@@ -6,7 +6,6 @@ void recovery_mode(void);
 void charge_mode(void);
 void dloader_mode(void);
 void fastboot_mode(void);
-void vlx_mode(void);
 void alarm_mode(void);
 void caliberation_mode(void);
 

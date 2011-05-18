@@ -245,7 +245,7 @@
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 
-#define CONFIG_BOOTCOMMAND "cboot vlx"
+#define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
 
 #ifdef CONFIG_CMD_NET

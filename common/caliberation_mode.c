@@ -194,7 +194,7 @@ void caliberation_mode(void)
 			printf("func: %s line %d usb trans with error %d\n", __func__, __LINE__, usb_trans_status);
 		usb_wait_trans_done(1);
 		udc_power_off();
-        vlx_mode();
+        normal_mode();
 	}	
     
     //nerver come to here
