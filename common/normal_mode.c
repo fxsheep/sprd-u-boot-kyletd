@@ -80,7 +80,7 @@ void array_diff(unsigned char * array1, unsigned char * array2, int len)
 	printf("arrar diff is finished\n");
 }
 
-void normal_mode(void)
+void vlx_nand_boot(char * kernel_pname)
 {
     boot_img_hdr *hdr = (void *)raw_header;
 	struct mtd_info *nand;
@@ -256,12 +256,12 @@ void normal_mode(void)
 	/* KERNEL_PART */
 	printf("Reading kernel to 0x%08x\n", KERNEL_ADR);
 
-	ret = find_dev_and_part(BOOT_PART, &dev, &pnum, &part);
+	ret = find_dev_and_part(kernel_pname, &dev, &pnum, &part);
 	if(ret){
-		printf("No partition named %s\n", BOOT_PART);
+		printf("No partition named %s\n", kernel_pname);
 		return;
 	}else if(dev->id->type != MTD_DEV_TYPE_NAND){
-		printf("Partition %s not a NAND device\n", BOOT_PART);
+		printf("Partition %s not a NAND device\n", kernel_pname);
 		return;
 	}
 
@@ -374,4 +374,8 @@ void normal_mode(void)
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
 	entry();
+}
+void normal_mode(void)
+{
+    vlx_nand_boot(BOOT_PART);
 }
