@@ -363,13 +363,13 @@ void normal_mode(void)
 #ifdef CONFIG_MODEM_CALIBERATE
 #define VLX_TAG_ADDR 0x5100000 //after initrd
     printf("caliberate mode is %d\n", caliberate_mode);
+    char buf[100];
     if(caliberate_mode){
-        char buf[20];
-        sprintf(buf, "calibration=%d", caliberate_mode);
-        creat_atags(VLX_TAG_ADDR, buf, RAMDISK_ADR, hdr->ramdisk_size);
+        sprintf(buf, "calibration=%d initrd=0x%x,0x%x", caliberate_mode, RAMDISK_ADR, hdr->ramdisk_size);
+    }else{
+        sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     }
-#else
-    creat_atags(VLX_TAG_ADDR, NULL, RAMDISK_ADR, hdr->ramdisk_size);
+    creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
 #endif
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
