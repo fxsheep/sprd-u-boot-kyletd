@@ -62,6 +62,8 @@
 #define CONFIG_SYS_NAND_RESET_CNT 200000
 #endif
 
+static unsigned long sc8800x_bootrom_ecclayout = 0;
+
 /* Define default oob placement schemes for large and small page devices */
 static struct nand_ecclayout nand_oob_8 = {
 	.eccbytes = 3,
@@ -978,6 +980,7 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 	uint8_t *ecc_calc = chip->buffers->ecccalc;
 	uint8_t *ecc_code = chip->buffers->ecccode;
 	uint32_t *eccpos = chip->ecc.layout->eccpos;
+	uint8_t tmplayout[64];
 
 	for (i = 0; eccsteps; eccsteps--, i += eccbytes, p += eccsize) {
 		chip->ecc.hwctl(mtd, NAND_ECC_READ);
@@ -985,6 +988,25 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 	}
 	chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
+
+	sc8800x_bootrom_ecclayout = 0;
+	if ((page >= 0) && (page < (2 * 64)))
+		sc8800x_bootrom_ecclayout = 1;
+
+	if (sc8800x_bootrom_ecclayout) {
+		/* transfer */
+		memset(tmplayout, 0xff, 64);
+		for (i = 0; i <= 3; i ++) {
+			tmplayout[eccpos[4 * i + 1]] = chip->oob_poi[16 * i + 8];
+			tmplayout[eccpos[4 * i + 2]] = chip->oob_poi[16 * i + 9];
+			tmplayout[eccpos[4 * i + 0]] = chip->oob_poi[16 * i + 10];
+			tmplayout[eccpos[4 * i + 3]] = 0x0;	
+		}
+		memcpy(chip->oob_poi, tmplayout, 64);
+	}
+
+	sc8800x_bootrom_ecclayout = 0;
+
 #ifdef NAND_DEBUG
 	printf("nand_read_page_hwecc next\n");
 	for(i=40;i<56;i++){
@@ -1007,10 +1029,27 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		if (stat < 0){
 			mtd->ecc_stats.failed++;
 			printk("%s: ecc correct error %d times\n",__FUNCTION__, mtd->ecc_stats.failed);
-//#ifdef NAND_DEBUG
-#if 0 
-			while(1)
-			  ;
+#if 0
+	printk("\nthe all data   page = %d\n", page);
+	for(i = 0; i < 2048; i++) {
+		printk("%02x ", *(p + i));
+		if(i % 16 == 15)
+		  printk("\n");
+	}
+
+	printk("\nthe read ecc\n");
+	for(i = 0; i < 16; i ++) {
+			printk("%02x ", ecc_code[i]/**(read_ecc + i)*/);
+			if(i % 4 == 3)
+				printk("\n");
+	}
+
+	printk("\nthe calc ecc\n");
+	for(i = 0; i < 16; i ++) {
+			printk("%02x ", ecc_calc[i]/**(calc_ecc + i)*/);
+			if(i % 4 == 3)
+				printk("\n");
+	}
 #endif
 		}
 		else
@@ -1720,6 +1759,7 @@ static void nand_write_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 	uint8_t *ecc_calc = chip->buffers->ecccalc;
 	const uint8_t *p = buf;
 	uint32_t *eccpos = chip->ecc.layout->eccpos;
+	uint8_t ecclayouttemp;
 
 	for (i = 0; eccsteps; eccsteps--, i += eccbytes, p += eccsize) {
 		chip->ecc.hwctl(mtd, NAND_ECC_WRITE);
@@ -1727,8 +1767,25 @@ static void nand_write_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 	}
 
-	for (i = 0; i < chip->ecc.total; i++)
-		chip->oob_poi[eccpos[i]] = ecc_calc[i];
+	if (sc8800x_bootrom_ecclayout) {
+		for (i = 0; i <= 3; i ++) {
+			ecclayouttemp = ecc_calc[4 * i + 0];
+			ecc_calc[4 * i + 0] = ecc_calc[4 * i + 1];
+			ecc_calc[4 * i + 1] = ecc_calc[4 * i + 2];
+			ecc_calc[4 * i + 2] = ecclayouttemp;
+			ecc_calc[4 * i + 3] = 0xff;
+		}
+
+		for (i = 0; i <= 3; i ++) {
+			chip->oob_poi[i * 16 + 8] = ecc_calc[i * 4 + 0];
+			chip->oob_poi[i * 16 + 9] = ecc_calc[i * 4 + 1];
+			chip->oob_poi[i * 16 + 10] = ecc_calc[i * 4 + 2];
+			chip->oob_poi[i * 16 + 11] = ecc_calc[i * 4 + 3];
+		}
+	} else {
+		for (i = 0; i < chip->ecc.total; i++)
+			chip->oob_poi[eccpos[i]] = ecc_calc[i];
+	}
 
 	chip->write_buf(mtd, chip->oob_poi, mtd->oobsize);
 #ifdef CONFIG_MTD_NAND_SPRD
@@ -1796,10 +1853,16 @@ static int nand_write_page(struct mtd_info *mtd, struct nand_chip *chip,
 
 	chip->cmdfunc(mtd, NAND_CMD_SEQIN, 0x00, page);
 
+	sc8800x_bootrom_ecclayout = 0;
+	if ((page >= 0) && (page < (2 * 64)))
+		sc8800x_bootrom_ecclayout = 1;
+
 	if (unlikely(raw))
 		chip->ecc.write_page_raw(mtd, chip, buf);
 	else
 		chip->ecc.write_page(mtd, chip, buf);
+
+	sc8800x_bootrom_ecclayout = 0;
 
 	/*
 	 * Cached progamming disabled for now, Not sure if its worth the

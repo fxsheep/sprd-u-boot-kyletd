@@ -1160,6 +1160,7 @@ int board_nand_init(struct nand_chip *this)
 {
 	//struct mtd_info *mtd;
 	unsigned long i, id, type;
+	volatile int ik_cnt = 0;
 	
 	/*structs must be linked */
 	//mtd = &host->mtd;
@@ -1177,6 +1178,9 @@ int board_nand_init(struct nand_chip *this)
 	sprd_ecc_mode = NAND_ECC_NONE;
 
 	REG_AHB_CTL0 |= BIT_8;//no BIT_9
+	REG_AHB_SOFT_RST |= BIT_5;
+	for(ik_cnt = 0; ik_cnt < 0xffff; ik_cnt++);
+	REG_AHB_SOFT_RST &= ~BIT_5;
 	REG_NFC_INTSRC |= BIT_0 | BIT_4 | BIT_5;
 	/* 0x1 : WPN disable, and micron nand flash status is 0xeo 
  *  	   0x0 : WPN enable, and micron nand flash status is 0x60 */
@@ -1188,7 +1192,7 @@ int board_nand_init(struct nand_chip *this)
 
 	nfc_reset();
 	//udelay(2000);
-	volatile int ik_cnt = 0;
+
 	for(ik_cnt = 0; ik_cnt < 0xfffff; ik_cnt++)
 	  ;
 	nfc_read_status();

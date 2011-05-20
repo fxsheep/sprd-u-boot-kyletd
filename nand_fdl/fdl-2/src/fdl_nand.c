@@ -77,8 +77,8 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 	  return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 
-	if(addr < nand->erasesize) //to skip the first block erase
-	  return NAND_INVALID_ADDR;
+	/*if(addr < nand->erasesize) //to skip the first block erase
+	  return NAND_INVALID_ADDR;*/
 	if(size != nand->erasesize)
 	  return NAND_INVALID_SIZE;
 	
