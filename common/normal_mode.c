@@ -21,18 +21,14 @@ unsigned char raw_header[2048];
 #define VMJALUNA_PART "vmjaluna"
 #define MODEM_PART "modem"
 #define KERNEL_PART "kernel"
-#define FIXVN_PART "fixnv"
+#define FIXNV_PART "fixnv"
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
 
 #define VMJALUNA_SIZE	(0x40000)
 #define MODEM_SIZE	(5973388)
 #define KERNEL_SIZE	(7474533)
-#ifdef CONFIG_SP6810A
-#define FIXNV_SIZE	(26076)
-#else
 #define FIXNV_SIZE	(64 * 1024)
-#endif
 #define RUNTIMENV_SIZE	(512 * 1024)
 #define DSP_SIZE	(4063232)
 
@@ -51,6 +47,39 @@ extern void cmd_yaffs_ls(const char *mountpt, int longlist);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 
 extern unsigned int caliberate_mode;
+
+void nand_block_info(struct mtd_info *nand, int *good, int *bad)
+{
+	loff_t off;
+	int goodblk, badblk;
+
+	goodblk = badblk = 0;
+
+	for (off = 0; off < nand->size; off += nand->erasesize)
+		if (nand_block_isbad(nand, off)) {
+			//printf("bad block :  %08llx\n", (unsigned long long)off);
+			badblk ++;
+		} else {
+			//printf("good block : %08llx\n", (unsigned long long)off);
+			goodblk ++;
+		}
+	*good = goodblk;
+	*bad = badblk;
+}
+
+void array_value_range(unsigned char * array, int start, int end)
+{
+	int aaa;
+	
+	printf("\n\n");
+
+	for (aaa = start; aaa <= end; aaa ++) {
+		printf("arr[%d] = %02x\n", aaa, array[aaa]);
+	}
+
+	printf("\n\n");
+}
+
 
 void array_value(unsigned char * array, int len)
 {
@@ -94,7 +123,6 @@ void vlx_nand_boot(char * kernel_pname)
 	char *fixnvfilename = "/fixnv/nvitem.bin";
 	char *runtimvnvpoint = "/runtimenv";
 	char *runtimenvfilename = "/runtime/runtimenvitem.bin";
-    char * array;
 
 	ret = mtdparts_init();
 	if (ret != 0){
@@ -135,17 +163,20 @@ void vlx_nand_boot(char * kernel_pname)
     set_backlight(50);
 #endif
 
+	/*int good_blknum, bad_blknum;
+	nand_block_info(nand, &good_blknum, &bad_blknum);
+	printf("good is %d  bad is %d\n", good_blknum, bad_blknum);*/
 	///////////////////////////////////////////////////////////////////////
-	/* FIXVN_PART */
+	/* FIXNV_PART */
 	printf("Reading fixnv to 0x%08x\n", FIXNV_ADR);
 #if 1
 	/* mtd nv */
-	ret = find_dev_and_part(FIXVN_PART, &dev, &pnum, &part);
+	ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
 	if (ret) {
-		printf("No partition named %s\n", FIXVN_PART);
+		printf("No partition named %s\n", FIXNV_PART);
 		return;
 	} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-		printf("Partition %s not a NAND device\n", FIXVN_PART);
+		printf("Partition %s not a NAND device\n", FIXNV_PART);
 		return;
 	}
 
@@ -157,22 +188,12 @@ void vlx_nand_boot(char * kernel_pname)
 		printf("fixnv image should not be zero\n");
 		return;
 	}
-    array = (unsigned char *)FIXNV_ADR;
-    memset(array, 0xff, FIXNV_SIZE);
-    memset(array, 0xff, size);
+	printf("FIXNV_SIZE = 0x%08x   pnum = %d  name = %s  size = %d  offset = %d\n", FIXNV_SIZE, pnum, part->name, part->size, part->offset);
 	ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
 	if (ret != 0) {
 		printf("fixnv nand read error %d\n", ret);
 		return;
 	}
-#ifdef CONFIG_SP6810A
-    if (FIXNV_SIZE == 26076) {
-            array[FIXNV_SIZE + 0] = 0xff;
-            array[FIXNV_SIZE + 1] = 0xff;
-            array[FIXNV_SIZE + 2] = 0xff;
-            array[FIXNV_SIZE + 3] = 0xff;
-    }
-#endif
 #else
 	/* fixnv */
     	cmd_yaffs_mount(fixnvpoint);

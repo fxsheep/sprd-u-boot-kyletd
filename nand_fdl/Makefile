@@ -41,7 +41,7 @@ FDL1_SOBJS_LIST = init.o
 COM_COBJS	= dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o mcu_command.o usb_boot.o drv_usb.o virtual_com.o
 COM_OBJS = $(addprefix $(COM_PATH)/src/,$(COM_COBJS))
 
-FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o
+FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o parsemtdparts.o
 FDL1_COBJS_LIST = board_init.o chip_init.o fdl_command.o fdl_main.o fdl_stdio.o sdram_init.o sdram_prod.o
 FDL1_COBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_COBJS_LIST))
 FDL1_SOBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_SOBJS_LIST))

@@ -99,6 +99,10 @@ LOCAL CONST ARM_EMC_AHB_CLK_T s_arm_emc_ahb_clk[] =
     {ARM_CLK_384M, ARM_CLK_192M, ARM_CLK_192M, ARM_CLK_96M},
 };
 
+//unsigned short ADI_Analogdie_reg_read (unsigned int addr);
+
+//void ADI_Analogdie_reg_write (unsigned int addr, unsigned short data);
+
 uint32 __GetMPllClk (void)
 {
     return ( ARM_CLK_26M
@@ -848,6 +852,32 @@ LOCAL void SDRAM_Init (uint32 clk)
     #else
     __sdram_set_param(clk, SDRAM_GetCfg());
     #endif
+
+#if 1
+    //ANA_REG_MSK_OR(ANA_DCDC_CTL, 4 << 6, 7 << 6);
+    ANA_REG_MSK_OR(ANA_DCDC_CTL, 0x1c << 6, 0x3f << 6);
+    {
+	 /* wait until voltage is stable */
+        volatile int32 i;
+	 for (i=0; i<3000; ++i)
+	 {
+	 }
+    }		
+
+    *(volatile uint32 *)(GREG_BASE + 0x18) |= BIT_9;
+    {
+        uint32 tmp = *(volatile uint32 *)(GREG_BASE + 0x24);
+	 tmp &= ~0x00000fff;
+	 //tmp |= 0xe1; // 450M
+	 //tmp |= 0x12c; // 600M
+	 tmp |= 0x113; // 550M
+	 //tmp |= 0xfa; // 500M
+	 //tmp |= 0x104; // 520M
+	 //tmp |= 0x145; // 650M
+	 *(volatile uint32 *)(GREG_BASE + 0x24) = tmp;
+    }
+    *(volatile uint32 *)(GREG_BASE + 0x18) &= ~BIT_9;	
+#endif
 
 }
 

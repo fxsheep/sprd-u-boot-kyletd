@@ -5,6 +5,8 @@
 #include <nand.h>
 #include <linux/mtd/nand.h>
 #include <jffs2/jffs2.h>
+#include <parsemtdparts.h>
+
 
 //#define FDL2_DEBUG 1
 typedef struct {
@@ -23,6 +25,7 @@ typedef struct {
 		yaffs_PackedTags2TagsPart t;
 		yaffs_ECCOther ecc;
 } yaffs_PackedTags2;
+
 
 #define ADDR_MASK				0x80000000
 #define SYSTEM_WRITE_MASK (0xC0000000)
@@ -74,7 +77,7 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 #endif
 	struct mtd_info *nand;
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
-	  return NAND_SYSTEM_ERROR;
+	  	return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 
 	/*if(addr < nand->erasesize) //to skip the first block erase
@@ -94,8 +97,12 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 #endif
 	return nand_erase_opts(nand, &opts);
 }
+
 int nand_start_write(unsigned int addr, unsigned int size)
 {
+	struct mtd_partition cur_partition;
+	int erase_blk, ret = 0;
+
 #ifdef FDL2_DEBUG
 	printf("function: %s\n", __FUNCTION__);
 #endif
@@ -103,7 +110,7 @@ int nand_start_write(unsigned int addr, unsigned int size)
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
-
+	//printf("nand->size = 0x%016Lx\n", (unsigned long long)nand->size);
 #ifdef FDL2_DEBUG
 	printf("function: %s write addr: 0x%x erasesize: 0x%x\n", __FUNCTION__, addr, nand->erasesize);
 #endif
@@ -122,35 +129,37 @@ int nand_start_write(unsigned int addr, unsigned int size)
 #ifdef FDL2_DEBUG
 	printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
 #endif
-	//printf("current device no: %d erase size: 0x%x write size: 0x%x\n", nand_curr_device, nand->erasesize, nand->writesize);
+	
 	nand_write_addr = addr;
 	cur_write_pos = addr;
 	nand_write_size = size;
 
-    nand_erase_options_t opts;
-    memset(&opts, 0, sizeof(opts));
+	cur_partition.offset = addr;
+	cur_partition.size = 0;
+	parse_cmdline_partitions(&cur_partition, (unsigned long long)nand->size);
+	//printf("\naddr = 0x%08x  size = 0x%08x  offset %08x, size %08x\n", addr, size, cur_partition.offset, cur_partition.size);
 
-    if(SYSTEM_PART_OFFSET == addr)
-    {
-        opts.offset = SYSTEM_PART_OFFSET;
-        opts.length = SYSTEM_PART_SIZE;
-        opts.jffs2 = 0;
-        opts.quiet = 1;
-        opts.scrub = 1;
-        nand_erase_opts(&nand_info[nand_curr_device], &opts);
-    }
+	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
+		//printf("erase block : %d\n", (cur_partition.offset / nand->erasesize + erase_blk));
+		ret = nand_erase_fdl(cur_partition.offset + erase_blk * nand->erasesize, nand->erasesize);
+		if (ret != 0) {
+			/* erase failed */
+			ret = nand->block_markbad(nand, cur_partition.offset + erase_blk * nand->erasesize);
+			if (ret != 0) {
+					/* mark failed */
+					printf("mark 0x%x bad error\n", cur_partition.offset + erase_blk * nand->erasesize);
+				   	return NAND_SYSTEM_ERROR + 1;
+			} else {
+					/* mark success */
+					printf("skip bad block 0x%x\n", cur_partition.offset + erase_blk * nand->erasesize);
+			}
+		}
+	}
+	
 
-    if(USERDATA_PART_OFFSET == addr)
-    {
-        opts.offset = USERDATA_PART_OFFSET;
-        opts.length = USERDATA_PART_SIZE;
-        opts.jffs2 = 0;
-        opts.quiet = 1;
-        opts.scrub = 1;
-        nand_erase_opts(&nand_info[nand_curr_device], &opts);
-    }
 	return NAND_SUCCESS;
 }
+
 int nand_do_write_ops(struct mtd_info *mtd, loff_t to,struct mtd_oob_ops *ops);
 int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
 			     struct mtd_oob_ops *ops);
@@ -166,36 +175,25 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 	  return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 	int ret=0;
+	int pos;
 
 	//find a good block to write 
-	while(!(cur_write_pos & (nand->erasesize-1))){
+	while(!(cur_write_pos & (nand->erasesize-1))) {
 #ifdef FDL2_DEBUG
 		printf("function: %s to check bad block, check address 0x%x\n", __FUNCTION__,cur_write_pos&(~(nand->erasesize - 1)));
 #endif
-		if(nand_block_isbad(nand, cur_write_pos&(~(nand->erasesize - 1)))){
+		if (nand_block_isbad(nand, cur_write_pos&(~(nand->erasesize - 1)))) {
 #ifdef FDL2_DEBUG
 			printf("function: %s block is bad\n",__FUNCTION__);
 #endif
 			printf("%s skip bad block 0x%x\n", __FUNCTION__, cur_write_pos&(~(nand->erasesize - 1)));
 			cur_write_pos = (cur_write_pos + nand->erasesize)&(~(nand->erasesize - 1));
 			continue;
-		}else {
+		} else {
 #ifdef FDL2_DEBUG
-			printf("function: %s block is not bad, erase it\n", __FUNCTION__);
+			printf("function: %s block is good\n", __FUNCTION__);
 #endif
-			ret = nand_erase_fdl(cur_write_pos, nand->erasesize);
-			if(ret != 0){
-				ret = nand->block_markbad(nand, cur_write_pos);
-				if(ret != 0){
-				  printf("function: %s mark 0x%x bad error\n", __FUNCTION__, cur_write_pos);
-				  return NAND_SYSTEM_ERROR + 1;
-				}else {
-					printf("function: %s skip bad block 0x%x\n", __FUNCTION__, cur_write_pos);
-					cur_write_pos = (cur_write_pos + nand->erasesize)&(~(nand->erasesize - 1));
-					continue;
-				}
-			}else
-				break;
+			break;
 		}
 	}
 
@@ -203,10 +201,13 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 #ifdef FDL2_DEBUG
 		printf("function: %s cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
 #endif
-		if(size < nand->writesize)
-		  size = nand->writesize;
-		else if(size > nand->writesize)
-		  return NAND_INVALID_SIZE;
+		if(size < nand->writesize) {
+			/* set 0xff from buf[size -- writesize] for fixnv and runtimenv */
+			for (pos = size; pos < nand->writesize; pos ++)
+				buf[pos] = 0xff;
+		  	size = nand->writesize;	
+		} else if(size > nand->writesize)
+		  	return NAND_INVALID_SIZE;
 #ifdef FDL2_DEBUG
 		printf("function: %s erase done, now to write it\n", __FUNCTION__);
 #endif
