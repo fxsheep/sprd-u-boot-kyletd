@@ -232,8 +232,8 @@ SEND_RECOVERY_MSG:
 	return 0;
 }
 
-extern void vlx_nand_boot(char * kernel_pname);
 void recovery_mode(void)
 {
-    vlx_nand_boot(RECOVERY_PART);
+    printf("%s\n", __func__);
+    vlx_nand_boot(RECOVERY_PART, NULL);
 }

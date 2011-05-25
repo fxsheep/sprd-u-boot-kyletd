@@ -20,4 +20,5 @@ void caliberation_mode(void);
 #define BOOT_CHARGE 0xf6
 
 extern unsigned int check_key_boot(unsigned char key);
+extern void vlx_nand_boot(char * kernel_pname, char * cmdline);
 #endif

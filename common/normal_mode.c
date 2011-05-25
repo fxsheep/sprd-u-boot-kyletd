@@ -11,6 +11,7 @@
 #include <environment.h>
 #include <jffs2/jffs2.h>
 #include <boot_mode.h>
+#include <malloc.h>
 
 unsigned char raw_header[2048];
 #ifdef FLASH_PAGE_SIZE
@@ -100,7 +101,7 @@ void array_diff(unsigned char * array1, unsigned char * array2, int len)
 {
 	int ii;
 	
-	printf("arrar diff is starting   array1 = 0x%08x  array2 = 0x%08x  len = %d\n", array1, array2, len);
+	printf("arrar diff is starting   array1 = 0x%08x  array2 = 0x%08x  len = %d\n", (unsigned int)array1, (unsigned int)array2, len);
 	for (ii = 0; ii < len; ii ++) {
 		if (array1[ii] != array2[ii]) {
 			printf("\narray1[%d] = 0x%02x  array2[%d] = 0x%02x\n", ii, array1[ii], ii, array2[ii]);
@@ -109,7 +110,7 @@ void array_diff(unsigned char * array1, unsigned char * array2, int len)
 	printf("arrar diff is finished\n");
 }
 
-void vlx_nand_boot(char * kernel_pname)
+void vlx_nand_boot(char * kernel_pname, char * cmdline)
 {
     boot_img_hdr *hdr = (void *)raw_header;
 	struct mtd_info *nand;
@@ -156,7 +157,7 @@ void vlx_nand_boot(char * kernel_pname)
 		return;
 	}
     extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
-    extern lcd_display(void);
+    extern void lcd_display(void);
     extern void set_backlight(uint32_t value);
     lcd_display_bitmap((ulong)bmp_img, 0, 0);
     lcd_display();
@@ -188,7 +189,6 @@ void vlx_nand_boot(char * kernel_pname)
 		printf("fixnv image should not be zero\n");
 		return;
 	}
-	printf("FIXNV_SIZE = 0x%08x   pnum = %d  name = %s  size = %d  offset = %d\n", FIXNV_SIZE, pnum, part->name, part->size, part->offset);
 	ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
 	if (ret != 0) {
 		printf("fixnv nand read error %d\n", ret);
@@ -307,7 +307,7 @@ void vlx_nand_boot(char * kernel_pname)
 		printf("kernel image should not be zero\n");
 		return;
 	}
-	ret = nand_read_offset_ret(nand, off, &size, KERNEL_ADR, &off);
+	ret = nand_read_offset_ret(nand, off, &size, (void *)KERNEL_ADR, &off);
 	if(ret != 0){
 		printf("kernel nand read error %d\n", ret);
 		return;
@@ -318,7 +318,7 @@ void vlx_nand_boot(char * kernel_pname)
 		printf("ramdisk size error\n");
 		return;
 	}
-	ret = nand_read_offset_ret(nand, off, &size, RAMDISK_ADR, &off);
+	ret = nand_read_offset_ret(nand, off, &size, (void *)RAMDISK_ADR, &off);
 	if(ret != 0){
 		printf("ramdisk nand read error %d\n", ret);
 		return;
@@ -384,12 +384,22 @@ void vlx_nand_boot(char * kernel_pname)
 #ifdef CONFIG_MODEM_CALIBERATE
 #define VLX_TAG_ADDR 0x5100000 //after initrd
     printf("caliberate mode is %d\n", caliberate_mode);
-    char buf[100];
+    char * buf;
+    buf = malloc(150);
     if(caliberate_mode){
         sprintf(buf, "calibration=%d initrd=0x%x,0x%x", caliberate_mode, RAMDISK_ADR, hdr->ramdisk_size);
     }else{
         sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     }
+
+    if(cmdline && cmdline[0]){
+        printf("deal with cmdline\n");
+        int str_len;
+        str_len = strlen(buf);
+        sprintf(&buf[str_len], " %s\n", cmdline);
+    }
+
+    printf("pass cmdline %s\n", buf);
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
 #endif
 
@@ -398,5 +408,5 @@ void vlx_nand_boot(char * kernel_pname)
 }
 void normal_mode(void)
 {
-    vlx_nand_boot(BOOT_PART);
+    vlx_nand_boot(BOOT_PART, NULL);
 }
