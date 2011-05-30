@@ -52,7 +52,7 @@ extern void udc_power_off(void);
 #define CALIBERATE_HEAD 0x7e
 #define CALIBERATE_COMMOND_T 0xfe
 
-#define CALIBERATE_DETECT_MS 1000
+#define CALIBERATE_DETECT_MS 3000
 
 unsigned int caliberate_mode = 0; 
 
