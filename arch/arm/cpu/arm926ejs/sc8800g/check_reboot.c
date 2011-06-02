@@ -17,6 +17,8 @@ unsigned check_reboot_mode(void)
       return RECOVERY_MODE;
     else if(rst_mode == HWRST_STATUS_FASTBOOT)
       return FASTBOOT_MODE;
+    else if(rst_mode == HWRST_STATUS_NORMAL)
+      return NORMAL_MODE;
 }
 
 void reboot_devices(unsigned reboot_mode)
@@ -27,8 +29,9 @@ void reboot_devices(unsigned reboot_mode)
     }
     else if(reboot_mode == FASTBOOT_MODE){
       rst_mode = HWRST_STATUS_FASTBOOT;
-    }
-    else{
+    }else if(reboot_mode == NORMAL_MODE){
+      rst_mode = HWRST_STATUS_NORMAL;
+    }else{
       rst_mode = 0;
     }
 

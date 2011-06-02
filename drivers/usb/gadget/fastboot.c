@@ -540,8 +540,7 @@ void cmd_reboot(const char *arg, void *data, unsigned sz)
 {
 	fastboot_okay("");
 	//udc_power_off();
-    //reboot_devices(0);
-    power_down_devices(0);
+    reboot_devices(NORMAL_MODE);
 }
 
 void cmd_reboot_bootloader(const char *arg, void *data, unsigned sz)

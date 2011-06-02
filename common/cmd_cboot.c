@@ -41,6 +41,8 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     else if(rst_mode == FASTBOOT_MODE){
         DBG("func: %s line: %d\n", __func__, __LINE__);
         fastboot_mode();
+    }else if(rst_mode == NORMAL_MODE){
+        normal_mode();
     }
     DBG("func: %s line: %d\n", __func__, __LINE__);
 
