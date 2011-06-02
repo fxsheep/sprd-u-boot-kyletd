@@ -335,10 +335,10 @@ int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long m
 				offset += realpart[i].size;
 
 
-				/*printf("realpart %02d: offset %08x, size %08x\n",
+				printf("realpart %02d: offset %08x, size %08x\n",
 	     			(i - current_part),
 	     			realpart[i].offset,
-	     			realpart[i].size);*/
+	     			realpart[i].size);
 		}
 	}
 
@@ -346,11 +346,6 @@ int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long m
 	for (i = current_part; i < MTDPARTITION_MAX; i ++) {
 		if (realpart[i].offset == current->offset) {
 			current->size = realpart[i].size;
-			if (current->offset == 0x13a0000) {
-				/* fixnv + runtimenv */
-				current->size += realpart[i + 1].size;
-				printf("erase runtimenv when erasing fixnv\n");
-			}
 			return 0;
 		}
 	}

@@ -380,11 +380,24 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
     unsigned long addr = *data;
     unsigned long size = * (data + 1);
     int           ret;
-
+	
     addr = EndianConv_32 (addr);
     size = EndianConv_32 (size);
-
-    ret = nand_erase_fdl (addr, size);
+	
+    	ret = addr & 0x3;
+    	switch (ret) {
+		case 0:
+			ret = nand_erase_partition(addr, size);
+		break;
+		case 1:
+			ret = nand_erase_check_partition(addr & ~3, size);
+		break;
+		case 2:
+			ret = nand_erase_check_write_partition(addr & ~3, size);
+		break;
+		default:
+			ret = NAND_SUCCESS;
+	}
     FDL2_SendRep (ret);
     return (NAND_SUCCESS == ret);
 }
