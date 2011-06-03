@@ -75,7 +75,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
                 recovery_mode();
                 break;
             case BOOT_CALIBRATE:
-                caliberation_mode();
+                calibration_detect(1);
                 return; //back to normal boot
                 break;
             case BOOT_DLOADER:
@@ -91,7 +91,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         DBG("%s: alarm triggered\n", __FUNCTION__);
         alarm_mode();
     }else{
-        caliberation_mode();
+        calibration_detect(0);
         //if calibrate success, it will here
         DBG("%s: power done again\n", __FUNCTION__);
         power_down_devices();
@@ -136,7 +136,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         DBG("func: %s line: %d\n", __func__, __LINE__);
 
         if(strcmp(argv[1],"caliberation") == 0){
-            caliberation_mode();
+            calibration_detect(1);
             return 1;
         }
         DBG("func: %s line: %d\n", __func__, __LINE__);

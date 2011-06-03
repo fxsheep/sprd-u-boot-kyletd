@@ -71,9 +71,15 @@ int check_caliberate(char * buf, int len)
 	return command;
 }
 
-int is_timeout(void)
+extern int power_button_pressed(void);
+int is_timeout(int key)
 {
     static int count_ms = CALIBERATE_DETECT_MS * 1000;
+    if(!key){
+        if(!power_button_pressed())
+          return 2;
+    }
+
     if(count_ms <= 0)
       return 1;
     else{
@@ -83,7 +89,7 @@ int is_timeout(void)
     }
 }
     
-void caliberation_mode(void)
+void calibration_detect(int key)
 {
 	int ret;
 	int i ;
@@ -133,12 +139,17 @@ void caliberation_mode(void)
 
 #endif
 #endif
-	while(!usb_is_configured() && !is_timeout())
-        ;	
-    if(!usb_is_configured()){
-        printf("usb calibrate configuration timeout\n");
-        return;
-    }
+    while(!usb_is_configured()){
+        ret = is_timeout(key);
+        if(ret == 0)
+          continue;
+        else if(ret == 2) // POWER KEY pressed
+          normal_mode();
+        else{
+            printf("usb calibrate configuration timeout\n");
+            return;
+        }
+    }	
 	printf("USB SERIAL CONFIGED\n");
 	gs_open();
 //code for caliberate detect
@@ -146,7 +157,7 @@ void caliberation_mode(void)
 	int count = CALIBERATE_STRING_LEN;
 	dprintf("start to calberate\n");
 	
-	while(got < CALIBERATE_STRING_LEN && !is_timeout()){
+	while(got < CALIBERATE_STRING_LEN){
 		if(usb_is_trans_done(0))		
 //	while(got < CALIBERATE_STRING_LEN){
 //		usb_wait_trans_done(0);
@@ -163,17 +174,20 @@ void caliberation_mode(void)
         }
 
         if(got<CALIBERATE_STRING_LEN){
-            count=CALIBERATE_STRING_LEN-got;
-            continue;
+            ret = is_timeout(key);
+            if(ret == 0){
+                count=CALIBERATE_STRING_LEN-got;
+                continue;
+            }else if(ret == 2){
+                normal_mode();
+            }else{
+                printf("usb read timeout\n");
+                return;
+            }
         }else{
             break;
         }
 	}
-
-    if(is_timeout()){
-        printf("usb read timeout\n");
-        return;
-    }
 
 	printf("caliberate:what got from host total %d is \n", got);
 	for(i=0; i<got;i++)

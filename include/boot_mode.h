@@ -7,7 +7,7 @@ void charge_mode(void);
 void dloader_mode(void);
 void fastboot_mode(void);
 void alarm_mode(void);
-void caliberation_mode(void);
+void calibration_detect(int key);
 
 #define RECOVERY_MODE   0x77665502
 #define FASTBOOT_MODE   0x77665500

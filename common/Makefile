@@ -54,7 +54,7 @@ COBJS-y += charge_mode.o
 COBJS-y += alarm_mode.o
 COBJS-y += dloader_mode.o
 COBJS-y += android_boot.o
-COBJS-y += caliberation_mode.o
+COBJS-y += calibration_detect.o
 
 # environment
 COBJS-y += env_common.o
