@@ -144,7 +144,7 @@ void calibration_detect(int key)
         if(ret == 0)
           continue;
         else if(ret == 2) // POWER KEY pressed
-          normal_mode();
+          power_down_devices();
         else{
             printf("usb calibrate configuration timeout\n");
             return;
@@ -179,7 +179,7 @@ void calibration_detect(int key)
                 count=CALIBERATE_STRING_LEN-got;
                 continue;
             }else if(ret == 2){
-                normal_mode();
+                power_down_devices();
             }else{
                 printf("usb read timeout\n");
                 return;
