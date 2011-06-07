@@ -46,7 +46,7 @@ int nandmtd2_WriteChunkWithTagsToNAND(yaffs_Device * dev, int chunkInNAND,
 	loff_t addr = ((loff_t) chunkInNAND) * dev->nDataBytesPerChunk;
 
 	yaffs_PackedTags2 pt;
-
+    memset(&pt, 0xff, sizeof(yaffs_PackedTags2));
 	T(YAFFS_TRACE_MTD,
 	  (TSTR
 	   ("nandmtd2_WriteChunkWithTagsToNAND chunk %d data %p tags %p"

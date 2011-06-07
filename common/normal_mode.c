@@ -26,25 +26,24 @@ unsigned char raw_header[2048];
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
 
-#define VMJALUNA_SIZE	(0x40000)
-#define MODEM_SIZE	(5973388)
-#define KERNEL_SIZE	(7474533)
+#define VMJALUNA_SIZE	(256 * 1024)
+#define MODEM_SIZE	(8 * 1024 * 1024)
+#define KERNEL_SIZE	(10 * 1024 * 1024)
 #define FIXNV_SIZE	(64 * 1024)
 #define RUNTIMENV_SIZE	(512 * 1024)
-#define DSP_SIZE	(4063232)
+#define DSP_SIZE	(5120 * 1024)
 
 #define VMJALUNA_ADR	0x00400000
 #define MODEM_ADR	0x00500000
 #define KERNEL_ADR	0x04508000
-#define RAMDISK_ADR 0x04c00000
+#define RAMDISK_ADR 	0x04c00000
 #define FIXNV_ADR	0x00000000
 #define RUNTIMENV_ADR	0x004a0000
 #define DSP_ADR		0x00020000
 
 extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
-extern void cmd_yaffs_read_file(char *fn);
-extern void cmd_yaffs_ls(const char *mountpt, int longlist);
+extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 
 extern unsigned int caliberate_mode;
@@ -66,6 +65,19 @@ void nand_block_info(struct mtd_info *nand, int *good, int *bad)
 		}
 	*good = goodblk;
 	*bad = badblk;
+}
+
+/*
+* retval : -1 is wrong  ;  1 is correct
+*/
+int runtimenv_is_correct(unsigned char *array, unsigned long size)
+{
+	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a)) {
+		array[size] = 0xff; array[size + 1] = 0xff;
+		array[size + 2] = 0xff; array[size + 3] = 0xff;	
+		return 1;
+	} else
+		return -1;
 }
 
 void array_value_range(unsigned char * array, int start, int end)
@@ -122,8 +134,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	loff_t off = 0;
 	char *fixnvpoint = "/fixnv";
 	char *fixnvfilename = "/fixnv/nvitem.bin";
-	char *runtimvnvpoint = "/runtimenv";
-	char *runtimenvfilename = "/runtime/runtimenvitem.bin";
+	char *runtimenvpoint = "/runtimenv";
+	char *runtimenvfilename = "/runtimenv/runtimenv.bin";
 
 	ret = mtdparts_init();
 	if (ret != 0){
@@ -209,7 +221,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	///////////////////////////////////////////////////////////////////////
 	/* RUNTIMEVN_PART */
 	printf("Reading runtimenv to 0x%08x\n", RUNTIMENV_ADR);
-#if 1
+#if 0
 	/* mtd nv */
 	ret = find_dev_and_part(RUNTIMEVN_PART, &dev, &pnum, &part);
 	if (ret) {
@@ -236,15 +248,16 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 #else
 	/* runtimenv */
     	cmd_yaffs_mount(runtimenvpoint);
-	/* there is need RUNTIMENV_ADR instead of DSP_ADR, but RUNTIMENV_ADR is 0x00000000, 
-	 * yaffs_read occur error at first page, so i use DSP_ADR, then copy data from DSP_ADR to RUNTIMENV_ADR.
-	*/
-    	cmd_yaffs_mread_file(runtimvenvfilename, (unsigned char *)DSP_ADR);
+	ret = cmd_yaffs_ls_chk(runtimenvfilename);
+	if (ret == (RUNTIMENV_SIZE + 4)) {
+		cmd_yaffs_mread_file(runtimenvfilename, (unsigned char *)RUNTIMENV_ADR);
+		if (-1 == runtimenv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE))
+			memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+	} else
+		memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
 	cmd_yaffs_umount(runtimenvpoint);
-	memcpy((unsigned char *)RUNTIMENV_ADR, (unsigned char *)DSP_ADR, RUNTIMENV_SIZE);
 #endif
 	//array_value((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE);
-
 	////////////////////////////////////////////////////////////////
 	/* DSP_PART */
 	printf("Reading dsp to 0x%08x\n", DSP_ADR);

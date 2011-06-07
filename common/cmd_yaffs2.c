@@ -14,6 +14,7 @@ extern void cmd_yaffs_umount(char *mp);
 extern void cmd_yaffs_read_file(char *fn);
 extern void cmd_yaffs_write_file(char *fn,char bval,int sizeOfFile);
 extern void cmd_yaffs_ls(const char *mountpt, int longlist);
+extern int  cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
 extern void cmd_yaffs_mread_file(char *fn, char *addr);
 extern void cmd_yaffs_mkdir(const char *dir);
@@ -45,6 +46,23 @@ int do_yls (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
     char *dirname = argv[argc-1];
 
     cmd_yaffs_ls(dirname, (argc>2)?1:0);
+
+    return(0);
+}
+
+int do_yls_chk (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+    char *dirfilename = argv[2];
+	int ret = -1;
+	if (argc != 3) {
+		printf("\ncommand error : yls_chk -l /runtimenv/runtimenv.bin\n");
+		return(0);
+	}
+    ret = cmd_yaffs_ls_chk(dirfilename);
+    if (ret > -1)
+	printf("\nfile is here  file size = %d\n", ret);
+    else
+	printf("\nfile is not here\n");
 
     return(0);
 }
@@ -156,6 +174,12 @@ U_BOOT_CMD(
     yls,    4,  0,  do_yls,
     "yaffs ls",
     "[-l] name"
+);
+
+U_BOOT_CMD(
+    yls_chk,    4,  0,  do_yls_chk,
+    "yaffs check file in directory",
+    "[-l] dirfilename"
 );
 
 U_BOOT_CMD(
