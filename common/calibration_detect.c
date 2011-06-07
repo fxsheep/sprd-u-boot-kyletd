@@ -52,7 +52,7 @@ extern void udc_power_off(void);
 #define CALIBERATE_HEAD 0x7e
 #define CALIBERATE_COMMOND_T 0xfe
 
-#define CALIBERATE_DETECT_MS 3000
+#define CALIBERATE_DETECT_MS 20 
 
 unsigned int caliberate_mode = 0; 
 
@@ -76,7 +76,7 @@ int is_timeout(int key)
 {
     static int count_ms = CALIBERATE_DETECT_MS * 1000;
     if(!key){
-        if(!power_button_pressed())
+        if(!power_button_pressed() || charger_connected())
           return 2;
     }
 
