@@ -13,6 +13,7 @@ unsigned check_reboot_mode(void)
     unsigned rst_mode= 0;
     rst_mode = ANA_REG_GET(ANA_HWRST_STATUS);
     rst_mode &= HWRST_STATUS_POWERON_MASK;
+    ANA_REG_SET(ANA_HWRST_STATUS, 0); //clear flag
     if(rst_mode == HWRST_STATUS_RECOVERY)
       return RECOVERY_MODE;
     else if(rst_mode == HWRST_STATUS_FASTBOOT)
