@@ -34,6 +34,11 @@ static unsigned int nand_write_addr;
 static unsigned int cur_write_pos;
 static unsigned int is_system_write;
 
+#define BLOCK_DATA_OOB		((2048 + 64) * 64)
+static unsigned char backupblk[BLOCK_DATA_OOB];
+static unsigned long backupblk_len = 0;
+static unsigned long backupblk_flag = 0;
+
 int nand_flash_init(void)
 {
 	nand_init();
@@ -90,8 +95,6 @@ int nand_erase_partition(unsigned int addr, unsigned int size)
 	}else 
 	  	return NAND_INVALID_ADDR;
 
-
-	//printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
 	cur_partition.offset = addr;
 	cur_partition.size = 0;
 	parse_cmdline_partitions(&cur_partition, (unsigned long long)nand->size);
@@ -146,7 +149,6 @@ int nand_check_data(unsigned int addr, unsigned int size)
 	
 
 	for (pos = addr; pos < (addr + size); pos += nand->writesize) {
-		//printf("pos = 0x%08x\n", pos);
 		ops.mode = MTD_OOB_AUTO;
 		ops.len = nand->writesize;
 		ops.datbuf = (uint8_t *)buffer;
@@ -155,23 +157,6 @@ int nand_check_data(unsigned int addr, unsigned int size)
 		ops.ooboffs = 0;
 		memset(buffer, 0x5a, 4096);
 		ret = nand_do_read_ops(nand, (unsigned long long)pos, &ops);
-		/*if ((pos) == 0x39d4000) {
-			printf("1 ret = %d\n", ret);
-			printf("\n\nread data :\n");
-			for (aaa = 0; aaa < 2048; aaa ++) {
-				if ((aaa % 16) == 0)
-					printf("\n");
-				printf(" %02x", buffer[aaa]);
-			}
-			printf("\n\nread oob :\n");
-			for (aaa = 0; aaa < 64; aaa ++) {
-				if ((aaa % 16) == 0)
-					printf("\n");
-				printf(" %02x", buffer[2048 + aaa]);
-			}
-			printf("\n\n");
-		}*/
-
 		if (ret < 0) {
 			printf("read data error\n");
 			return -1;
@@ -290,22 +275,6 @@ int check_write_read_block(struct mtd_info *nand, unsigned int addr, unsigned in
 			ops.oobbuf = (uint8_t *)buffer + nand->writesize;
 			ops.ooblen = sizeof(yaffs_PackedTags2);
 			ops.ooboffs = 0;
-			/*if ((pos) == 0x39d4000) {
-				printf("1 ret = %d\n", ret);
-				printf("\n\nread data :\n");
-				for (aaa = 0; aaa < 2048; aaa ++) {
-					if ((aaa % 16) == 0)
-						printf("\n");
-					printf(" %02x", buffer[aaa]);
-				}
-				printf("\n\nread oob :\n");
-				for (aaa = 0; aaa < 64; aaa ++) {
-					if ((aaa % 16) == 0)
-						printf("\n");
-					printf(" %02x", buffer[2048 + aaa]);
-				}
-				printf("\n\n");
-			}*/
 			ret = nand_do_write_ops(nand, (unsigned long long)pos, &ops);
 			if (0 != ret)
 				return -1;
@@ -444,7 +413,100 @@ int nand_erase_check_write_partition(unsigned int addr, unsigned int size)
 
 }
 
+int move2goodblk(struct mtd_info *nand, int yaffs_flag)
+{
+	int pageno, size, pageall, ret;
+	unsigned char buffer[2048 + 64];
 
+write2nextblk:
+	printf("old write address : 0x%08x\n", cur_write_pos);
+	cur_write_pos = (cur_write_pos + nand->erasesize) & (~(nand->erasesize - 1));
+	printf("new write address : 0x%08x\n", cur_write_pos);
+	//find a good block to write 
+	while(!(cur_write_pos & (nand->erasesize-1))) {
+		if (nand_block_isbad(nand, cur_write_pos&(~(nand->erasesize - 1)))) {
+			printf("%s skip bad block 0x%x\n", __FUNCTION__, cur_write_pos&(~(nand->erasesize - 1)));
+			cur_write_pos = (cur_write_pos + nand->erasesize)&(~(nand->erasesize - 1));
+		} else
+			break;
+	}
+	
+	if (!yaffs_flag) {
+		size = nand->writesize;
+		pageall = backupblk_len / nand->writesize;
+		for (pageno = 0; pageno < pageall; pageno ++) {
+			memset(buffer, 0xff, (2048 + 64));
+			memcpy(buffer, backupblk + pageno * size, size);
+			ret = nand_write_skip_bad(nand, cur_write_pos, &size, buffer);
+			if (0 == ret) {
+				//////////////////////
+				struct mtd_oob_ops ops;
+				ops.mode = MTD_OOB_AUTO;
+				ops.len = nand->writesize;
+				ops.datbuf = (uint8_t *)buffer;
+				ops.oobbuf = (uint8_t *)buffer + nand->writesize; 
+				ops.ooblen = 64; 
+				ops.ooboffs = 0;
+				memset(buffer, 0x0, 2048 + 64);
+				ret = nand_do_read_ops(nand,(unsigned long long)(cur_write_pos),&ops);
+				if (ret < 0) {
+					printf("read error, mark bad block : 0x%08x\n", cur_write_pos);
+					nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
+					printf("find next good block to write again\n");
+					goto write2nextblk;
+				}
+				//////////////////////
+				cur_write_pos += nand->writesize;
+			} else {
+				printf("write error, mark bad block : 0x%08x\n", cur_write_pos);
+				nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
+				printf("find next good block to write again\n");
+				goto write2nextblk;
+			}
+		} //for (pageno = 0; pageno < pageall; pageno ++)
+	} else {//if (!yaffs_flag)
+		struct mtd_oob_ops ops;
+		size = nand->writesize + nand->oobsize;
+		pageall = backupblk_len / size;
+		for (pageno = 0; pageno < pageall; pageno ++) {
+			memset(buffer, 0xff, size);
+			memcpy(buffer, backupblk + pageno * size, size);
+			ops.mode = MTD_OOB_AUTO;
+			ops.len = nand->writesize;
+			ops.datbuf = (uint8_t *)buffer;
+			ops.oobbuf = (uint8_t *)buffer + nand->writesize;
+			ops.ooblen = sizeof(yaffs_PackedTags2);
+			ops.ooboffs = 0;
+			ret = nand_do_write_ops(nand, (unsigned long long)cur_write_pos, &ops);
+			if (0 == ret) {
+				//////////////////////
+				ops.mode = MTD_OOB_AUTO;
+				ops.len = nand->writesize;
+				ops.datbuf = (uint8_t *)buffer;
+				ops.oobbuf = (uint8_t *)buffer + nand->writesize; 
+				ops.ooblen = 64; 
+				ops.ooboffs = 0;
+				memset(buffer, 0x0, 2048 + 64);
+				ret = nand_do_read_ops(nand,(unsigned long long)(cur_write_pos),&ops);
+				if (ret < 0) {
+					printf("read error, mark bad block : 0x%08x\n", cur_write_pos);
+					nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
+					printf("find next good block to write again\n");
+					goto write2nextblk;
+				}
+				//////////////////////
+				cur_write_pos += nand->writesize;
+			} else {
+				printf("write error, mark bad block : 0x%08x\n", cur_write_pos);
+				nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
+				printf("find next good block to write again\n");
+				goto write2nextblk;
+			}
+		} //for (pageno = 0; pageno < pageall; pageno ++)
+	}
+
+	return 0;
+}
 
 int nand_erase_fdl(unsigned int addr, unsigned int size)
 {
@@ -505,6 +567,10 @@ int nand_start_write(unsigned int addr, unsigned int size)
 	printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
 #endif
 	
+	memset(backupblk, 0xff, BLOCK_DATA_OOB);
+	backupblk_len = 0;
+	backupblk_flag = 0;
+
 	nand_write_addr = addr;
 	cur_write_pos = addr;
 	nand_write_size = size;
@@ -586,23 +652,46 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 				buf[pos] = 0xff;
 		  	size = nand->writesize;	
 		} else if(size > nand->writesize)	
-		  	return NAND_INVALID_SIZE;
+		  		return NAND_INVALID_SIZE;
 #ifdef FDL2_DEBUG
 		printf("function: %s erase done, now to write it\n", __FUNCTION__);
 #endif
+		/* backup */
+		memcpy(backupblk + backupblk_len, buf, size);
+		backupblk_len += size;
+		if (backupblk_len >= (128 * 1024))
+			backupblk_flag = 1; /* full */
+		else
+			backupblk_flag = 0;
+		
+
 		ret = nand_write_skip_bad(nand, cur_write_pos, &size, buf);
-		if(0 == ret){
+
+#if 0
+		/* fcj test */
+		if (cur_write_pos == (0x00bc0000 - 0x800))
+			ret = -1;
+#endif
+
+
+		if (0 == ret) {
 			cur_write_pos += nand->writesize;
-		}else{
+		} else {
+			printf("\nwrite error, mark bad block : 0x%08x\n", cur_write_pos);
 			nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
-			return NAND_SYSTEM_ERROR;
+			printf("find new good partition to move and write data again\n");
+			move2goodblk(nand,is_system_write);
+			printf("move and write end. new write pos : 0x%08x\n", cur_write_pos);
+			ret = 0;
+			/* all success not failed */
+			//return NAND_SYSTEM_ERROR;
 		}
 	}else{ // system write 
 #ifdef FDL2_DEBUG
 		printf("function: %s system write cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
 #endif
 		if(size != (nand->writesize + nand->oobsize))
-		  return NAND_INVALID_SIZE;
+		  	return NAND_INVALID_SIZE;
 
 		struct nand_chip *chip = nand->priv;
 
@@ -616,20 +705,37 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 #ifdef FDL2_DEBUG
 		printf("function: %s system write start to write\n", __FUNCTION__);
 #endif
+
+		/* backup */
+		memcpy(backupblk + backupblk_len, buf, size);
+		backupblk_len += size;
+		if (backupblk_len >= BLOCK_DATA_OOB)
+			backupblk_flag = 1; /* full */
+		else
+			backupblk_flag = 0;
+		
 		ret = nand_do_write_ops(nand, (unsigned long long)cur_write_pos, &(chip->ops));
-		if(0==ret){
-#ifdef FDL2_DEBUG
-			printf("function: %s system write write complete\n", __FUNCTION__);
+#if 0
+		/* fcj test */
+		if ((cur_write_pos == (0x02bc0000 - 0x800)) || (cur_write_pos == (0x0bfc0000 - 0x800)))
+			ret = -1;
 #endif
+		if (0 == ret) {
 			cur_write_pos += nand->writesize;
-		}else{
+		} else {
+			printf("\nwrite error, mark bad block : 0x%08x\n", cur_write_pos);
 			nand->block_markbad(nand, cur_write_pos&~(nand->erasesize - 1));
-			return NAND_SYSTEM_ERROR;
+			printf("find new good partition to move and write data again\n");
+			move2goodblk(nand, is_system_write);
+			printf("move and write end. new write pos : 0x%08x\n", cur_write_pos);
+			ret = 0;
+			/* all success not failed */
+			//return NAND_SYSTEM_ERROR;
 		}
 	}
-	if(ret == 0){
+	
+	if(ret == 0) {
 		struct mtd_oob_ops ops;
-		uint8_t buf_tmp[2] = { 0, 0 };
 		ops.mode = MTD_OOB_AUTO;
 		ops.len = nand->writesize;
 		ops.datbuf = (uint8_t *)buffer;
@@ -638,16 +744,27 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		ops.ooboffs = 0;
 		memset(buffer, 0x0, 4096);
 		ret = nand_do_read_ops(nand,(unsigned long long)(cur_write_pos-nand->writesize),&ops);
-		if(ret < 0){
-			ret = nand->block_markbad(nand, cur_write_pos & ~(nand->erasesize - 1));
-			if (ret) {
-				printf("block 0x%08lx NOT marked as bad! \n",cur_write_pos);
-			}
-			return NAND_SYSTEM_ERROR;
-		}	
+		if (ret < 0) {
+			cur_write_pos -= nand->writesize;
+			printf("\nread error, mark bad block : 0x%08x\n", cur_write_pos);
+			nand->block_markbad(nand, cur_write_pos & ~(nand->erasesize - 1));
+			printf("find new good partition to move and write data again, then read data\n");
+			move2goodblk(nand, is_system_write);
+			printf("move and write and read end. new write pos : 0x%08x\n", cur_write_pos);
+			/* can not cur_write_pos + nand->writesize */
+			//return NAND_SYSTEM_ERROR;
+		}
+
+		if (backupblk_flag) {
+			memset(backupblk, 0xff, BLOCK_DATA_OOB);
+			backupblk_len = 0;
+			backupblk_flag = 0;
+		}
+
 		return NAND_SUCCESS;
 	} else
-	  return NAND_SYSTEM_ERROR;
+		/* can not run here */
+		return NAND_SYSTEM_ERROR;
 }
 int nand_end_write(void)
 {
@@ -657,6 +774,10 @@ int nand_end_write(void)
 	nand_write_addr = NULL;
 	nand_write_size = 0;
 	cur_write_pos = NULL;
+
+	memset(backupblk, 0xff, BLOCK_DATA_OOB);
+	backupblk_len = 0;
+	backupblk_flag = 0;
 	return NAND_SUCCESS;
 }
 int nand_read_fdl(unsigned int addr, unsigned int off, unsigned int size, unsigned char *buf)

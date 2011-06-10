@@ -384,6 +384,7 @@ static int nand_default_block_markbad(struct mtd_info *mtd, loff_t ofs)
 	struct nand_chip *chip = mtd->priv;
 	uint8_t buf[2] = { 0, 0 };
 	int block, ret;
+	mtd_oob_mode_t sprd_mode;
 
 	/* Get block number */
 	block = (int)(ofs >> chip->bbt_erase_shift);
@@ -404,7 +405,16 @@ static int nand_default_block_markbad(struct mtd_info *mtd, loff_t ofs)
 		chip->ops.oobbuf = buf;
 		chip->ops.ooboffs = chip->badblockpos & ~0x01;
 
+#if 1
+		sprd_mode = chip->ops.mode;
+		if (chip->ops.mode == MTD_OOB_AUTO)
+			chip->ops.mode = MTD_OOB_RAW;
+#endif
+			
 		ret = nand_do_write_oob(mtd, ofs, &chip->ops);
+#if 1
+		chip->ops.mode = sprd_mode;
+#endif
 		nand_release_device(mtd);
 	}
 	if (!ret)
