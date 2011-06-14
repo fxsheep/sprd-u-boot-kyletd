@@ -95,7 +95,7 @@ static int isMounted = 0;
 
 #define SPRD_MOUNT_PARTITION	1
 #ifdef  SPRD_MOUNT_PARTITION
-#define MOUNT_POINT1 "/fixnv"
+#define MOUNT_POINT1 "/backupfixnv"
 #define MOUNT_POINT2 "/runtimenv"
 #endif
 
@@ -176,20 +176,20 @@ int yaffs_StartUp(void)
 
 	yaffs_Device *flashDev = calloc(1, sizeof(yaffs_Device));
 #ifdef  SPRD_MOUNT_PARTITION
-	yaffs_Device *fixnvDev = calloc(1, sizeof(yaffs_Device));
+	yaffs_Device *backupfixnvDev = calloc(1, sizeof(yaffs_Device));
 	yaffs_Device *runtimenvDev = calloc(1, sizeof(yaffs_Device));
 #endif
 
 	yaffsfs_config[0].dev = flashDev;
 #ifdef  SPRD_MOUNT_PARTITION
-	yaffsfs_config[1].dev = fixnvDev;
+	yaffsfs_config[1].dev = backupfixnvDev;
 	yaffsfs_config[2].dev = runtimenvDev;
 #endif
 
 	/* store the mtd device for later use */
 	flashDev->genericDevice = mtd;
 #ifdef  SPRD_MOUNT_PARTITION
-	fixnvDev->genericDevice = mtd;
+	backupfixnvDev->genericDevice = mtd;
 	runtimenvDev->genericDevice = mtd;
 #endif
 
@@ -282,48 +282,63 @@ int yaffs_StartUp(void)
 	flashDev->initialiseNAND = nandmtd_InitialiseNAND;
 
 #ifdef  SPRD_MOUNT_PARTITION
-	// /fixnv
-	fixnvDev->nReservedBlocks = 5;
-	fixnvDev->nShortOpCaches = 4; // Use caches
-	fixnvDev->useNANDECC = 1; // use YAFFS's ECC    FCJTEST
+	// /backupfixnv
+	backupfixnvDev->nReservedBlocks = 5;
+	backupfixnvDev->nShortOpCaches = 10; // Use caches
+	backupfixnvDev->useNANDECC = 1; // use YAFFS's ECC
+
+	backupfixnvDev->skipCheckpointRead = 1;
+	backupfixnvDev->skipCheckpointWrite = 1;
+
 	if (yaffsVersion == 2)
 	{
-		fixnvDev->writeChunkWithTagsToNAND = nandmtd2_WriteChunkWithTagsToNAND;
-		fixnvDev->readChunkWithTagsFromNAND = nandmtd2_ReadChunkWithTagsFromNAND;
-		fixnvDev->markNANDBlockBad = nandmtd2_MarkNANDBlockBad;
-		fixnvDev->queryNANDBlock = nandmtd2_QueryNANDBlock;
-		fixnvDev->spareBuffer = YMALLOC(mtd->oobsize);
-		fixnvDev->isYaffs2 = 1;
+		backupfixnvDev->writeChunkWithTagsToNAND = nandmtd2_WriteChunkWithTagsToNAND;
+		backupfixnvDev->readChunkWithTagsFromNAND = nandmtd2_ReadChunkWithTagsFromNAND;
+		backupfixnvDev->markNANDBlockBad = nandmtd2_MarkNANDBlockBad;
+		backupfixnvDev->queryNANDBlock = nandmtd2_QueryNANDBlock;
+		backupfixnvDev->spareBuffer = YMALLOC(mtd->oobsize);
+		backupfixnvDev->isYaffs2 = 1;
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17))
-		fixnvDev->nDataBytesPerChunk = mtd->writesize;
-		fixnvDev->nChunksPerBlock = mtd->erasesize / mtd->writesize;
+		backupfixnvDev->nDataBytesPerChunk = mtd->writesize;
+		backupfixnvDev->nChunksPerBlock = mtd->erasesize / mtd->writesize;
 #else
-		fixnvDev->nDataBytesPerChunk = mtd->oobblock;
-		fixnvDev->nChunksPerBlock = mtd->erasesize / mtd->oobblock;
+		backupfixnvDev->nDataBytesPerChunk = mtd->oobblock;
+		backupfixnvDev->nChunksPerBlock = mtd->erasesize / mtd->oobblock;
 #endif
 		nBlocks = mtd->size / mtd->erasesize;
-		//printf("nBlocks = %d\n", nBlocks);
+		//printf("size = 0x%016Lx  erasesize = 0x%016Lx  nBlocks = %d\n", (unsigned long long)mtd->size, (unsigned long long)mtd->erasesize, nBlocks);
 
-		//fixnvDev->nCheckpointReservedBlocks = 10;
-		fixnvDev->startBlock = 157;
-		fixnvDev->endBlock = fixnvDev->startBlock + 10  - 1;	
-		//printf("\n\nfixnv device from %d to %d\n\n", fixnvDev->startBlock, fixnvDev->endBlock);
+		backupfixnvDev->nCheckpointReservedBlocks = 0;
+		
+		memset(&cur_partition, 0 , sizeof(struct mtd_partition));
+		memset(partname, 0, 255);
+		strcpy(partname, MOUNT_POINT1);
+		cur_partition.name = (char *)(partname + 1); /* skip '/' charater */
+		cur_partition.offset = 0xffffffff;
+		parse_cmdline_partitions(&cur_partition, (unsigned long long)mtd->size);
+		//printf("offset = 0x%08x  size = 0x%08x\n", cur_partition.offset, cur_partition.size);
+		backupfixnvDev->startBlock = cur_partition.offset / mtd->erasesize;
+		backupfixnvDev->endBlock = backupfixnvDev->startBlock + cur_partition.size / mtd->erasesize  - 1;
+		//printf("\nbackupfixnv device from %d to %d\n", backupfixnvDev->startBlock, backupfixnvDev->endBlock);
 	}
 	else
 	{
-		fixnvDev->writeChunkToNAND = nandmtd_WriteChunkToNAND;
-		fixnvDev->readChunkFromNAND = nandmtd_ReadChunkFromNAND;
-		fixnvDev->isYaffs2 = 0;
+		backupfixnvDev->writeChunkToNAND = nandmtd_WriteChunkToNAND;
+		backupfixnvDev->readChunkFromNAND = nandmtd_ReadChunkFromNAND;
+		backupfixnvDev->isYaffs2 = 0;
 		nBlocks = mtd->size / (YAFFS_CHUNKS_PER_BLOCK * YAFFS_BYTES_PER_CHUNK);
-		fixnvDev->startBlock = 320;
-		fixnvDev->endBlock = nBlocks - 1;
-		fixnvDev->nChunksPerBlock = YAFFS_CHUNKS_PER_BLOCK;
-		fixnvDev->nDataBytesPerChunk = YAFFS_BYTES_PER_CHUNK;
+		backupfixnvDev->startBlock = 320;
+		backupfixnvDev->endBlock = nBlocks - 1;
+		backupfixnvDev->nChunksPerBlock = YAFFS_CHUNKS_PER_BLOCK;
+		backupfixnvDev->nDataBytesPerChunk = YAFFS_BYTES_PER_CHUNK;
 	}
 
 	/* ... and common functions */
-	fixnvDev->eraseBlockInNAND = nandmtd_EraseBlockInNAND;
-	fixnvDev->initialiseNAND = nandmtd_InitialiseNAND;
+	backupfixnvDev->eraseBlockInNAND = nandmtd_EraseBlockInNAND;
+	backupfixnvDev->initialiseNAND = nandmtd_InitialiseNAND;
+
+	//yaffs_dump_dev(backupfixnvDev);
+
 
 	// /runtimenv
 	runtimenvDev->nReservedBlocks = 5;

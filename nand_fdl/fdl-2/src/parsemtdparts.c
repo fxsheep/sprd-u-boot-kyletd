@@ -346,6 +346,10 @@ int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long m
 	for (i = current_part; i < MTDPARTITION_MAX; i ++) {
 		if (realpart[i].offset == current->offset) {
 			current->size = realpart[i].size;
+			if (current->offset == 0x01a60000) {
+				/* erase fixnv and backupfixnv */
+				current->size += realpart[i + 1].size;
+			}
 			return 0;
 		}
 	}
