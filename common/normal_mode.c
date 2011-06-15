@@ -182,6 +182,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	///////////////////////////////////////////////////////////////////////
 	/* FIXNV_PART */
 	printf("Reading fixnv to 0x%08x\n", FIXNV_ADR);
+	memset((unsigned char *)DSP_ADR, 0xff, FIXNV_SIZE + 4);
+	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 #if 0
 	/* mtd nv */
 	ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);

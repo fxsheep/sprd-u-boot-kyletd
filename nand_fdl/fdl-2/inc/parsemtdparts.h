@@ -8,14 +8,6 @@ struct mtd_partition {
 	unsigned long mask_flags;		/* master MTD flags to mask out for this partition */
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long mastersize);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* FDL_NAND_H */

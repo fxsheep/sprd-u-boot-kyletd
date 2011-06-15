@@ -49,7 +49,7 @@ static unsigned int simple_guess_base(const char *cp)
 	}
 }
 
-unsigned long long memparse(const char *ptr, char **retptr)
+static unsigned long long memparse(const char *ptr, char **retptr)
 {
 	char *endptr;	/* local pointer to end of parsed string */
 	unsigned long long ret = simple_strtoull(ptr, &endptr, 0);

@@ -612,7 +612,7 @@ int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 int nand_write_fdl(unsigned int size, unsigned char *buf)
 {
 #ifdef FDL2_DEBUG
-	printf("function: %s\n", __FUNCTION__);
+	printf("function: %s   %d\n", __FUNCTION__, __LINE__);
 #endif
 	struct mtd_info *nand;
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
@@ -621,8 +621,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 	int ret=0;
 	int pos;
 	unsigned char buffer[4096];
-	int aaa;
-
+	
 	//find a good block to write 
 	while(!(cur_write_pos & (nand->erasesize-1))) {
 #ifdef FDL2_DEBUG
@@ -641,11 +640,11 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 			break;
 		}
 	}
-
 	if(!is_system_write){
 #ifdef FDL2_DEBUG
 		printf("function: %s cur_write_pos: 0x%x size: 0x%x\n", __FUNCTION__, cur_write_pos, size);
 #endif
+		//printf("cur_write_pos: 0x%x size: 0x%x\n", cur_write_pos, size);
 		if(size < nand->writesize) {
 			/* set 0xff from buf[size -- writesize] for fixnv and runtimenv */
 			for (pos = size; pos < nand->writesize; pos ++)
@@ -664,7 +663,6 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		else
 			backupblk_flag = 0;
 		
-
 		ret = nand_write_skip_bad(nand, cur_write_pos, &size, buf);
 
 #if 0
@@ -672,7 +670,6 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		if (cur_write_pos == (0x00bc0000 - 0x800))
 			ret = -1;
 #endif
-
 
 		if (0 == ret) {
 			cur_write_pos += nand->writesize;
@@ -733,7 +730,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 			//return NAND_SYSTEM_ERROR;
 		}
 	}
-	
+
 	if(ret == 0) {
 		struct mtd_oob_ops ops;
 		ops.mode = MTD_OOB_AUTO;
@@ -762,9 +759,10 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		}
 
 		return NAND_SUCCESS;
-	} else
+	} else {
 		/* can not run here */
 		return NAND_SYSTEM_ERROR;
+		}
 }
 int nand_end_write(void)
 {
@@ -782,9 +780,63 @@ int nand_end_write(void)
 }
 int nand_read_fdl(unsigned int addr, unsigned int off, unsigned int size, unsigned char *buf)
 {
-	printf("function: %s\n", __FUNCTION__);
+	struct mtd_info *nand;
+	int ret=0;
+	int pos;
+	unsigned char buffer[64];
+
+	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
+	  	return NAND_SYSTEM_ERROR;
+	nand = &nand_info[nand_curr_device];
+
+	if(addr & (nand->erasesize - 1))
+	  	return NAND_INVALID_ADDR;
+
+	if((addr & SYSTEM_WRITE_MASK)==SYSTEM_WRITE_MASK){
+		addr &= ~SYSTEM_WRITE_MASK;
+		is_system_write = 1;
+	}else if((addr & ADDR_MASK)==ADDR_MASK){
+		addr &= ~ADDR_MASK;
+		is_system_write = 0;
+	}else 
+	  	return NAND_INVALID_ADDR;
+	//printf("addr = 0x%08x  size = %d  off = %d\n", addr, size, off);
+	while (!(addr & (nand->erasesize - 1))) {
+		if (nand_block_isbad(nand, addr & (~(nand->erasesize - 1)))) {
+			printf("skip bad block 0x%x\n", addr & (~(nand->erasesize - 1)));
+			addr = (addr + nand->erasesize)&(~(nand->erasesize - 1));
+		} else {
+			//printf("good block 0x%x\n", addr & (~(nand->erasesize - 1)));
+			break;
+		}
+	}
+
+	if(!is_system_write){
+		/* for fixnv, read total 64KB */
+		if (size != nand->writesize)	
+		  	return NAND_INVALID_SIZE;
+	
+		struct mtd_oob_ops ops;
+		ops.mode = MTD_OOB_AUTO;
+		ops.len = nand->writesize;
+		ops.datbuf = (uint8_t *)buf;
+		ops.oobbuf = (uint8_t *)buffer; 
+		ops.ooblen = 64; 
+		ops.ooboffs = 0;
+		memset(buffer, 0xff, 64);
+		memset(buf, 0xff, size);
+		ret = nand_do_read_ops(nand,(unsigned long long)(addr + off), &ops);
+		if (ret < 0) {
+			printf("\nread error, mark bad block : 0x%08x\n", addr);
+			nand->block_markbad(nand, addr & ~(nand->erasesize - 1));
+			return NAND_SYSTEM_ERROR;
+		}
+	}
+	
+	return NAND_SUCCESS;
 }
 int nand_read_NBL(void *buf)
 {
 	printf("function: %s\n", __FUNCTION__);
+	return NAND_SUCCESS;
 }

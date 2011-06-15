@@ -315,7 +315,7 @@ int yaffs_StartUp(void)
 		strcpy(partname, MOUNT_POINT1);
 		cur_partition.name = (char *)(partname + 1); /* skip '/' charater */
 		cur_partition.offset = 0xffffffff;
-		parse_cmdline_partitions(&cur_partition, (unsigned long long)mtd->size);
+		yaffs_parse_cmdline_partitions(&cur_partition, (unsigned long long)mtd->size);
 		//printf("offset = 0x%08x  size = 0x%08x\n", cur_partition.offset, cur_partition.size);
 		backupfixnvDev->startBlock = cur_partition.offset / mtd->erasesize;
 		backupfixnvDev->endBlock = backupfixnvDev->startBlock + cur_partition.size / mtd->erasesize  - 1;
@@ -373,7 +373,7 @@ int yaffs_StartUp(void)
 		strcpy(partname, MOUNT_POINT2);
 		cur_partition.name = (char *)(partname + 1); /* skip '/' charater */
 		cur_partition.offset = 0xffffffff;
-		parse_cmdline_partitions(&cur_partition, (unsigned long long)mtd->size);
+		yaffs_parse_cmdline_partitions(&cur_partition, (unsigned long long)mtd->size);
 		//printf("offset = 0x%08x  size = 0x%08x\n", cur_partition.offset, cur_partition.size);
 		runtimenvDev->startBlock = cur_partition.offset / mtd->erasesize;
 		runtimenvDev->endBlock = runtimenvDev->startBlock + cur_partition.size / mtd->erasesize  - 1;

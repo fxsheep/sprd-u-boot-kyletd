@@ -53,6 +53,7 @@ FDL2_OBJS = $(FDL2_COBJS) $(FDL2_SOBJS)
 MTD_LIB = $(TOPDIR)/drivers/mtd/libmtd.o 
 #ARM_LIB = $(TOPDIR)/arch/arm/lib/libarm.a
 NAND_LIB = $(TOPDIR)/drivers/mtd/nand/libnand.o
+YAFFS2_LIB = $(TOPDIR)/fs/yaffs2/libyaffs2.o
 COMMON_OBJ = dlmalloc.o 
 COMMON_LIB = $(addprefix $(TOPDIR)/common/,$(COMMON_OBJ))
 DRIVERS_LIB = $(TOPDIR)/drivers/serial/serial_sc8800x.o
@@ -60,7 +61,7 @@ ARCH_LIB =
 CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_cfg.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/boot_mode.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_hal.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/adi_drv.o
 
 GENERIC_LIB = $(TOPDIR)/lib/libgeneric.o
-UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB) $(ARCH_LIB)
+UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(YAFFS2_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB) $(ARCH_LIB)
 
 #ALL_UBOOT_LIBS = $(addprefix $(obj),$(__LIBS))
 #UBOOT_LIBS = $(ALL_UBOOT_LIBS)

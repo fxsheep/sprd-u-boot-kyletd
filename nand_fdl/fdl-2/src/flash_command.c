@@ -6,14 +6,32 @@
 #include "fdl_crc.h"
 #include "fdl_stdio.h"
 
+
+#if 1
+#include "asm/arch/sci_types.h"
+#include "asm/arch/nand_controller.h"
+#include <linux/mtd/mtd.h>
+#include <nand.h>
+#include <linux/mtd/nand.h>
+#include <jffs2/jffs2.h>
+
+extern void cmd_yaffs_mount(char *mp);
+extern void cmd_yaffs_umount(char *mp);
+extern int cmd_yaffs_ls_chk(const char *dirfilename);
+extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
+extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
+
+#define FIXNV_SIZE	(64 * 1024)
+#endif
+
 typedef struct _DL_FILE_STATUS
 {
     unsigned long   total_size;
     unsigned long   recv_size;
 } DL_FILE_STATUS, *PDL_FILE_STATUS;
-unsigned long g_checksum;
+static unsigned long g_checksum;
 static unsigned long g_sram_addr;
-__align(4) unsigned char g_fixnv_buf[0x10000];
+__align(4) unsigned char g_fixnv_buf[FIXNV_SIZE + 4];
 
 #define CHECKSUM_OTHER_DATA       0x5555aaaa
 static DL_FILE_STATUS g_status;
@@ -51,8 +69,10 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
     start_addr = EndianConv_32 (start_addr);
     size = EndianConv_32 (size);
 #endif
+
     if (packet->packet_body.size == 12)
     {
+	memset(g_fixnv_buf, 0xff, FIXNV_SIZE + 4);
         g_checksum = * (data+2);
         g_sram_addr = (unsigned long) g_fixnv_buf;
     }
@@ -60,7 +80,6 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
     {
         g_checksum = CHECKSUM_OTHER_DATA;
     }
-
     if (0 == (g_checksum & 0xffffff))
     {
         //The fixnv checksum is error.
@@ -74,9 +93,7 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
         ret = nand_start_write (start_addr, size);
 
         if (NAND_SUCCESS != ret)
-        {
             break;
-        }
 
 	is_nbl_write = 0;
 	if((start_addr & ADDR_MASK) == ADDR_MASK) {
@@ -203,7 +220,6 @@ int NandWriteAndCheck(unsigned int size, unsigned char *buf)
     {
         return NAND_SUCCESS;
     }
-
     NandChangeBootloaderHeader((unsigned int *) g_FixNBLBuf);
 	/*printf("\n\n");	
 	for (aaa = 32; aaa <= 55; aaa ++)
@@ -225,7 +241,7 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
     }
 
     size = packet->packet_body.size;
-
+	//printf("size = %d  recv_size = %d   total_size = %d\n", size, g_status.recv_size, g_status.total_size);
     if ( (g_status.recv_size + size) > g_status.total_size)
     {
         g_prevstatus = NAND_INVALID_SIZE;
@@ -257,80 +273,85 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
     }
     else //It's fixnv data. We should backup it.
     {
-        memcpy ( (unsigned char *) g_sram_addr, (char *) (packet->packet_body.content), size); /*lint !e718*/
-        g_sram_addr+=size;
+        memcpy ( (unsigned char *) g_sram_addr, (char *) (packet->packet_body.content), size);
+        g_sram_addr += size;
+	g_status.recv_size += size;
         FDL_SendAckPacket (BSL_REP_ACK);
         return 1;
-
     }
-
 }
 
 int FDL2_DataEnd (PACKET_T *packet, void *arg)
 {
-    unsigned long pos, size;
-    unsigned long i, fix_nv_size, fix_nv_checksum;
-
-    if (CHECKSUM_OTHER_DATA != g_checksum)
-    {
-        fix_nv_size = g_sram_addr - (unsigned long) g_fixnv_buf;
-
-        fix_nv_checksum = Get_CheckSum ( (unsigned char *) g_fixnv_buf, fix_nv_size);
-
-        fix_nv_checksum = EndianConv_32 (fix_nv_checksum);
-
-        if (fix_nv_checksum != g_checksum)
-        {
-
-            SEND_ERROR_RSP (BSL_CHECKSUM_DIFF); /*lint !e527*/
-        }
-
-        for (i=0; i<3; i++)
-        {
-            if (nand_write_fdl (fix_nv_size, g_fixnv_buf) == NAND_SUCCESS)
-            {
-                //Double check the flash nv area is correct. If it is Nand, we needn't do this.
-                g_prevstatus = NAND_SUCCESS;
-                break;
-            }
-        }
-
-        if (i==3)
-        {
-            //Write error happened
-            SEND_ERROR_RSP (BSL_WRITE_ERROR); /*lint !e527*/
-        }
-    } else if (is_nbl_write == 1) {
-	   /* write the spl loader image to the nand*/
-	for (i = 0; i < 3; i++)
-        {
-		for (pos = 0; pos < ((g_NBLFixBufDataSize / 2048) * 2048); pos += 2048) {
-#if 0
-			if ((g_NBLFixBufDataSize - pos) >= 2048)
+	unsigned long pos, size, ret;
+    	unsigned long i, fix_nv_size, fix_nv_checksum;
+	
+    	if (CHECKSUM_OTHER_DATA != g_checksum) {
+		/* It's fixnv data */
+        	fix_nv_size = g_sram_addr - (unsigned long) g_fixnv_buf;
+        	fix_nv_checksum = Get_CheckSum ( (unsigned char *) g_fixnv_buf, fix_nv_size);
+        	fix_nv_checksum = EndianConv_32 (fix_nv_checksum);
+        	if (fix_nv_checksum != g_checksum)
+            		SEND_ERROR_RSP(BSL_CHECKSUM_DIFF);
+		
+		//////////////////////////////
+		pos = 0;
+		while (pos < fix_nv_size) {
+			if ((fix_nv_size - pos) >= 2048)
 				size = 2048;
 			else
-				size = g_NBLFixBufDataSize - pos;
-#else
-			size = 2048;
-#endif
-			//printf("pos = 0x%08x  size = 0x%08x\n", pos, size);
-            		if (nand_write_fdl (size, g_FixNBLBuf + pos) == NAND_SUCCESS) {
+				size = fix_nv_size - pos;
+			//printf("pos = %d  size = %d\n", pos, size);
+			if (size == 0)
+				break;
+			if (nand_write_fdl (size, g_fixnv_buf + pos) == NAND_SUCCESS)
                 		g_prevstatus = NAND_SUCCESS;
-            		}
+			pos += size;
 		}
-        }
-	is_nbl_write = 0;
-    }
+		
+#if 1
+		/* write fixnv to yaffs2 format */
+		char *backupfixnvpoint = "/backupfixnv";
+		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
 
-    if (NAND_SUCCESS != g_prevstatus)
-    {
-        FDL2_SendRep (g_prevstatus);
-        return 0;
-    }
+		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
+		g_fixnv_buf[FIXNV_SIZE + 0] = g_fixnv_buf[FIXNV_SIZE + 1] = 0x5a;
+		g_fixnv_buf[FIXNV_SIZE + 2] = g_fixnv_buf[FIXNV_SIZE + 3] = 0x5a;
+		cmd_yaffs_mount(backupfixnvpoint);
+    		cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
+		ret = cmd_yaffs_ls_chk(backupfixnvfilename);
+		cmd_yaffs_umount(backupfixnvpoint);	
+#endif
+		//////////////////////////////
+    	} else if (is_nbl_write == 1) {
+	   	/* write the spl loader image to the nand*/
+		for (i = 0; i < 3; i++) {
+			pos = 0;
+			while (pos < g_NBLFixBufDataSize) {
+				if ((g_NBLFixBufDataSize - pos) >= 2048)
+					size = 2048;
+				else
+					size = g_NBLFixBufDataSize - pos;
+				//printf("pos = %d  size = %d\n", pos, size);
+				if (size == 0)
+					break;
+				if (nand_write_fdl (size, g_FixNBLBuf + pos) == NAND_SUCCESS)
+                			g_prevstatus = NAND_SUCCESS;
+				pos += size;
+			}
 
-    g_prevstatus = nand_end_write();
-    FDL2_SendRep (g_prevstatus);
-    return (NAND_SUCCESS == g_prevstatus);
+        	}//for (i = 0; i < 3; i++)
+		is_nbl_write = 0;
+    	}
+
+    	if (NAND_SUCCESS != g_prevstatus) {
+        	FDL2_SendRep (g_prevstatus);
+        	return 0;
+    	}
+
+    	g_prevstatus = nand_end_write();
+    	FDL2_SendRep (g_prevstatus);
+    	return (NAND_SUCCESS == g_prevstatus);
 }
 
 int FDL2_ReadFlash (PACKET_T *packet, void *arg)
@@ -345,7 +366,6 @@ int FDL2_ReadFlash (PACKET_T *packet, void *arg)
     addr = EndianConv_32 (addr);
     size = EndianConv_32 (size);
 #endif
-
     if (size > MAX_PKT_SIZE)
     {
         FDL_SendAckPacket (BSL_REP_DOWN_SIZE_ERROR);

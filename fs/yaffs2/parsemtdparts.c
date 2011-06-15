@@ -48,7 +48,7 @@ static unsigned int simple_guess_base(const char *cp)
 	}
 }
 
-unsigned long long memparse(const char *ptr, char **retptr)
+static unsigned long long memparse(const char *ptr, char **retptr)
 {
 	char *endptr;	/* local pointer to end of parsed string */
 	unsigned long long ret = simple_strtoull(ptr, &endptr, 0);
@@ -310,7 +310,7 @@ static int mtdpart_setup_real(char *s)
 }
 
 
-int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long mastersize)
+int yaffs_parse_cmdline_partitions(struct mtd_partition *current, unsigned long long mastersize)
 {
 	unsigned long offset;
 	int i;

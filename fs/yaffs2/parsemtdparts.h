@@ -1,5 +1,5 @@
-#ifndef FDL_PARSRMTD_H
-#define FDL_PARSRMTD_H
+#ifndef YAFFS2_PARSRMTD_H
+#define YAFFS2_PARSRMTD_H
 
 struct mtd_partition {
 	char *name;			/* identifier string */
@@ -8,5 +8,5 @@ struct mtd_partition {
 	unsigned long mask_flags;		/* master MTD flags to mask out for this partition */
 };
 
-int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long mastersize);
-#endif /* FDL_NAND_H */
+int yaffs_parse_cmdline_partitions(struct mtd_partition *current, unsigned long long mastersize);
+#endif /* YAFFS2_NAND_H */
