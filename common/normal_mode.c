@@ -26,20 +26,20 @@ unsigned char raw_header[2048];
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
 
+#define FIXNV_SIZE	(64 * 1024)
+#define DSP_SIZE	(3968 * 1024)
 #define VMJALUNA_SIZE	(256 * 1024)
+#define RUNTIMENV_SIZE	(256 * 1024)
 #define MODEM_SIZE	(8 * 1024 * 1024)
 #define KERNEL_SIZE	(10 * 1024 * 1024)
-#define FIXNV_SIZE	(64 * 1024)
-#define RUNTIMENV_SIZE	(512 * 1024)
-#define DSP_SIZE	(4500 * 1024)
 
+#define FIXNV_ADR	0x00000000
+#define DSP_ADR		0x00020000
 #define VMJALUNA_ADR	0x00400000
+#define RUNTIMENV_ADR	0x004a0000
 #define MODEM_ADR	0x00500000
 #define KERNEL_ADR	0x04508000
 #define RAMDISK_ADR 	0x04c00000
-#define FIXNV_ADR	0x00000000
-#define RUNTIMENV_ADR	0x004a0000
-#define DSP_ADR		0x00020000
 
 extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
