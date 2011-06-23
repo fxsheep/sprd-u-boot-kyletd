@@ -54,11 +54,11 @@ extern void udc_power_off(void);
 
 #define CALIBERATE_DETECT_MS 20 
 
-unsigned int caliberate_mode = 0; 
 
-int check_caliberate(char * buf, int len)
+unsigned int check_caliberate(uint8_t * buf, int len)
 {
 	unsigned int command = 0;
+    unsigned int freq = 0;
 	if(len != CALIBERATE_STRING_LEN)
 		return 0;
 
@@ -66,6 +66,10 @@ int check_caliberate(char * buf, int len)
 		if((*(buf+7)==CALIBERATE_COMMOND_T) && (*(buf+len-2) != 0x1)){
 			command = *(buf+len-2);
 			command &= 0xf;
+            freq = *(buf+1);
+            freq = freq<<8;
+            freq += *(buf+2);
+            command += freq<<8;
 		}
 	}
 	return command;
@@ -93,6 +97,8 @@ void calibration_detect(int key)
 {
 	int ret;
 	int i ;
+    unsigned int caliberate_mode;
+    char * cmd_buf = NULL;
 	loff_t off = 0;
     printf("%s\n", "calibrate detecting");
 
@@ -103,7 +109,7 @@ void calibration_detect(int key)
    // set_backlight(50);
 
 #ifdef CONFIG_MODEM_CALIBERATE
-	char buf[20];
+	uint8_t buf[20];
 	for(i = 0; i<20; i++)
 		buf[i] = i+'a';
 	dwc_otg_driver_init();
@@ -194,21 +200,26 @@ void calibration_detect(int key)
 		printf("0x%x ", buf[i]);
 	printf("\n");
 
-	ret = check_caliberate(buf, CALIBERATE_STRING_LEN);
+	caliberate_mode = check_caliberate(buf, CALIBERATE_STRING_LEN);
 	dprintf("check_caliberate return is 0x%x\n", ret);
-	if(!ret){
+	if(!caliberate_mode){
         printf("func: %s line: %d caliberate failed\n", __func__, __LINE__);
 		return;
     }
 	else{
-        caliberate_mode = ret;
 		ret = gs_write(buf, got);
 		dprintf("func: %s waitting %d write done\n", __func__, got);
 		if(usb_trans_status)
 			printf("func: %s line %d usb trans with error %d\n", __func__, __LINE__, usb_trans_status);
 		usb_wait_trans_done(1);
 		udc_power_off();
-        normal_mode();
+        cmd_buf=malloc(30);
+        if(cmd_buf==NULL){
+            printf("%s: out of memory\n", __func__);
+            return;
+        }
+        sprintf(cmd_buf, "calibration=%d,%d", caliberate_mode&0xff, (caliberate_mode&(~0xff))>>8);
+        vlx_nand_boot(BOOT_PART, cmd_buf);
 	}	
     
     //nerver come to here
