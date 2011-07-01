@@ -786,7 +786,7 @@ static int sprd_nand_devready(struct mtd_info *mtd)
         status = REG_NFC_IDSTATUS;
    	if ((status & 0x1) != 0) 	
      		return -1; /* fail */
-   	else if ((status & 0x20) == 0)
+   	else if ((status & 0x40) == 0)
      		return 0; /* busy */
    	else 							
      		return 1; /* ready */
