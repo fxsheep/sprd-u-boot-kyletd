@@ -21,6 +21,25 @@ extern int charger_connected(void);
 extern int alarm_triggered(void);
 #define mdelay(_ms) udelay(_ms*1000)
 
+int recheck_power_button(void)
+{
+    int cnt = 0;
+    int ret = 0;
+    do{
+        ret = power_button_pressed();
+        if(ret == 0)
+          cnt++;
+        else
+          return 1;
+
+        if(cnt>4)
+          return 0;
+        else{
+            mdelay(1);
+        }
+    }while(1);
+}
+
 int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
     uint32_t key_mode = 0;
@@ -55,12 +74,12 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     }
 
     //find the power up trigger
-    if(!power_button_pressed()){
+    if(!recheck_power_button()){
         DBG("%s: power button press\n", __FUNCTION__);
 
         //go on to check other keys
         mdelay(50);
-        for(i=0; i<0x50;i++){
+        for(i=0; i<10;i++){
             key_code = board_key_scan();
             if(key_code != KEY_RESERVED)
               break;

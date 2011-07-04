@@ -76,11 +76,12 @@ unsigned int check_caliberate(uint8_t * buf, int len)
 }
 
 extern int power_button_pressed(void);
+extern int recheck_power_button(void);
 int is_timeout(int key)
 {
     static int count_ms = CALIBERATE_DETECT_MS * 1000;
     if(!key){
-        if(!power_button_pressed() || charger_connected())
+        if(!recheck_power_button() || charger_connected())
           return 2;
     }
 
