@@ -84,7 +84,7 @@ int charger_connected(void)
 
 int alarm_triggered(void)
 {
-    printf("ANA_RTC_INT_RSTS is 0x%x\n", ANA_RTC_INT_RSTS);
-    printf("value of it 0x%x\n", ANA_REG_GET(ANA_RTC_INT_RSTS));
+    //printf("ANA_RTC_INT_RSTS is 0x%x\n", ANA_RTC_INT_RSTS);
+    //printf("value of it 0x%x\n", ANA_REG_GET(ANA_RTC_INT_RSTS));
     return ANA_REG_GET(ANA_RTC_INT_RSTS) & BIT_4;
 }
