@@ -132,9 +132,11 @@ reset:
 
 	/*set stack limit to 0*/
 	MOV R10, #0
-
-	ldr sp, =0x31000000
-
+#ifdef CONFIG_SC8810_OPENPHONE
+        ldr sp, =0x31000000
+#else
+	ldr sp, =0x1000000
+#endif
 clear_bss:
 	ldr	r0, _bss_start		/* find start of bss segment        */
 	ldr	r1, _bss_end		/* stop here                        */

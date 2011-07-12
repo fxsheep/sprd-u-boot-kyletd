@@ -63,6 +63,9 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     }else if(rst_mode == NORMAL_MODE){
         normal_mode();
     }
+#ifdef CONFIG_SC8810_OPENPHONE
+    normal_mode();
+#endif
     DBG("func: %s line: %d\n", __func__, __LINE__);
 
     int recovery_init(void);

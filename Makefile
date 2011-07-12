@@ -155,6 +155,7 @@ sinclude $(obj)include/autoconf.mk
 include $(obj)include/config.mk
 export	ARCH CPU BOARD VENDOR SOC
 
+CROSS_COMPILE = arm-eabi-
 # set default to nothing for native builds
 ifeq ($(HOSTARCH),$(ARCH))
 CROSS_COMPILE ?=
@@ -1211,6 +1212,11 @@ sp6810a_config	: unconfig
 sp8805ga_config	: unconfig
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs sp8805ga spreadtrum sc8800g
+
+sc8810_openphone_config	: unconfig
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sc8810_openphone spreadtrum sc8810
+
 #########################################################################
 #########################################################################
 

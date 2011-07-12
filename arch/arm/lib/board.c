@@ -267,6 +267,47 @@ init_fnc_t *init_sequence[] = {
 #endif
 	NULL,
 };
+#ifdef CONFIG_SC8810_OPENPHONE
+
+void sc8810_sdram_init(void)
+{
+	unsigned int isSDRAM = 1;
+	unsigned int i = 0;
+	*(volatile unsigned int *)(0x20000024) |= 0x40;
+	*(volatile unsigned int *)(0x2000002C) |= 0x40;
+
+	if (isSDRAM ) {
+		*(volatile unsigned int *)(0x20000190) = 0x40010000;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile unsigned int *)(0x20000190) = 0x40020000;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile unsigned int *)(0x20000190) = 0x40020000;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile unsigned int *)(0x20000190) = 0x40040031;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile unsigned int *)(0x20000180) |= 0x4000;
+		for (i = 0; i < 1000; ++i);
+
+	} else {
+
+	}
+
+}
+void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
+{
+    volatile unsigned int i = 0;
+
+	sc8810_sdram_init();
+	for (i=0; i<5000; i++) {}
+	return;
+ 
+}
+
+#endif
 
 void board_init_f (ulong bootflag)
 {
@@ -274,7 +315,9 @@ void board_init_f (ulong bootflag)
 	init_fnc_t **init_fnc_ptr;
 	gd_t *id;
 	ulong addr, addr_sp;
-
+#ifdef CONFIG_SC8810_OPENPHONE
+	Chip_Init ();/*lint !e765 "Chip_Init" is used by init.s entry.s*/
+#endif
 	/* Pointer is writable since we allocated a register for it */
 	gd = (gd_t *) ((CONFIG_SYS_INIT_SP_ADDR) & ~0x07);
 	/* compiler optimization barrier needed for GCC >= 3.4 */

@@ -26,6 +26,13 @@ const unsigned char **FDL2_GetSig (void)
     return (const unsigned char **) FDL2_signature;
 }
 extern unsigned long _bss_end;
+#ifdef CONFIG_SC8810_OPENPHONE
+extern unsigned long _bss_start;
+
+static int bss_end_end;
+static int bss_start_start;
+char mempool[1024*1024] = {0};
+#endif
 int main(void)
 {
 	/* All hardware initialization has been done in the 1st FDL,
@@ -51,7 +58,12 @@ int main(void)
 #endif
 
        FDL_PacketInit();
-	   mem_malloc_init (_bss_end, CONFIG_SYS_MALLOC_LEN);
+#ifdef CONFIG_SC8810_OPENPHONE	   
+	   bss_start_start = _bss_start;
+	   bss_end_end = _bss_end;
+
+	   mem_malloc_init (&mempool[0], 1024*1024);
+#endif	   
 	   timer_init();
 
 //        FDL_SendAckPacket (BSL_REP_ACK);
