@@ -94,7 +94,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
                 recovery_mode();
                 break;
             case BOOT_CALIBRATE:
-                calibration_detect(1);
+                engtest_mode();
                 return; //back to normal boot
                 break;
             case BOOT_DLOADER:

@@ -8,6 +8,7 @@ void dloader_mode(void);
 void fastboot_mode(void);
 void alarm_mode(void);
 void calibration_detect(int key);
+void engtest_mode(void);
 
 #define RECOVERY_MODE   0x77665502
 #define FASTBOOT_MODE   0x77665500
