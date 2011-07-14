@@ -109,8 +109,8 @@ reset:
 	BIC r0,r0,#1	/*disable MMU*/
 	LDR r1,=0x1004
 	BIC r0,r0,r1	/*disable cache*/
-	LDR r1,=0x1000
-	ORR r0,r0,r1
+	/*LDR r1,=0x1000*/  /* use mmu.c and mmu_asm.S, so richard feng remove it */
+	/*ORR r0,r0,r1*/    /* use mmu.c and mmu_asm.S, so richard feng remove it */
 
 	MCR p15,0,r0,c1,c0,0
 

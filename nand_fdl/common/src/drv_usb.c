@@ -13,6 +13,9 @@
 #include "usb200_fdl.h"
 #include "drv_usb20.h"
 #include "virtual_com.h"
+
+#define FDL2_MODULE	1
+
 PUBLIC void Dcache_InvalRegion(void *addr, unsigned int length);
 static __inline void usb_handler (void);
 /**---------------------------------------------------------------------------*
