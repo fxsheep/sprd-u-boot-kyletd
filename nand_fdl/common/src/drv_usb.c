@@ -13,6 +13,7 @@
 #include "usb200_fdl.h"
 #include "drv_usb20.h"
 #include "virtual_com.h"
+#include "packet.h"
 
 #define FDL2_MODULE	1
 
@@ -34,6 +35,8 @@ LOCAL uint32 nIndex = 0;
 LOCAL uint32 readIndex = 0;
 
 PUBLIC __align (32)  unsigned char usb_out_endpoint_buf[2] [MAX_RECV_LENGTH];
+
+int error_count = 0;
  
 /*****************************************************************************/
 //  Description:   configure out endpoint0 to receive setup message.
@@ -596,9 +599,33 @@ REGET:
         {
             goto REGET;
         }
-        
     }
+
      return usb_out_endpoint_buf[nIndex][readIndex++];
+}
+
+int receive_nonhdlc_data(unsigned char *packet_data, int packet_len)
+{
+	int data_size, process_size;
+	unsigned char *array;
+	unsigned char *start;
+	unsigned char ch;
+	unsigned char *array_data;
+
+	array_data = packet_data + packet_len;
+	array = (usb_out_endpoint_buf[nIndex] + readIndex);
+	start = array;
+	data_size = 0;
+	process_size = recv_length - readIndex;
+	while ((data_size < process_size) && (*array != HDLC_ESCAPE) && (*array != HDLC_FLAG)) {
+		*array_data = *array;
+		array_data ++;
+		data_size ++;
+		array ++;
+	}
+	readIndex += data_size;
+
+	return data_size;
 }
 
 int VCOM_GetSingleChar (void)
@@ -619,9 +646,25 @@ int VCOM_GetSingleChar (void)
         {
             return -1;
         }
+
+
+	//error_count ++;
+	//printf("readIndex = %d  recv_length = %d  nIndex = %d  error_count = %d\n", readIndex, recv_length, nIndex, error_count);
+
+	/*if ((error_count >= 6583) && (error_count <= 6585)) {
+		printf("\n");
+		printf("%s %d  error_count = %d\n", __FUNCTION__, __LINE__, error_count);
+		for (aaa = 0; aaa < recv_length; aaa ++) {
+			if ((aaa % 16) == 0)
+				printf("\n");
+			printf(" %02x", usb_out_endpoint_buf[nIndex][aaa]);
+		}
+		printf("\n");
+
+	}*/
     
     }
-        
+    
     return (int)usb_out_endpoint_buf[nIndex][readIndex++];
 }
 

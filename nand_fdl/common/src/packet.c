@@ -9,6 +9,8 @@
 #include "virtual_com.h"
 #include "fdl_channel.h"
 
+#define	MODIFY_REC_DATA	1
+
 extern void FDL_SendAckPacket (cmd_pkt_type pkt_type);
 
 
@@ -95,6 +97,9 @@ void FDL_PacketDoIdle (void)
     uint32          crc;
     unsigned char   ch;
     int ch1;
+	int nonhdlc_size;
+	unsigned char *array;
+	int aaa;
 
     // try get a packet to handle the receive char
     packet_ptr = packet_receiving;
@@ -139,11 +144,15 @@ void FDL_PacketDoIdle (void)
             packet_receiving = NULL;
             FDL_FreePacket (packet_ptr);
             sio_trace ("data_size error");
+		printf("\n\n\n%s %s %d\n\n\n", __FILE__, __FUNCTION__, __LINE__);
+		printf("data_size error");
+		printf("\n\n\n%s %s %d\n\n\n", __FILE__, __FUNCTION__, __LINE__);
             SEND_ERROR_RSP (BSL_REP_VERIFY_ERROR)
             //return;
         }
 
         // try handle this input data
+	//printf(" %02x  %d\n", ch1, packet_ptr->pkt_state);
         switch (packet_ptr->pkt_state)
         {
             case PKT_NONE:
@@ -176,13 +185,81 @@ void FDL_PacketDoIdle (void)
 
                 break;
             case PKT_GATHER:
+#if defined(MODIFY_REC_DATA)
+		/////////////////////////////////////////////////////////////
+                if (HDLC_FLAG == ch) {
+			packet_ptr->pkt_state = PKT_RECV;
+                    	//check the packet. CRC should be 0
+                    	crc = frm_chk((unsigned short *)&packet_ptr->packet_body, packet_ptr->data_size);
+			
+                    	if (0 != crc) {
+				printf("\n\n\n%s %s %d\n\n\n", __FILE__, __FUNCTION__, __LINE__);
+                        	//Verify error, reject this packet.
+                        	FDL_FreePacket(packet_ptr);
+                        	packet_receiving = NULL;
+                        	//if check result failed, notify PC
+                        	SEND_ERROR_RSP (BSL_REP_VERIFY_ERROR)
+				printf("crc failed");
+				printf("\n\n\n%s %s %d\n\n\n", __FILE__, __FUNCTION__, __LINE__);
+                        	//return ;
+                    	} else {
+                        	//Check there are free packet?
+                        	if ((NULL != packet_free_list) && (BSL_CMD_MIDST_DATA == packet_ptr->packet_body.type)) {
+                            		//send a ACK
+#if defined (NOR_FDL_SC6600L) || defined (NOR_FDL_SC6800H)
+                            		packet_ptr->ack_flag = 1;
+                            		FDL_SendAckPacket (BSL_REP_ACK);
+#endif
+				}
 
+                        	//It is a complete packet, move to completed list.
+                        	packet_ptr->next = NULL;
+                        	if (NULL == packet_completed_list) {
+                            		packet_completed_list = packet_ptr;
+                        	} else {
+                            		//added to the tail
+                            		tmp_ptr = packet_completed_list;
+                            		while (NULL != tmp_ptr->next) {
+                                		tmp_ptr = tmp_ptr->next;
+                            		}
+                            		tmp_ptr->next = packet_ptr;
+                        	}
+
+                        	//set to null for next transfer
+                        	packet_receiving = NULL;
+                        	return ;
+                    	}//if (0 != crc)
+                } else {//if (HDLC_FLAG == ch)
+			if (HDLC_ESCAPE == ch) {
+                        	ch = gFdlUsedChannel->GetChar(gFdlUsedChannel);
+                        	ch = ch ^ HDLC_ESCAPE_MASK;
+
+				*(pdata + packet_ptr->data_size) = ch;
+                    		packet_ptr->data_size += 1;
+
+                    	} else {
+				*(pdata + packet_ptr->data_size) = ch;
+                    		packet_ptr->data_size += 1;
+				nonhdlc_size = 0;
+				nonhdlc_size = receive_nonhdlc_data((unsigned char *)&packet_ptr->packet_body, packet_ptr->data_size);
+				packet_ptr->data_size += nonhdlc_size;
+			}
+                }
+		/////////////////////////////////////////////////////////////
+#else
                 if (HDLC_FLAG == ch)
                 {
                     packet_ptr->pkt_state = PKT_RECV;
 
                     // check the packet. CRC should be 0
                     crc = frm_chk ( (unsigned short *) &packet_ptr->packet_body, packet_ptr->data_size);
+
+			if (0 != crc) {
+				printf("\n\n\n%s %s %d\n\n\n", __FILE__, __FUNCTION__, __LINE__);
+				printf("Richard Feng mask crc check");
+				printf("\n\n\n%s %s %d\n\n\n", __FILE__, __FUNCTION__, __LINE__);
+				crc = 0;
+			}
 
                     if (0 != crc)
                     {
@@ -245,7 +322,7 @@ void FDL_PacketDoIdle (void)
                     * (pdata + packet_ptr->data_size)         = ch;
                     packet_ptr->data_size += 1;
                 }
-
+#endif
                 break;
             default:
                 break;
