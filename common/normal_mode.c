@@ -33,7 +33,12 @@ unsigned char raw_header[2048];
 #define MODEM_SIZE	(8 * 1024 * 1024)
 #define KERNEL_SIZE	(10 * 1024 * 1024)
 
+#if 0
 #define FIXNV_ADR	0x00000000
+#else
+#define FIXNV_ADR	0x00480000
+#endif
+
 #define DSP_ADR		0x00020000
 #define VMJALUNA_ADR	0x00400000
 #define RUNTIMENV_ADR	0x004a0000
