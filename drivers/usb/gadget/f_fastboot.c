@@ -985,7 +985,7 @@ int usb_fastboot_initialize(void)
 	mdelay(20);
 	usb_fastboot_start();
 
-	fastboot_init((void*) SCRATCH_ADDR, 100 * 1024 * 1024, l_fbdev.in_ep, l_fbdev.out_ep);
+	fastboot_init((void*) SCRATCH_ADDR, FB_DOWNLOAD_BUF_SIZE, l_fbdev.in_ep, l_fbdev.out_ep);
 	
 	if (status < 0)
 		goto fail;
