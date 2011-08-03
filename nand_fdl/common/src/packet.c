@@ -9,7 +9,7 @@
 #include "virtual_com.h"
 #include "fdl_channel.h"
 
-#define	MODIFY_REC_DATA	1
+//#define	MODIFY_REC_DATA	1
 
 extern void FDL_SendAckPacket (cmd_pkt_type pkt_type);
 

@@ -26,21 +26,16 @@ unsigned char raw_header[2048];
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
 
-#define FIXNV_SIZE	(64 * 1024)
 #define DSP_SIZE	(3968 * 1024)
 #define VMJALUNA_SIZE	(256 * 1024)
+#define FIXNV_SIZE	(64 * 1024)
 #define RUNTIMENV_SIZE	(256 * 1024)
 #define MODEM_SIZE	(8 * 1024 * 1024)
 #define KERNEL_SIZE	(10 * 1024 * 1024)
 
-#if 0
-#define FIXNV_ADR	0x00000000
-#else
-#define FIXNV_ADR	0x00480000
-#endif
-
 #define DSP_ADR		0x00020000
 #define VMJALUNA_ADR	0x00400000
+#define FIXNV_ADR	0x00480000
 #define RUNTIMENV_ADR	0x004a0000
 #define MODEM_ADR	0x00500000
 #define KERNEL_ADR	0x04508000
@@ -464,21 +459,21 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 
 	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
     //check caliberation mode
-#ifdef CONFIG_MODEM_CALIBERATE
-#define VLX_TAG_ADDR 0x5100000 //after initrd
+    int str_len;
     char * buf;
     buf = malloc(150);
+#define VLX_TAG_ADDR 0x5100000 //after initrd
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
+    str_len = strlen(buf);
+    sprintf(&buf[str_len], " %s", MTDPARTS_DEFAULT);
 
     if(cmdline && cmdline[0]){
-        int str_len;
-        str_len = strlen(buf);
-        sprintf(&buf[str_len], " %s", cmdline);
+            str_len = strlen(buf);
+            sprintf(&buf[str_len], " %s", cmdline);
     }
 
     printf("pass cmdline: %s\n", buf);
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
-#endif
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
 	entry();
