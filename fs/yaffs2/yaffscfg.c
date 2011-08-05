@@ -97,6 +97,7 @@ static int isMounted = 0;
 #ifdef  SPRD_MOUNT_PARTITION
 #define MOUNT_POINT1 "/backupfixnv"
 #define MOUNT_POINT2 "/runtimenv"
+#define MOUNT_POINT3 "/productinfo"
 #endif
 
 extern nand_info_t nand_info[];
@@ -119,6 +120,7 @@ static yaffsfs_DeviceConfiguration yaffsfs_config[] = {
 #ifdef  SPRD_MOUNT_PARTITION
 	{ MOUNT_POINT1, 0},
 	{ MOUNT_POINT2, 0},
+	{ MOUNT_POINT3, 0},
 #endif
 #endif
 	{(void *)0,(void *)0}
@@ -178,12 +180,14 @@ int yaffs_StartUp(void)
 #ifdef  SPRD_MOUNT_PARTITION
 	yaffs_Device *backupfixnvDev = calloc(1, sizeof(yaffs_Device));
 	yaffs_Device *runtimenvDev = calloc(1, sizeof(yaffs_Device));
+	yaffs_Device *productinfoDev = calloc(1, sizeof(yaffs_Device));
 #endif
 
 	yaffsfs_config[0].dev = flashDev;
 #ifdef  SPRD_MOUNT_PARTITION
 	yaffsfs_config[1].dev = backupfixnvDev;
 	yaffsfs_config[2].dev = runtimenvDev;
+	yaffsfs_config[3].dev = productinfoDev;
 #endif
 
 	/* store the mtd device for later use */
@@ -191,6 +195,7 @@ int yaffs_StartUp(void)
 #ifdef  SPRD_MOUNT_PARTITION
 	backupfixnvDev->genericDevice = mtd;
 	runtimenvDev->genericDevice = mtd;
+	productinfoDev->genericDevice = mtd;
 #endif
 
 	// Stuff to configure YAFFS
@@ -396,6 +401,64 @@ int yaffs_StartUp(void)
 	runtimenvDev->initialiseNAND = nandmtd_InitialiseNAND;
 
 	//yaffs_dump_dev(runtimenvDev);
+
+
+	// /productinfo
+	productinfoDev->nReservedBlocks = 5;
+	productinfoDev->nShortOpCaches = 10; // Use caches
+	productinfoDev->useNANDECC = 1; // use YAFFS's ECC
+
+	productinfoDev->skipCheckpointRead = 1;
+	productinfoDev->skipCheckpointWrite = 1;
+
+	if (yaffsVersion == 2)
+	{
+		productinfoDev->writeChunkWithTagsToNAND = nandmtd2_WriteChunkWithTagsToNAND;
+		productinfoDev->readChunkWithTagsFromNAND = nandmtd2_ReadChunkWithTagsFromNAND;
+		productinfoDev->markNANDBlockBad = nandmtd2_MarkNANDBlockBad;
+		productinfoDev->queryNANDBlock = nandmtd2_QueryNANDBlock;
+		productinfoDev->spareBuffer = YMALLOC(mtd->oobsize);
+		productinfoDev->isYaffs2 = 1;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,17))
+		productinfoDev->nDataBytesPerChunk = mtd->writesize;
+		productinfoDev->nChunksPerBlock = mtd->erasesize / mtd->writesize;
+#else
+		productinfoDev->nDataBytesPerChunk = mtd->oobblock;
+		productinfoDev->nChunksPerBlock = mtd->erasesize / mtd->oobblock;
+#endif
+		nBlocks = mtd->size / mtd->erasesize;
+		//printf("size = 0x%016Lx  erasesize = 0x%016Lx  nBlocks = %d\n", (unsigned long long)mtd->size, (unsigned long long)mtd->erasesize, nBlocks);
+
+		productinfoDev->nCheckpointReservedBlocks = 0;
+		
+		memset(&cur_partition, 0 , sizeof(struct mtd_partition));
+		memset(partname, 0, 255);
+		strcpy(partname, MOUNT_POINT3);
+		cur_partition.name = (char *)(partname + 1); /* skip '/' charater */
+		cur_partition.offset = 0xffffffff;
+		yaffs_parse_cmdline_partitions(&cur_partition, (unsigned long long)mtd->size);
+		//printf("offset = 0x%08x  size = 0x%08x\n", cur_partition.offset, cur_partition.size);
+		productinfoDev->startBlock = cur_partition.offset / mtd->erasesize;
+		productinfoDev->endBlock = productinfoDev->startBlock + cur_partition.size / mtd->erasesize  - 1;
+		//printf("\productinfo device from %d to %d\n", productinfoDev->startBlock, productinfoDev->endBlock);
+	}
+	else
+	{
+		productinfoDev->writeChunkToNAND = nandmtd_WriteChunkToNAND;
+		productinfoDev->readChunkFromNAND = nandmtd_ReadChunkFromNAND;
+		productinfoDev->isYaffs2 = 0;
+		nBlocks = mtd->size / (YAFFS_CHUNKS_PER_BLOCK * YAFFS_BYTES_PER_CHUNK);
+		productinfoDev->startBlock = 320;
+		productinfoDev->endBlock = nBlocks - 1;
+		productinfoDev->nChunksPerBlock = YAFFS_CHUNKS_PER_BLOCK;
+		productinfoDev->nDataBytesPerChunk = YAFFS_BYTES_PER_CHUNK;
+	}
+
+	/* ... and common functions */
+	productinfoDev->eraseBlockInNAND = nandmtd_EraseBlockInNAND;
+	productinfoDev->initialiseNAND = nandmtd_InitialiseNAND;
+
+	//yaffs_dump_dev(productinfoDev);
 
 #endif
 

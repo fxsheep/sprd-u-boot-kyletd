@@ -26,20 +26,22 @@ unsigned char raw_header[2048];
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
 
-#define DSP_SIZE	(3968 * 1024)
-#define VMJALUNA_SIZE	(256 * 1024)
-#define FIXNV_SIZE	(64 * 1024)
-#define RUNTIMENV_SIZE	(256 * 1024)
-#define MODEM_SIZE	(8 * 1024 * 1024)
-#define KERNEL_SIZE	(10 * 1024 * 1024)
+#define DSP_SIZE		(3968 * 1024)
+#define VMJALUNA_SIZE		(256 * 1024)
+#define FIXNV_SIZE		(64 * 1024)
+#define PRODUCTINFO_SIZE	(3 * 1024)
+#define RUNTIMENV_SIZE		(256 * 1024)
+#define MODEM_SIZE		(8 * 1024 * 1024)
+#define KERNEL_SIZE		(10 * 1024 * 1024)
 
-#define DSP_ADR		0x00020000
-#define VMJALUNA_ADR	0x00400000
-#define FIXNV_ADR	0x00480000
-#define RUNTIMENV_ADR	0x004a0000
-#define MODEM_ADR	0x00500000
-#define KERNEL_ADR	0x04508000
-#define RAMDISK_ADR 	0x04c00000
+#define DSP_ADR			0x00020000
+#define VMJALUNA_ADR		0x00400000
+#define FIXNV_ADR		0x00480000
+#define PRODUCTINFO_ADR		0x00490000
+#define RUNTIMENV_ADR		0x004a0000
+#define MODEM_ADR		0x00500000
+#define KERNEL_ADR		0x04508000
+#define RAMDISK_ADR 		0x04c00000
 
 extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
@@ -135,6 +137,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
 	char *runtimenvpoint = "/runtimenv";
 	char *runtimenvfilename = "/runtimenv/runtimenv.bin";
+	char *productinfopoint = "/productinfo";
+	char *productinfofilename = "/productinfo/productinfo.bin";
 
 	ret = mtdparts_init();
 	if (ret != 0){
@@ -282,6 +286,23 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	memcpy((unsigned char *)FIXNV_ADR, (unsigned char *)DSP_ADR, FIXNV_SIZE);
 #endif
 	//array_value((unsigned char *)FIXNV_ADR, FIXNV_SIZE);
+
+	///////////////////////////////////////////////////////////////////////
+	/* PRODUCTINFO_PART */
+	printf("Reading productinfo to 0x%08x\n", PRODUCTINFO_ADR);
+	/* runtimenv */
+    	cmd_yaffs_mount(productinfopoint);
+	ret = cmd_yaffs_ls_chk(productinfofilename);
+	if (ret == (PRODUCTINFO_SIZE + 4)) {
+		cmd_yaffs_mread_file(productinfofilename, (unsigned char *)PRODUCTINFO_ADR);
+		if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE))
+			memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+	} else
+		memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+	cmd_yaffs_umount(productinfopoint);
+	//array_value((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE);
+	///////////////////////////////////////////////////////////////////////
+
 
 	///////////////////////////////////////////////////////////////////////
 	/* RUNTIMEVN_PART */
