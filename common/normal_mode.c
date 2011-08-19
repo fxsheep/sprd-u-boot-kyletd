@@ -47,6 +47,7 @@ extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
+void set_vibrator(int on);
 
 
 void nand_block_info(struct mtd_info *nand, int *good, int *bad)
@@ -178,6 +179,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
     lcd_display();
     set_backlight(50);
 #endif
+    set_vibrator(0);
 
 	/*int good_blknum, bad_blknum;
 	nand_block_info(nand, &good_blknum, &bad_blknum);
@@ -501,5 +503,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 }
 void normal_mode(void)
 {
+    set_vibrator(1);
     vlx_nand_boot(BOOT_PART, NULL);
 }
