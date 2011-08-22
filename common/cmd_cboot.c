@@ -114,6 +114,8 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         //if calibrate success, it will here
         DBG("%s: power done again\n", __FUNCTION__);
         power_down_devices();
+        while(1)
+          ;
     }
 
     if(argc == 1){
