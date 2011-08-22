@@ -240,7 +240,7 @@
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #elif defined CONFIG_OPENPHONE
 #ifdef MCP_F2R1
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),10m(recovery),150m(system),1m(boot_logo),1m(fastboot_logo),20m(cache),256k(misc),2m(productinfo),30m(userdata)"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),4m(modem),7m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),7m(recovery),95m(system),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc),2m(productinfo),107m(userdata)"
 #else
 #error "no MCP defined"
 #endif
