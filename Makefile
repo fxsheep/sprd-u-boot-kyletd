@@ -241,6 +241,7 @@ LIBS += drivers/usb/host/libusb_host.o
 LIBS += drivers/usb/musb/libusb_musb.o
 LIBS += drivers/usb/phy/libusb_phy.o
 LIBS += drivers/video/libvideo.o
+LIBS += property/libproperty.o
 LIBS += drivers/watchdog/libwatchdog.o
 LIBS += common/libcommon.o
 LIBS += lib/libfdt/libfdt.o
@@ -390,8 +391,16 @@ endif
 $(OBJS):	depend
 		$(MAKE) -C $(CPUDIR) $(if $(REMOTE_BUILD),$@,$(notdir $@))
 
+ifdef CONFIG_IDH_BUILD
+$(LIBS):	depend $(SUBDIRS)
+		@echo "idh builddkfaldfj l  "
+		if [ "$@" != "$(obj)property/libproperty.o" ] && [ "$@" != "$(obj)$(CPUDIR)/$(SOC)/lib$(SOC).o" ]; then \
+		$(MAKE) -C $(dir $(subst $(obj),,$@)); \
+		fi
+else
 $(LIBS):	depend $(SUBDIRS)
 		$(MAKE) -C $(dir $(subst $(obj),,$@))
+endif
 
 $(LIBBOARD):	depend $(LIBS)
 		$(MAKE) -C $(dir $(subst $(obj),,$@))
@@ -1220,6 +1229,46 @@ sc8810_openphone_config	: unconfig
 #########################################################################
 #########################################################################
 
+ifdef CONFIG_IDH_BUILD
+clean:
+	@rm -f $(obj)examples/standalone/82559_eeprom			  \
+	       $(obj)examples/standalone/atmel_df_pow2			  \
+	       $(obj)examples/standalone/eepro100_eeprom		  \
+	       $(obj)examples/standalone/hello_world			  \
+	       $(obj)examples/standalone/interrupt			  \
+	       $(obj)examples/standalone/mem_to_mem_idma2intr		  \
+	       $(obj)examples/standalone/sched				  \
+	       $(obj)examples/standalone/smc91111_eeprom		  \
+	       $(obj)examples/standalone/test_burst			  \
+	       $(obj)examples/standalone/timer
+	@rm -f $(obj)examples/api/demo{,.bin}
+	@rm -f $(obj)tools/bmp_logo	   $(obj)tools/easylogo/easylogo  \
+	       $(obj)tools/env/{fw_printenv,fw_setenv}			  \
+	       $(obj)tools/envcrc					  \
+	       $(obj)tools/gdb/{astest,gdbcont,gdbsend}			  \
+	       $(obj)tools/gen_eth_addr    $(obj)tools/img2srec		  \
+	       $(obj)tools/mkimage	   $(obj)tools/mpc86x_clk	  \
+	       $(obj)tools/ncb		   $(obj)tools/ubsha1
+	@rm -f $(obj)board/cray/L1/{bootscript.c,bootscript.image}	  \
+	       $(obj)board/matrix_vision/*/bootscript.img		  \
+	       $(obj)board/netstar/{eeprom,crcek,crcit,*.srec,*.bin}	  \
+	       $(obj)board/trab/trab_fkt   $(obj)board/voiceblue/eeprom   \
+	       $(obj)board/armltd/{integratorap,integratorcp}/u-boot.lds  \
+	       $(obj)u-boot.lds						  \
+	       $(obj)arch/blackfin/cpu/bootrom-asm-offsets.[chs]
+	@rm -f $(obj)include/bmp_logo.h
+	@rm -f $(obj)lib/asm-offsets.s
+	@rm -f $(obj)nand_spl/{u-boot.lds,u-boot-spl,u-boot-spl.map,System.map}
+	@rm -f $(obj)onenand_ipl/onenand-{ipl,ipl.bin,ipl.map}
+	@rm -f $(ONENAND_BIN)
+	@rm -f $(obj)onenand_ipl/u-boot.lds
+	@rm -f $(TIMESTAMP_FILE) $(VERSION_FILE)
+	@find $(OBJTREE) -type f \
+		\( -name 'core' -o -name '*.bak' -o -name '*~' \
+		-o -name '*.o'	-o -name '*.a' -o -name '*.exe'	\) -print \
+		| grep -v property | grep -v sc8800g | grep -v sc8800x | grep -v sc8810\
+		| grep -v nand_fdl | grep -v nand_spl |  xargs rm -f
+else
 clean:
 	@rm -f $(obj)examples/standalone/82559_eeprom			  \
 	       $(obj)examples/standalone/atmel_df_pow2			  \
@@ -1257,6 +1306,7 @@ clean:
 		\( -name 'core' -o -name '*.bak' -o -name '*~' \
 		-o -name '*.o'	-o -name '*.a' -o -name '*.exe'	\) -print \
 		| xargs rm -f
+endif
 
 clobber:	clean
 	@find $(OBJTREE) -type f \( -name '*.depend' \
