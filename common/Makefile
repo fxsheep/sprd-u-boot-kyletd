@@ -45,17 +45,7 @@ COBJS-y += cmd_bootm.o
 COBJS-y += cmd_help.o
 COBJS-y += cmd_nvedit.o
 COBJS-y += cmd_version.o
-
-COBJS-y += cmd_cboot.o
-COBJS-y += normal_mode.o
-COBJS-y += recv_mode.o
-COBJS-y += fastboot_mode.o
-COBJS-y += charge_mode.o
-COBJS-y += alarm_mode.o
-COBJS-y += dloader_mode.o
-COBJS-y += android_boot.o
-COBJS-y += calibration_detect.o
-COBJS-y += engtest_mode.o
+COBJS-y += idh_layout.o
 
 # environment
 COBJS-y += env_common.o

@@ -22,6 +22,7 @@
 
 include $(TOPDIR)/config.mk
 include $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/config.mk
+include $(TOPDIR)/board/$(BOARDDIR)/config.mk
 
 gcclibdir := $(shell dirname `$(CC) -print-libgcc-file-name`)
 
@@ -54,7 +55,7 @@ MTD_LIB = $(TOPDIR)/drivers/mtd/libmtd.o
 #ARM_LIB = $(TOPDIR)/arch/arm/lib/libarm.a
 NAND_LIB = $(TOPDIR)/drivers/mtd/nand/libnand.o
 YAFFS2_LIB = $(TOPDIR)/fs/yaffs2/libyaffs2.o
-COMMON_OBJ = dlmalloc.o 
+COMMON_OBJ = dlmalloc.o idh_layout.o
 COMMON_LIB = $(addprefix $(TOPDIR)/common/,$(COMMON_OBJ))
 DRIVERS_LIB = $(TOPDIR)/drivers/serial/serial_sc8800x.o
 ARCH_LIB = 
@@ -75,10 +76,14 @@ fdl2_obj	:= $(fdlobj)fdl-2/src/
 
 ALL	= $(fdlobj)fdl2.bin $(fdlobj)fdl1.bin
 
-all:	$(obj).depend $(ALL)
+#all:	$(obj).depend $(ALL)
+#
+#fdl1: $(obj).depend $(fdlobj)fdl1.bin
+#fdl2: $(obj).depend $(fdlobj)fdl2.bin
+all:	 $(ALL)
 
-fdl1: $(obj).depend $(fdlobj)fdl1.bin
-fdl2: $(obj).depend $(fdlobj)fdl2.bin
+fdl1:  $(fdlobj)fdl1.bin
+fdl2:  $(fdlobj)fdl2.bin
 
 $(fdlobj)fdl1.bin: $(fdlobj)fdl1
 	$(OBJCOPY) ${OBJCFLAGS} -O binary $< $@
@@ -116,6 +121,7 @@ test:
 
 #########################################################################
 
+ifndef CONFIG_IDH_BUILD
 $(COM_OBJS):%.o:%.c
 	$(CC) $(CFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 $(FDL1_COBJS):%.o:%.c
@@ -126,6 +132,7 @@ $(FDL2_COBJS):%.o:%.c
 	$(CC) $(CFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 $(FDL2_SOBJS):%.o:%.S
 	$(CC) $(AFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
+endif
 # defines $(obj).depend target
 include $(SRCTREE)/rules.mk
 
