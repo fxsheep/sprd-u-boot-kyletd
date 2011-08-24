@@ -500,6 +500,23 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
             sprintf(&buf[str_len], " %s", cmdline);
     }
 
+	{
+		extern uint32_t load_lcd_id_to_kernel();
+		uint32_t lcd_id;
+
+		lcd_id = load_lcd_id_to_kernel();
+	    //add lcd id
+		if(lcd_id)
+		{
+			str_len = strlen(buf);
+			sprintf(&buf[str_len], " lcd_id=");
+			str_len = strlen(buf);
+			buf[str_len] = (char)((lcd_id>>8)&0xff);
+			buf[str_len+1] = (char)(lcd_id&0xff);
+			buf[str_len+2] = 0;
+		}
+	}
+
     printf("pass cmdline: %s\n", buf);
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
 

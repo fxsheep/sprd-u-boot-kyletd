@@ -126,6 +126,37 @@ struct sc8800fb_info {
     uint32_t smem_len;
 //	struct rrmanager *rrm;
 };
+
+struct lcd_cfg{ 
+	uint32_t lcd_id;
+	struct lcd_spec* panel;
+};
+
+
+//overlord for lcd adapt
+static struct lcd_cfg lcd_panel[] = {
+	[0]={
+		.lcd_id = 0x1,
+		.panel = &lcd_panel_r61581,
+		},
+
+	[1]={
+		.lcd_id = 0x9481,
+		.panel = &lcd_panel_rm68040,
+		},
+	[2]={
+		.lcd_id = 0x3,
+		.panel = &lcd_panel_hx8357,
+		},
+};
+
+vidinfo_t panel_info = {
+	.vl_col = 320,
+	.vl_bpix = 4,
+	.vl_row = 480,
+};
+
+
 static void __raw_bits_and(unsigned int v, unsigned int a)
 {
         __raw_writel((__raw_readl(a) & v), a);
@@ -171,10 +202,28 @@ static int32_t lcm_send_data (uint32_t data)
 
 	return 0;
 }
+
+static uint32_t lcm_read_data ()
+{
+	volatile uint32_t i =32;
+	/* busy wait for ahb fifo full sign's disappearance */
+	while(__raw_readl(LCM_STATUS) & 0x2);
+	/* bit18 means 'read' */
+	__raw_writel(1<<18, LCM_DATA0);
+
+	/* busy wait for ahb fifo full sign's disappearance */
+	while(__raw_readl(LCM_STATUS) & 0x2);
+
+	/*wait*/
+	while(i--);
+	return __raw_readl(LCM_RDDATA);
+}
+
 static struct ops_mcu lcm_mcu_ops = {
 	.send_cmd = lcm_send_cmd,
 	.send_cmd_data = lcm_send_cmd_data,
 	.send_data = lcm_send_data,
+	.read_data = lcm_read_data,
 };
 
 //extern struct lcdc_manager lm; /* TEMP */
@@ -235,7 +284,7 @@ static void set_pins(void)
 
     sprd_mfp_config(lcd_func_cfg,ARRAY_SIZE(lcd_func_cfg));
 }
-static uint32_t panel_reset(void)
+static uint32_t panel_reset(struct lcd_spec *self)
 {
 	//panel reset
 	__raw_writel(0x1, LCM_RSTN);	
@@ -247,11 +296,8 @@ static uint32_t panel_reset(void)
 
     return 0;
 }
-static void lcdc_mcu_init(void)
+static void lcdc_mcu_init(struct sc8800fb_info *sc8800fb)
 {
-	//panel reset
-	panel_reset();
-	
 	//LCDC module enable
 	__raw_bits_or(1<<0, LCDC_CTRL);
 
@@ -725,27 +771,21 @@ int set_lcdc_layers(struct sc8800fb_info *info)
 
 	return 0;
 }
-static void hw_init(struct sc8800fb_info *sc8800fb)
+
+static void hw_early_init(struct sc8800fb_info *sc8800fb)
 {
 	int ret;
 
-	/* only MCU mode is supported currently */
-	if (LCD_MODE_RGB == sc8800fb->panel->mode)
-		return;
-
 	set_pins();
-	
-	//misc_setup();
-	
 	//select LCD clock source	
 	__raw_bits_and(~(1<<6), GR_PLL_SCR);    //pll_src=96M
 	__raw_bits_and(~(1<<7), GR_PLL_SCR);
-	
+
 	//set LCD divdior
 	__raw_bits_and(~(1<<0), GR_GEN4);  //div=0
 	__raw_bits_and(~(1<<1), GR_GEN4); 
 	__raw_bits_and(~(1<<2), GR_GEN4);  
-	
+
 	//enable LCD clock
 	__raw_bits_or(1<<3, AHB_CTL0); 
 
@@ -754,32 +794,39 @@ static void hw_init(struct sc8800fb_info *sc8800fb)
 	mdelay(10);	
 	__raw_bits_and(~(1<<3), AHB_SOFT_RST); 
 
-	/* register isr */
-	//ret = request_irq(IRQ_LCDC_INT, lcdc_isr, IRQF_DISABLED, "LCDC", sc8800fb);
-	//if (ret) {
-	//	printk(KERN_ERR "lcdc: failed to request irq!\n");
-	//	return;
-	//}
 
 	/* enable LCDC_DONE IRQ */
 	__raw_bits_or((1<<0), LCDC_IRQ_EN);
-	
+
 	/* init lcdc mcu mode using default configuration */
-	lcdc_mcu_init();
+	lcdc_mcu_init(sc8800fb);
+}
+
+static void hw_init(struct sc8800fb_info *sc8800fb)
+{
+	/* only MCU mode is supported currently */
+	if (LCD_MODE_RGB == sc8800fb->panel->mode)
+		return;
 	
-	//__raw_bits_or((1<<0), LCDC_DAC_CONTROL_REG); /*close tv_out */
+	//__raw_bits_or((1<<0), LCDC_DAC_CONTROL_REG); /*close tv_out */	
+	//panel reset
+	panel_reset(sc8800fb->panel);
 
 	/* set lcdc-lcd interface parameters */
 	lcdc_lcm_configure(sc8800fb);
 
 	/* set timing parameters for LCD */
 	lcdc_update_lcm_timing(sc8800fb);
+}
 
+static void hw_later_init(struct sc8800fb_info *sc8800fb)
+{
 	/* init mounted lcd panel */
 	sc8800fb->panel->ops->lcd_init(sc8800fb->panel);
 
 	set_lcdc_layers(sc8800fb); 
 }
+
 
 void set_backlight(uint32_t value)
 {
@@ -790,11 +837,92 @@ void set_backlight(uint32_t value)
 }
 
 struct sc8800fb_info *sc8800fb;
-extern struct lcd_spec lcd_panel;
+
+static uint32_t lcd_id_to_kernel = 0;
+
+void save_lcd_id_to_kernel(uint32_t id)
+{
+	lcd_id_to_kernel = id;
+}
+
+uint32_t load_lcd_id_to_kernel()
+{
+	return lcd_id_to_kernel;
+}
+
+static int find_adapt_from_saved()
+{
+	int i;
+	//we will decide how to save lcdid later
+	/*
+	uint32_t id = savedvalue;
+	for(i = 0;i<(sizeof(lcd_panel))/(sizeof(lcd_panel[0]));i++)
+	{
+		if(id == lcd_panel[i].lcd_id)
+		{
+			save_lcd_id_to_kernel(id);
+			return i;
+			
+		}
+	}*/
+	return -1;		
+}
+
+static int lcd_readid_default(struct lcd_spec *self)
+{
+	uint32_t dummy;
+	//default id reg is 0
+	self->info.mcu->ops->send_cmd(0x0);
+
+	if(self->info.mcu->bus_width == 8)
+	{
+		dummy = (self->info.mcu->ops->read_data())&0xff;
+		dummy <<= 8;
+		dummy |= (self->info.mcu->ops->read_data())&0xff;
+	}
+	else
+	{
+		dummy = (self->info.mcu->ops->read_data())&0xffff;
+	}
+	return dummy;
+}
+
+
+static int find_adapt_from_readid(struct sc8800fb_info *sc8800fb)
+{
+	int i;
+	uint32_t id;
+	for(i = 0;i<(sizeof(lcd_panel))/(sizeof(lcd_panel[0]));i++)
+	{
+		//first ,try mount
+		mount_panel(sc8800fb,lcd_panel[i].panel);
+		//hw init to every panel
+		hw_init(sc8800fb);
+		//readid
+		if(sc8800fb->panel->ops->lcd_readid)
+		{
+			id = sc8800fb->panel->ops->lcd_readid(sc8800fb->panel);
+		}
+		else
+		{
+			id = lcd_readid_default(sc8800fb->panel);
+		}
+		//if the id is right?
+		if(id == lcd_panel[i].lcd_id)
+		{
+			save_lcd_id_to_kernel(id);
+			return i;
+		}
+	}
+	return -1;		
+}
+
+
 static int sc8800fb_probe(void * lcdbase)
 {
 	//struct fb_info *fb;
 	int32_t ret;
+	int lcd_adapt;
 
 	FB_PRINT("@fool2[%s]\n", __FUNCTION__);
 	FB_PRINT("sc8800g_fb initialize!\n");
@@ -817,11 +945,35 @@ static int sc8800fb_probe(void * lcdbase)
     }
     sc8800fb->ops = &lcm_mcu_ops;
 
-	ret = mount_panel(sc8800fb, &lcd_panel);
+	//we maybe readid ,so hardware should be init
+	hw_early_init(sc8800fb);
+
+//only test 6810 ,do not want get troubles on other plateform
+#ifdef CONFIG_LCD_SP6810A
+
+	lcd_adapt = find_adapt_from_saved();
+	if(lcd_adapt == -1)
+	{
+		lcd_adapt = find_adapt_from_readid(sc8800fb);
+	}
+	if(lcd_adapt == -1)
+	{
+		lcd_adapt = 0;
+	}
+#endif
+#ifdef CONFIG_LCD_SP8805GA
+		lcd_adapt = 0;
+#endif
+#ifdef CONFIG_LCD_OPENPHONE
+		lcd_adapt = 2;
+#endif
+
+	ret = mount_panel(sc8800fb, lcd_panel[lcd_adapt].panel);
 	if (ret) {
 		printk("unsupported panel!!");
 		return -EFAULT;
 	}
+
     sc8800fb->smem_start = lcdbase;
     sc8800fb->smem_len = sc8800fb->panel->width * sc8800fb->panel->height;
 
@@ -838,6 +990,7 @@ static int sc8800fb_probe(void * lcdbase)
 	//}
 
 	hw_init(sc8800fb);
+	hw_later_init(sc8800fb);
     real_set_layer(sc8800fb);
 
 	//copybit_lcdc_init(); /* TEMP */

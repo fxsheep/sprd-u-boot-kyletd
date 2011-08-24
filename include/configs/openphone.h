@@ -46,6 +46,10 @@
 #define CONFIG_SC8800G
 #define CONFIG_OPENPHONE
 
+//add for lcd adapt temp overlord 
+#define CONFIG_LCD_OPENPHONE
+
+
 #ifdef CONFIG_SC8800G
 #define PLATFORM_SC8800G
 #define CHIP_VER_8800G2

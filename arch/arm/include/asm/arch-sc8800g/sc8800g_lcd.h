@@ -60,6 +60,7 @@ struct lcd_operations {
 				uint16_t right, uint16_t bottom,
 				uint16_t angle);
 	int32_t (*lcd_set_direction)(struct lcd_spec *self, uint16_t direction);
+	uint32_t (*lcd_readid)(struct lcd_spec *self);
 };
 
 /* RGB LCD specific properties */
@@ -97,6 +98,7 @@ struct ops_mcu {
 	int32_t (*send_cmd)(uint32_t cmd);
 	int32_t (*send_cmd_data)(uint32_t cmd, uint32_t data);
 	int32_t (*send_data)(uint32_t data);
+	uint32_t (*read_data)(void);
 };
 
 struct info_mcu {
@@ -119,5 +121,8 @@ struct lcd_spec {
 	struct lcd_operations *ops;
 };
 
-extern struct lcd_spec lcd_panel;
+extern struct lcd_spec lcd_panel_hx8357;
+extern struct lcd_spec lcd_panel_ili9328;
+extern struct lcd_spec lcd_panel_r61581;
+extern struct lcd_spec lcd_panel_rm68040;
 #endif

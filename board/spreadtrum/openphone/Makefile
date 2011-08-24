@@ -25,7 +25,7 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(BOARD).o
 
-COBJS	:= openphone.o sprd_kp.o sc8800g_lcd_hx8357.o
+COBJS	:= openphone.o sprd_kp.o sc8800g_lcd_rm68040.o sc8800g_lcd_r61581.o sc8800g_lcd_hx8357.o
 SOBJS	:= 
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
