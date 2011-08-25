@@ -71,11 +71,11 @@ int main(void)
 		/* Initialize NAND flash. */
 		err = nand_flash_init();
 		if ((NAND_SUCCESS != err) && (NAND_INCOMPATIBLE_PART != err)) {
-            FDL_SendAckPacket (convert_err (err));
-            break;
-        }
-   		/* Register command handler */
-   		FDL_DlInit();
+			FDL_SendAckPacket (convert_err (err));
+			break;
+		}
+		/* Register command handler */
+		FDL_DlInit();
 
   		FDL_DlReg(BSL_CMD_START_DATA,     FDL2_DataStart,         0);
    		FDL_DlReg(BSL_CMD_MIDST_DATA,     FDL2_DataMidst,         0);

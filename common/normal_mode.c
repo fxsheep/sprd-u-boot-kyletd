@@ -505,11 +505,12 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 #define ATAG_CMDLINE    0x54410009
 
 //config begin
+//steve.zhan add for normal linux boot.
 #define DRAM_BASE		(0X0)
 #define ZIMAGE_LOAD_ADDRESS     (DRAM_BASE + 0X8000)
 #define INITRD_IN_SDRAM 	(0X1a00000)
 #define INITRD_LOAD_ADDRESS	(DRAM_BASE + INITRD_IN_SDRAM)
-#define MEM_INDEX_O_SIZE	(0x4000000)
+#define MEM_INDEX_O_SIZE	(256*1024*1024)
 #define ROOTFS_SIZE		(2040834)
 
 #define u8 char
@@ -641,20 +642,20 @@ struct atag_revision {
 };
 
 struct atag_videolfb {
-        u16             lfb_width;
-        u16             lfb_height;
-        u16             lfb_depth;
-        u16             lfb_linelength;
-        u32             lfb_base;
-        u32             lfb_size;
-        u8              red_size;
-        u8              red_pos;
-        u8              green_size;
-        u8              green_pos;
-        u8              blue_size;
-        u8              blue_pos;
-        u8              rsvd_size;
-        u8              rsvd_pos;
+	u16             lfb_width;
+	u16             lfb_height;
+	u16             lfb_depth;
+	u16             lfb_linelength;
+	u32             lfb_base;
+	u32             lfb_size;
+	u8              red_size;
+	u8              red_pos;
+	u8              green_size;
+	u8              green_pos;
+	u8              blue_size;
+	u8              blue_pos;
+	u8              rsvd_size;
+	u8              rsvd_pos;
 };
 
 struct atag_cmdline {
@@ -662,18 +663,18 @@ struct atag_cmdline {
 };
 
 struct atag {
-        struct atag_header hdr;
-        union {
-                struct atag_core         core;
-                struct atag_mem          mem;
-                struct atag_videotext    videotext;
-                struct atag_ramdisk      ramdisk;
-                struct atag_initrd2      initrd2;
-                struct atag_serialnr     serialnr;
-                struct atag_revision     revision;
-                struct atag_videolfb     videolfb;
-                struct atag_cmdline      cmdline;
-        } u;
+	struct atag_header hdr;
+	union {
+		struct atag_core         core;
+		struct atag_mem          mem;
+		struct atag_videotext    videotext;
+		struct atag_ramdisk      ramdisk;
+		struct atag_initrd2      initrd2;
+		struct atag_serialnr     serialnr;
+		struct atag_revision     revision;
+		struct atag_videolfb     videolfb;
+		struct atag_cmdline      cmdline;
+	} u;
 };
 
 
@@ -683,114 +684,113 @@ static struct atag *params; /* used to point at the current tag */
 
 static void setup_core_tag(void * address,long pagesize)
 {
-    params = (struct atag *)address;         /* Initialise parameters to start at given address */
+	params = (struct atag *)address;         /* Initialise parameters to start at given address */
+	params->hdr.tag = ATAG_CORE;            /* start with the core tag */
+	params->hdr.size = tag_size(atag_core); /* size the tag */
 
-    params->hdr.tag = ATAG_CORE;            /* start with the core tag */
-    params->hdr.size = tag_size(atag_core); /* size the tag */
+	params->u.core.flags = 1;               /* ensure read-only */
+	params->u.core.pagesize = pagesize;     /* systems pagesize (4k) */
+	params->u.core.rootdev = 0;             /* zero root device (typicaly overidden from commandline )*/
 
-    params->u.core.flags = 1;               /* ensure read-only */
-    params->u.core.pagesize = pagesize;     /* systems pagesize (4k) */
-    params->u.core.rootdev = 0;             /* zero root device (typicaly overidden from commandline )*/
-
-    params = tag_next(params);              /* move pointer to next tag */
+	params = tag_next(params);              /* move pointer to next tag */
 }
 
 static void setup_ramdisk_tag(u32_t size)
 {
-    params->hdr.tag = ATAG_RAMDISK;         /* Ramdisk tag */
-    params->hdr.size = tag_size(atag_ramdisk);  /* size tag */
-
-    params->u.ramdisk.flags = 0;            /* Load the ramdisk */
-    params->u.ramdisk.size = size;          /* Decompressed ramdisk size */
-    params->u.ramdisk.start = 0;            /* Unused */
-
-    params = tag_next(params);              /* move pointer to next tag */
+	params->hdr.tag = ATAG_RAMDISK;         /* Ramdisk tag */
+	params->hdr.size = tag_size(atag_ramdisk);  /* size tag */
+	params->u.ramdisk.flags = 0;            /* Load the ramdisk */
+	params->u.ramdisk.size = size;          /* Decompressed ramdisk size */
+	params->u.ramdisk.start = 0;            /* Unused */
+	params = tag_next(params);              /* move pointer to next tag */
 }
 
 static void
 setup_initrd2_tag(u32_t start, u32_t size)
 {
-    params->hdr.tag = ATAG_INITRD2;         /* Initrd2 tag */
-    params->hdr.size = tag_size(atag_initrd2);  /* size tag */
-
-    params->u.initrd2.start = start;        /* physical start */
-    params->u.initrd2.size = size;          /* compressed ramdisk size */
-
-    params = tag_next(params);              /* move pointer to next tag */
+	params->hdr.tag = ATAG_INITRD2;         /* Initrd2 tag */
+	params->hdr.size = tag_size(atag_initrd2);  /* size tag */
+	params->u.initrd2.start = start;        /* physical start */
+	params->u.initrd2.size = size;          /* compressed ramdisk size */
+	params = tag_next(params);              /* move pointer to next tag */
 }
 
 static void setup_mem_tag(u32_t start, u32_t len)
 {
-    params->hdr.tag = ATAG_MEM;             /* Memory tag */
-    params->hdr.size = tag_size(atag_mem);  /* size tag */
-
-    params->u.mem.start = start;            /* Start of memory area (physical address) */
-    params->u.mem.size = len;               /* Length of area */
-
-    params = tag_next(params);              /* move pointer to next tag */
+	params->hdr.tag = ATAG_MEM;             /* Memory tag */
+	params->hdr.size = tag_size(atag_mem);  /* size tag */
+	params->u.mem.start = start;            /* Start of memory area (physical address) */
+	params->u.mem.size = len;               /* Length of area */
+	params = tag_next(params);              /* move pointer to next tag */
 }
 
 static void setup_cmdline_tag(const char * line)
 {
-    int linelen = strlen(line);
+	int linelen = strlen(line);
 
-    if(!linelen)
-        return;                             /* do not insert a tag for an empty commandline */
+	if(!linelen)
+		return;                             /* do not insert a tag for an empty commandline */
 
-    params->hdr.tag = ATAG_CMDLINE;         /* Commandline tag */
-    params->hdr.size = (sizeof(struct atag_header) + linelen + 1 + 4) >> 2;
-
-    strcpy(params->u.cmdline.cmdline,line); /* place commandline into tag */
-
-    params = tag_next(params);              /* move pointer to next tag */
+	params->hdr.tag = ATAG_CMDLINE;         /* Commandline tag */
+	params->hdr.size = (sizeof(struct atag_header) + linelen + 1 + 4) >> 2;
+	strcpy(params->u.cmdline.cmdline,line); /* place commandline into tag */
+	params = tag_next(params);              /* move pointer to next tag */
 }
 
 static void setup_end_tag(void)
 {
-    params->hdr.tag = ATAG_NONE;            /* Empty tag ends list */
-    params->hdr.size = 0;                   /* zero length */
+	params->hdr.tag = ATAG_NONE;            /* Empty tag ends list */
+	params->hdr.size = 0;                   /* zero length */
 }
 
 
 static void setup_tags(void *parameters)
 {
-    setup_core_tag(parameters, 4096);       /* standard core tag 4k pagesize */
-    setup_mem_tag(DRAM_BASE, MEM_INDEX_O_SIZE);    /* 64Mb at 0x10000000 */
-//    setup_mem_tag(DRAM_BASE + 0x8000000, 0x4000000); /* 64Mb at 0x18000000 */
-    setup_ramdisk_tag(4096*2);                /* create 8Mb ramdisk */ 
-    setup_initrd2_tag(INITRD_LOAD_ADDRESS, ROOTFS_SIZE); /* 1Mb of compressed data placed 8Mb into memory */
-    setup_cmdline_tag("console=ttyS1,115200n8 root=/dev/ram0 rw init=/init");    /* commandline setting root device */
-    setup_end_tag();                    /* end of tags */
+	setup_core_tag(parameters, 4096);       /* standard core tag 4k pagesize */
+	setup_mem_tag(DRAM_BASE, MEM_INDEX_O_SIZE);    /* 64Mb at 0x10000000 */
+	setup_ramdisk_tag(4096*2);                /* create 8Mb ramdisk */ 
+	setup_initrd2_tag(INITRD_LOAD_ADDRESS, ROOTFS_SIZE); /* 1Mb of compressed data placed 8Mb into memory */
+	setup_cmdline_tag("console=ttyS1,115200n8 root=/dev/ram0 rw init=/init " MTDPARTS_DEFAULT);    /* commandline setting root device */
+	setup_end_tag();                    /* end of tags */
 }
 
 static int start_linux()
 {
-    void (*theKernel)(int zero, int arch, u32 params);
-    u32 exec_at = (u32)-1;
-    u32 parm_at = (u32)-1;
-    u32 machine_type;
+	void (*theKernel)(int zero, int arch, u32 params);
+	u32 exec_at = (u32)-1;
+	u32 parm_at = (u32)-1;
+	u32 machine_type;
 
-    exec_at = ZIMAGE_LOAD_ADDRESS;
-    parm_at = DRAM_BASE + 0x100;
- 
-    load_image_kernel(BOOT_PART, exec_at, COPY_LINUX_KERNEL_SIZE);              /* copy image into RAM */
-    load_image_kernel(LINUX_INITRD_NAME,INITRD_LOAD_ADDRESS, ROOTFS_SIZE);/* copy initial ramdisk image into RAM */
+	exec_at = ZIMAGE_LOAD_ADDRESS;
+	parm_at = DRAM_BASE + 0x100;
 
-    setup_tags((void*)parm_at);                    /* sets up parameters */
+	*(volatile u32*)0x84001000 = 'c';
+	*(volatile u32*)0x84001000 = 'p';
+	*(volatile u32*)0x84001000 = 'k';
 
-    machine_type = get_mach_type();         /* get machine type */
+	load_image_kernel(BOOT_PART, exec_at, COPY_LINUX_KERNEL_SIZE);/* copy image into RAM */
 
-    irq_shutdown();                         /* stop irq */
+	*(volatile u32*)0x84001000 = 'c';
+	*(volatile u32*)0x84001000 = 'p';
+	*(volatile u32*)0x84001000 = 'f';
 
-    cpu_op();          /* turn MMU off */
+	load_image_kernel(LINUX_INITRD_NAME,INITRD_LOAD_ADDRESS, ROOTFS_SIZE);/* copy initial ramdisk image into RAM */
 
-    theKernel = (void (*)(int, int, u32))exec_at; /* set the kernel address */
-    *(volatile u32*)0x84001000 = 'j';
-    *(volatile u32*)0x84001000 = 'm';
-    *(volatile u32*)0x84001000 = 'p';
-    theKernel(0, machine_type, parm_at);    /* jump to kernel with register set */
+	setup_tags((void*)parm_at);                    /* sets up parameters */
 
-    return 0;
+	machine_type = get_mach_type();         /* get machine type */
+
+	irq_shutdown();                         /* stop irq */
+
+	cpu_op();          /* turn MMU off */
+
+	theKernel = (void (*)(int, int, u32))exec_at; /* set the kernel address */
+	*(volatile u32*)0x84001000 = 'j';
+	*(volatile u32*)0x84001000 = 'm';
+	*(volatile u32*)0x84001000 = 'p';
+	theKernel(0, machine_type, parm_at);    /* jump to kernel with register set */
+
+	return 0;
 }
 
 #endif

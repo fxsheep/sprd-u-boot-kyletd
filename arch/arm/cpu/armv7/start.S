@@ -47,6 +47,31 @@ _start: b	reset
 	ldr	pc, _hang
 	ldr	pc, _hang
 
+               /*22 begin*/	
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	/*22 end*/
+
 _hang:
 	.word	do_hang
 /* pad to 64 byte boundary */
@@ -78,6 +103,7 @@ _pad:			.word 0x12345678 /* now 16*4=64 */
 _end_vect:
 
 #endif	/* CONFIG_PRELOADER */
+	
 	.balignl 16,0xdeadbeef
 /*************************************************************************
  *
@@ -147,7 +173,7 @@ reset:
 #if (CONFIG_SC8810)
 #ifndef CONFIG_NAND_SPL
 #if 0
-	ldr	r1, =0xffffff
+	ldr	r1, =0xeffff
 time:	subs	r1,r1,#0x1
 	bne	time
 #endif
@@ -156,10 +182,16 @@ time:	subs	r1,r1,#0x1
 	bic r1, #0x5
 	mcr p15, 0, r1, c1, c0, 0
 
+	ldr	r0, =0x8b00002c
+	ldr	r1, =0xf
+	ldr	r2,  [r0]
+	orr	r1,  r1,r2
+	str	r1,  [r0]
+
 #endif
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
 	bl	cpu_init_crit
-        mov    r10, #0
+	mov    r10, #0
 	/*set up temp stack*/
 	LDR    sp, =SVC_STACK_TEMP
 

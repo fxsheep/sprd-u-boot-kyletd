@@ -29,16 +29,16 @@ LDFLAGS	= -Bstatic -T $(LDSCRIPT) -Ttext $(CONFIG_SYS_TEXT_BASE) $(PLATFORM_LDFL
 AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL -g
 
-SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o cpu_spec.o mmu_asm.o 
-COBJS	= nand_boot.o nand_ecc.o sprd_nand.o lowlevel_init.o div0.o adi_drv.o sdram.o mmu.o sdram_prod.o chip_cfg.o serial_sc8800x.o
+SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o cpu_spec.o mmu_asm.o
+COBJS	= nand_boot.o nand_ecc.o sc8810_nand.o lowlevel_init.o div0.o adi_drv.o sdram.o mmu.o sdram_prod.o chip_cfg.o serial_sc8800x.o
 
 SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c
-SRCS	+= $(SRCTREE)/arch/arm/cpu/arm926ejs/start.S
-SRCS	+= $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800g/lowlevel_init.c
-SRCS	+= $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800g/clk_config.c
-SRCS    += $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800g/sdram.c
-SRCS    += $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800g/adi_drv.c
-SRCS    += $(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800g/remap.c
+SRCS	+= $(SRCTREE)/arch/arm/cpu/armv7/start.S
+SRCS	+= $(SRCTREE)/arch/arm/cpu/armv7/sc8810/lowlevel_init.c
+SRCS	+= $(SRCTREE)/arch/arm/cpu/armv7/sc8810/clk_config.c
+SRCS    += $(SRCTREE)/arch/arm/cpu/armv7/sc8810/sdram.c
+SRCS    += $(SRCTREE)/arch/arm/cpu/armv7/sc8810/adi_drv.c
+SRCS    += $(SRCTREE)/arch/arm/cpu/armv7/sc8810/remap.c
 SRCS    += $(SRCTREE)/arch/arm/lib/_udivsi3.S
 SRCS    += $(SRCTREE)/arch/arm/lib/_divsi3.S
 SRCS    += $(SRCTREE)/arch/arm/lib/div0.c
@@ -67,10 +67,10 @@ $(nandobj)u-boot-spl:	$(OBJS) $(LDSCRIPT)
 
 #########################################################################
 
-$(obj)%.o:	$(SRCTREE)/arch/arm/cpu/arm926ejs/%.S
+$(obj)%.o:	$(SRCTREE)/arch/arm/cpu/armv7/%.S
 	$(CC) $(AFLAGS) -mlittle-endian -c -o $@ $<
 
-$(obj)%.o:	$(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800g/%.c
+$(obj)%.o:	$(SRCTREE)/arch/arm/cpu/armv7/sc8810/%.c
 	$(CC) $(CFLAGS) -mlittle-endian -c -o $@ $<
 
 $(obj)%.o:	$(SRCTREE)/nand_spl/%.c
@@ -85,7 +85,7 @@ $(obj)%.o:      $(SRCTREE)/arch/arm/lib/%.c
 $(obj)%.o:      $(SRCTREE)/drivers/mtd/nand/%.c
 	$(CC) $(CFLAGS) -mlittle-endian -c -o $@ $<
 
-$(obj)%.o:	$(SRCTREE)/arch/arm/cpu/arm926ejs/sc8800g/%.S
+$(obj)%.o:	$(SRCTREE)/arch/arm/cpu/armv7/sc8810/%.S
 	$(CC) $(AFLAGS) -mlittle-endian -c -o $@ $<
 
 $(obj)%.o:	$(SRCTREE)/drivers/serial/%.c

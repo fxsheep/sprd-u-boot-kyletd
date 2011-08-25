@@ -44,7 +44,6 @@
 /*
  * SPREADTRUM BIGPHONE board - SoC Configuration
  */
-#define CONFIG_ARM926EJS			/* arm926ejs CPU core */
 #define CONFIG_SC8800G
 #define CONFIG_SC8810_OPENPHONE
 
@@ -58,7 +57,7 @@
 #endif
 
 #define BB_DRAM_TYPE_256MB_32BIT
-#define  CONFIG_MTD_NAND_SPRD 1
+#define  CONFIG_MTD_NAND_SC8810 1
 
 #define CONFIG_SYS_HZ			1000
 #define CONFIG_SPRD_TIMER_CLK		1000 /*32768*/
@@ -82,6 +81,9 @@
 /* Start copying real U-boot from the second page */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
 #define CONFIG_SYS_NAND_U_BOOT_SIZE	0x60000
+
+#define RAM_TYPPE_IS_SDRAM	0
+
 #ifdef CONFIG_NAND_SPL
 /* Load U-Boot to this address */
 #define CONFIG_SYS_NAND_U_BOOT_DST	0x00f00000
@@ -96,6 +98,9 @@
 #define CONFIG_SYS_NAND_PAGE_COUNT	64
 #define CONFIG_SYS_NAND_SIZE		(128 * 1024 * 1024)
 #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0
+
+#define CONFIG_SYS_NAND_5_ADDR_CYCLE
+
 #else
 
 #define CONFIG_SYS_SDRAM_BASE 0x00000000
@@ -107,12 +112,14 @@
 
 #define CONFIG_SYS_NAND_PAGE_SIZE	2048
 /* Size of the block protected by one OOB (Spare Area in Samsung terminology) */
-#define CONFIG_SYS_NAND_ECCSIZE	CONFIG_SYS_NAND_PAGE_SIZE
+#define CONFIG_SYS_NAND_ECCSIZE	512
 /* Number of ECC bytes per OOB - S3C6400 calculates 4 bytes ECC in 1-bit mode */
-//#define CONFIG_SYS_NAND_ECCBYTES	4
-#define CONFIG_SYS_NAND_ECCBYTES	16
+#define CONFIG_SYS_NAND_ECCBYTES	4
 /* Number of ECC-blocks per NAND page */
 #define CONFIG_SYS_NAND_ECCSTEPS	(CONFIG_SYS_NAND_PAGE_SIZE / CONFIG_SYS_NAND_ECCSIZE)
+/* 2 bit correct, sc8810 support 1, 2, 4, 8, 12,14, 24 */
+#define CONFIG_SYS_NAND_ECC_MODE	2
+#define CONFIG_SYS_SPL_ECC_POS		8
 /* Size of a single OOB region */
 #define CONFIG_SYS_NAND_OOBSIZE	64
 /* Number of ECC bytes per page */
@@ -176,13 +183,15 @@
 */
 
 /* NAND */
-#define CONFIG_NAND_SPRD
+#define CONFIG_NAND_SC8810
 #define CONFIG_SPRD_NAND_REGS_BASE	(0x60000000)
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_SYS_NAND_BASE		(0x60000000)
 //#define CONFIG_JFFS2_NAND
-#define CONFIG_SPRD_NAND_HWECC
+//#define CONFIG_SPRD_NAND_HWECC
+#define CONFIG_SYS_NAND_HW_ECC
 #define CONFIG_SYS_NAND_LARGEPAGE
+//#define CONFIG_SYS_NAND_5_ADDR_CYCLE
 
 #define CONFIG_SYS_64BIT_VSPRINTF
 
@@ -244,10 +253,8 @@
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 
-#if 1//sc8810
 #define COPY_LINUX_KERNEL_SIZE	(0x600000)
 #define LINUX_INITRD_NAME	"modem"
-#endif
 
 #define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	

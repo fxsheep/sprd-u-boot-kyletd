@@ -1052,10 +1052,10 @@ LOCAL uint32 Chip_ConfigClk (void)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
-void sc8810_sdram_init(void)
+void sc8810_ram_init(void)
 {
-	uint32 isSDRAM = 1;
-	uint32 i = 0;
+	uint32 isSDRAM = RAM_TYPPE_IS_SDRAM;
+	volatile uint32 i = 0;
 	*(volatile uint32 *)(0x20000024) |= BIT_6;
 	*(volatile uint32 *)(0x2000002C) |= BIT_6;
 
@@ -1076,31 +1076,60 @@ void sc8810_sdram_init(void)
 		for (i = 0; i < 1000; ++i);
 
 	} else {
+	//ddr init
+		*(volatile uint32 *)(0x20000004) = 0x00000049;
+		for (i = 0; i < 1000; ++i);
 
+		*(volatile uint32 *)(0x20000194) = 0x00622728;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x2000019c) = 0x00f0000e;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x200001a0) = 0x00f0000e;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x20000190) = 0x40010000;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x20000190) = 0x40020000;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x20000190) = 0x40020000;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x20000190) = 0x40040031;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x20000190) = 0x40048000;
+		for (i = 0; i < 1000; ++i);
+
+
+		*(volatile uint32 *)(0x20000180) |= BIT_14;
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x20000180) &= ~(0x70);
+		*(volatile uint32 *)(0x20000180) |= (0x20);
+		for (i = 0; i < 1000; ++i);
+
+		*(volatile uint32 *)(0x20000180) &= ~0x3;
+		*(volatile uint32 *)(0x20000180) |= 0x3;
+		for (i = 0; i < 1000; ++i);		
+
+		
+		*(volatile uint32 *)(0x20000000) &= ~0x7;
+		*(volatile uint32 *)(0x20000000) |= 0x6;
+		for (i = 0; i < 1000; ++i);		
 	}
 
 }
 PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
-    volatile uint32 i = 0;
+	volatile uint32 i = 0;
 #if 1//for sc8810,
-	sc8810_sdram_init();
+	sc8810_ram_init();
 	g_ahb_clk = 32000000;
 	for (i=0; i<5000; i++) {}
 	return;
 #endif
-    //step1, SDRAM pin set up
-    SDRAM_PinDrv_Set();
-
-    //step2, config AHB CLK and PLL clk
-    g_ahb_clk = Chip_ConfigClk();
-
-    //step3, initialize SDRAM init
-    #ifdef PLATFORM_SC8800G
-    SDRAM_Init (g_emc_clk/2);
-    #else
-    SDRAM_Init (g_ahb_clk);
-    #endif
-
-    for (i=0; i<5000; i++) {}
 }
