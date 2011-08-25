@@ -15,5 +15,5 @@
 void alarm_mode(void)
 {
     printf("%s\n", __func__);
-    vlx_nand_boot(BOOT_PART, "androidboot.mode=alarm");
+    vlx_nand_boot(BOOT_PART, NULL);
 }
