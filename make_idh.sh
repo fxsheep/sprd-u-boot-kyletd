@@ -13,7 +13,7 @@ fi
 
 if [ $argu = "clean" ]; then
     for dir in $DIR_PROTECT; do
-    find $dir -name *.c | xargs rm -f
+    find $dir -name *.c -o -name *.S | xargs rm -f
     done
 
     for file in $PRODUCTS; do
