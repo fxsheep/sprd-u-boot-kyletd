@@ -392,7 +392,6 @@ $(OBJS):	depend
 
 ifdef CONFIG_IDH_BUILD
 $(LIBS):	depend $(SUBDIRS)
-		@echo "idh builddkfaldfj l  "
 		if [ "$@" != "$(obj)property/libproperty.o" ] && [ "$@" != "$(obj)$(CPUDIR)/$(SOC)/lib$(SOC).o" ]; then \
 		$(MAKE) -C $(dir $(subst $(obj),,$@)); \
 		fi
@@ -1310,6 +1309,26 @@ clean:
 		| xargs rm -f
 endif
 
+ifdef CONFIG_IDH_BUILD
+clobber:	clean
+	@find $(OBJTREE) \( -path ".*/property" -o -path ".*/sc8800g" \
+			   -o -path ".*/sc8800x" -o -path ".*/nand_fdl" -o -path "nand_spl" \) \
+			   -prune -o -type f \( -name '*.depend' \
+		-o -name '*.srec' -o -name '*.bin' -o -name u-boot.img \) \
+		-print0 \
+		| xargs -0 rm -f
+	@rm -f $(OBJS) $(obj)*.bak $(obj)ctags $(obj)etags $(obj)TAGS \
+		$(obj)cscope.* $(obj)*.*~
+	@rm -f $(obj)u-boot $(obj)u-boot.map $(obj)u-boot.hex $(ALL)
+	@rm -f $(obj)u-boot.kwb
+	@rm -f $(obj)u-boot.imx
+	@rm -f $(obj)tools/{env/crc32.c,inca-swap-bytes}
+	@rm -f $(obj)arch/powerpc/cpu/mpc824x/bedbug_603e.c
+	@rm -f $(obj)include/asm/proc $(obj)include/asm/arch $(obj)include/asm
+	@rm -fr $(obj)include/generated
+	@[ ! -d $(obj)nand_spl ] || find $(obj)nand_spl -name "*" -type l -print | xargs rm -f
+	@[ ! -d $(obj)onenand_ipl ] || find $(obj)onenand_ipl -name "*" -type l -print | xargs rm -f
+else
 clobber:	clean
 	@find $(OBJTREE) -type f \( -name '*.depend' \
 		-o -name '*.srec' -o -name '*.bin' -o -name u-boot.img \) \
@@ -1326,6 +1345,7 @@ clobber:	clean
 	@rm -fr $(obj)include/generated
 	@[ ! -d $(obj)nand_spl ] || find $(obj)nand_spl -name "*" -type l -print | xargs rm -f
 	@[ ! -d $(obj)onenand_ipl ] || find $(obj)onenand_ipl -name "*" -type l -print | xargs rm -f
+endif
 
 ifeq ($(OBJTREE),$(SRCTREE))
 mrproper \
