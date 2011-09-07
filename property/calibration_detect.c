@@ -52,9 +52,7 @@ extern void udc_power_off(void);
 #define CALIBERATE_HEAD 0x7e
 #define CALIBERATE_COMMOND_T 0xfe
 
-#define CALIBERATE_DETECT_MS 20 
-
-
+extern int get_cal_det_ms(void);
 unsigned int check_caliberate(uint8_t * buf, int len)
 {
 	unsigned int command = 0;
@@ -77,9 +75,9 @@ unsigned int check_caliberate(uint8_t * buf, int len)
 
 extern int power_button_pressed(void);
 extern int recheck_power_button(void);
+static int count_ms;
 int is_timeout(int key)
 {
-    static int count_ms = CALIBERATE_DETECT_MS * 1000;
     if(!key){
         if(!recheck_power_button() || charger_connected())
           return 2;
@@ -103,6 +101,7 @@ void calibration_detect(int key)
 	loff_t off = 0;
     printf("%s\n", "calibrate detecting");
 
+    count_ms = get_cal_det_ms();
    // extern lcd_display(void);
    // extern void set_backlight(uint32_t value);
    // lcd_printf("   caliberation mode");
