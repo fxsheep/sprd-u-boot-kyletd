@@ -516,6 +516,19 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 			buf[str_len+2] = 0;
 		}
 	}
+	{
+		char *factorymodepoint = "/productinfo";
+		char *factorymodefilename = "/productinfo/factorymode.file";
+		cmd_yaffs_mount(factorymodepoint);
+		ret = cmd_yaffs_ls_chk(factorymodefilename );
+		if (ret == -1) {
+			/* no factorymode.file found, nothing to do */
+		} else {
+			str_len = strlen(buf);
+			sprintf(&buf[str_len], " factory");
+		}
+		cmd_yaffs_umount(factorymodepoint);
+	}
 
     printf("pass cmdline: %s\n", buf);
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
