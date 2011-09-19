@@ -489,7 +489,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
     //check caliberation mode
     int str_len;
     char * buf;
-    buf = malloc(150);
+    buf = malloc(384);
 #define VLX_TAG_ADDR 0x5100000 //after initrd
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     str_len = strlen(buf);
