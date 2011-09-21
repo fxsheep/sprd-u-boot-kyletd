@@ -788,6 +788,9 @@ static int start_linux()
 	*(volatile u32*)0x84001000 = 'j';
 	*(volatile u32*)0x84001000 = 'm';
 	*(volatile u32*)0x84001000 = 'p';
+
+	//remap 
+	*(volatile u32*)(0x20900000 + 0x218) |= (0x1);//internal ram using 0xffff0000
 	theKernel(0, machine_type, parm_at);    /* jump to kernel with register set */
 
 	return 0;
