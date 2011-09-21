@@ -9,7 +9,7 @@ char * version_string="fdl2";
 
 int printf(const char *fmt, ...)
 {
-#if 1
+#if CONFIG_FDL2_PRINT
 	va_list args;
 	unsigned int i;
 	char printbuffer[CONFIG_SYS_PBSIZE];
