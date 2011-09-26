@@ -65,7 +65,9 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         fastboot_mode();
     }else if(rst_mode == NORMAL_MODE){
         normal_mode();
-    }
+    }else if(rst_mode == ALARM_MODE){
+		alarm_mode();
+	}
     DBG("func: %s line: %d\n", __func__, __LINE__);
 
     int recovery_init(void);

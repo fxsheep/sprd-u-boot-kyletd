@@ -20,6 +20,10 @@ unsigned check_reboot_mode(void)
       return FASTBOOT_MODE;
     else if(rst_mode == HWRST_STATUS_NORMAL)
       return NORMAL_MODE;
+	else if(rst_mode == HWRST_STATUS_ALARM)
+		return ALARM_MODE;
+	else
+		return 0;
 }
 
 void reboot_devices(unsigned reboot_mode)

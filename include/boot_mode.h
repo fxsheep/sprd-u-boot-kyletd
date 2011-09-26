@@ -13,6 +13,7 @@ void engtest_mode(void);
 #define RECOVERY_MODE   0x77665502
 #define FASTBOOT_MODE   0x77665500
 #define NORMAL_MODE   0x77665503
+#define ALARM_MODE   0x77665504
 
 #define BOOT_NORAML 0xf1
 #define BOOT_FASTBOOT 0xf2
