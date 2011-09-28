@@ -321,7 +321,7 @@ static void sc8810_nand_hw_init(void)
 	REG_AHB_SOFT_RST &= ~BIT_5;
 
 	sc8810_nand_wp_en(0);
-	set_nfc_param(0);//53MHz
+	//set_nfc_param(0);//53MHz
 }
 static void sc8810_nand_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)
 {
