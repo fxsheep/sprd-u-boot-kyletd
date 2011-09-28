@@ -45,8 +45,8 @@ unsigned char raw_header[2048];
 #define PRODUCTINFO_ADR		0x00490000
 #define RUNTIMENV_ADR		0x004a0000
 #define MODEM_ADR		0x00500000
-#define KERNEL_ADR		0x00008000
-#define RAMDISK_ADR 		0X1a00000
+#define KERNEL_ADR		0x04508000
+#define RAMDISK_ADR 		0x04c00000
 
 extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
@@ -128,31 +128,7 @@ void array_diff(unsigned char * array1, unsigned char * array2, int len)
 	}
 	printf("arrar diff is finished\n");
 }
-static int start_linux()
-{
-	void (*theKernel)(int zero, int arch, u32 params);
-	u32 exec_at = (u32)-1;
-	u32 parm_at = (u32)-1;
-	u32 machine_type;
-	
-	*(volatile u32*)0x84001000 = 'c';
-	*(volatile u32*)0x84001000 = 'p';
-	*(volatile u32*)0x84001000 = 'f';
 
-	machine_type = 0x7dd;         /* get machine type */
-
-	theKernel = (void (*)(int, int, u32))KERNEL_ADR; /* set the kernel address */
-	*(volatile u32*)0x84001000 = 'j';
-	*(volatile u32*)0x84001000 = 'm';
-	*(volatile u32*)0x84001000 = 'p';
-#define VLX_TAG_ADDR 0x100 //after initrd
-
-	//remap 
-	*(volatile u32*)(0x20900000 + 0x218) |= (0x1);//internal ram using 0xffff0000
-	theKernel(0, machine_type, VLX_TAG_ADDR);    /* jump to kernel with register set */
-	while(1);
-	return 0;
-}
 void vlx_nand_boot(char * kernel_pname, char * cmdline)
 {
     	boot_img_hdr *hdr = (void *)raw_header;
@@ -175,7 +151,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		printf("mtdparts init error %d\n", ret);
 		return;
 	}
-#if 0	
 #ifdef CONFIG_SPLASH_SCREEN 
 #define SPLASH_PART "boot_logo"
 
@@ -401,7 +376,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		printf("dsp nand read error %d\n", ret);
 		return;
 	}
-#endif
+
 	//array_value((unsigned char *)DSP_ADR, DSP_SIZE);
 
 	////////////////////////////////////////////////////////////////
@@ -455,7 +430,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		return;
 	}
 	//array_value((unsigned char *)KERNEL_ADR, KERNEL_SIZE);
-#if 0
+
 	////////////////////////////////////////////////////////////////
 	/* MODEM_PART */
 	printf("Reading modem to 0x%08x\n", MODEM_ADR);
@@ -509,13 +484,13 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		printf("modem nand read error %d\n", ret);
 		return;
 	}
-#endif
+
 	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
     //check caliberation mode
     int str_len;
     char * buf;
     buf = malloc(384);
-#define VLX_TAG_ADDR 0x100 //after initrd
+#define VLX_TAG_ADDR 0x5100000 //after initrd
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     str_len = strlen(buf);
     sprintf(&buf[str_len], " %s", MTDPARTS_DEFAULT);
@@ -524,7 +499,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
             str_len = strlen(buf);
             sprintf(&buf[str_len], " %s", cmdline);
     }
-#if 0
+
 	{
 		extern uint32_t load_lcd_id_to_kernel();
 		uint32_t lcd_id;
@@ -554,16 +529,15 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		}
 		cmd_yaffs_umount(factorymodepoint);
 	}
-#endif
+
     printf("pass cmdline: %s\n", buf);
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
-	start_linux();
-	//entry();
+	entry();
 }
 void normal_mode(void)
 {
     set_vibrator(1);
-    vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS);
+    vlx_nand_boot(BOOT_PART, NULL);
 }
