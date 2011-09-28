@@ -138,7 +138,11 @@ time:	subs	r0,r0,#0x1
 
 	/*set stack limit to 0*/
 	MOV R10, #0
+#ifndef CONFIG_NAND_SC8810
+	ldr sp, =0x31000000
+#else
 	ldr sp, =0x1000000
+#endif	
 clear_bss:
 	ldr	r0, _bss_start		/* find start of bss segment        */
 	ldr	r1, _bss_end		/* stop here                        */

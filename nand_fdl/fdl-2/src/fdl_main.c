@@ -64,6 +64,8 @@ int main(void)
 	   bss_end_end = _bss_end;
 
 	   mem_malloc_init (&mempool[0], 1024*1024);
+#else
+       mem_malloc_init (_bss_end, CONFIG_SYS_MALLOC_LEN);	   
 #endif	   
 	   timer_init();
 

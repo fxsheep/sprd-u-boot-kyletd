@@ -1,7 +1,10 @@
 #include "fdl_nand.h"
 #include "asm/arch/sci_types.h"
-//#include "asm/arch/nand_controller.h"
+#ifndef CONFIG_NAND_SC8810
+#include "asm/arch/nand_controller.h"
+#else
 #include <asm/arch/regs_nfc.h>
+#endif
 #include <linux/mtd/mtd.h>
 #include <nand.h>
 #include <linux/mtd/nand.h>
@@ -10,7 +13,7 @@
 
 struct mtd_info *_local_mtd = 0;
 
-#define FDL2_DEBUG 1
+//#define FDL2_DEBUG 1
 typedef struct {
 		unsigned char colParity;
 		unsigned lineParity;
@@ -1012,65 +1015,5 @@ int nand_read_fdl(unsigned int addr, unsigned int off, unsigned int size, unsign
 int nand_read_NBL(void *buf)
 {
 	printf("function: %s\n", __FUNCTION__);
-	if (buf == 0x12334343)
-		nand_command( );
-
 	return NAND_SUCCESS;
 }
-
-
- int nand_command( )
-{
-	 unsigned int offs = CONFIG_SYS_NAND_U_BOOT_OFFS;
-
-	 unsigned int block;
-	 unsigned int page;
-	 struct mtd_info *mtd = _local_mtd;
-
-	u8 cmd = NAND_CMD_READ0;
-	struct nand_chip *this = mtd->priv;
-	int page_addr = 0;
-	u32 column;
-
-	block = offs / (128*1024);
-	page = (offs % (128*1024)) / 2048;
-
-	page_addr = page + block * 64;
-
-	if (this->dev_ready)
-		while (!this->dev_ready(mtd))
-			;
-
-	/* Begin command latch cycle */
-	this->cmd_ctrl(mtd, cmd, NAND_CTRL_CLE | NAND_CTRL_CHANGE);
-	/* Set ALE and clear CLE to start address cycle */
-	/* Column address */
-	if(this->options & NAND_BUSWIDTH_16)
-	{
-		column >>= 1;
-	}
-	this->cmd_ctrl(mtd, column & 0xff,
-		       NAND_CTRL_ALE | NAND_CTRL_CHANGE); /* A[7:0] */
-	this->cmd_ctrl(mtd, (column >> 8) & 0xff, NAND_CTRL_ALE); /* A[11:9] */
-	/* Row address */
-	this->cmd_ctrl(mtd, (page_addr & 0xff), NAND_CTRL_ALE); /* A[19:12] */
-	this->cmd_ctrl(mtd, ((page_addr >> 8) & 0xff),
-		       NAND_CTRL_ALE); /* A[27:20] */
-
-	/* One more address cycle for devices > 128MiB */
-	this->cmd_ctrl(mtd, (page_addr >> 16) & 0x0f,
-		       NAND_CTRL_ALE); /* A[31:28] */
-	/* Latch in address */
-	this->cmd_ctrl(mtd, NAND_CMD_READSTART,
-		       NAND_CTRL_CLE | NAND_CTRL_CHANGE);
-	this->cmd_ctrl(mtd, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
-
-	/*
-	 * Wait a while for the data to be ready
-	 */
-	if (this->dev_ready)
-		while (!this->dev_ready(mtd))
-			;
-	return 0;
-}
-
