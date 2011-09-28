@@ -342,6 +342,9 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		cmd_yaffs_umount(backupfixnvpoint);
 		//////////////////////////////
     	} else if (is_nbl_write == 1) {
+#ifdef CONFIG_NAND_SC8810	//only for sc8810 to write spl
+		nand_write_fdl(0x0, g_FixNBLBuf);
+#else
 	   	/* write the spl loader image to the nand*/
 		for (i = 0; i < 3; i++) {
 			pos = 0;
@@ -359,6 +362,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			}
 
         	}//for (i = 0; i < 3; i++)
+#endif
 		is_nbl_write = 0;
    	} else if (is_phasecheck_write == 1) {
 		/* write phasecheck to yaffs2 format */
