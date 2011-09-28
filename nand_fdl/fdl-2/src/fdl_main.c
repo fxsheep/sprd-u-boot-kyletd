@@ -51,6 +51,7 @@ int main(void)
 	  for(j=0; j<1005528;j++)
 	   cnt++;
 #endif
+	MMU_Init();
 	sigture_address = (uint32)FDL2_signature;
 
 #if defined(CHIP_ENDIAN_DEFAULT_LITTLE) && defined(CHIP_ENDIAN_BIG)    

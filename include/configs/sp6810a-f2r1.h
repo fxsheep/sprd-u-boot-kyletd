@@ -21,9 +21,6 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-//only used in fdl2 .in uart download, the debug infors  from  serial will break the download process.
-#define CONFIG_FDL2_PRINT	0
-
 #define CONFIG_SILENT_CONSOLE
 #define CONFIG_GPIOLIB 1
 //#define NAND_DEBUG  
@@ -35,9 +32,11 @@
 #define SPRD_EVM_TAG(_x) (*(((unsigned long *)SPRD_EVM_ADDR_START)+_x) = *(volatile unsigned long *)0x87003004)
 #endif
 
-#define CONFIG_L2_OFF			1
-
 #define BOOT_DEBUG 1
+
+/* mcp type   FmRn : nand flash is mGb and ddr sdram is nGb */
+#define MCP_F2R1    1
+//#define MCP_F4R2    1
 
 #define CONFIG_YAFFS2 1
 
@@ -47,8 +46,12 @@
 /*
  * SPREADTRUM BIGPHONE board - SoC Configuration
  */
+#define CONFIG_ARM926EJS			/* arm926ejs CPU core */
 #define CONFIG_SC8800G
-#define CONFIG_SC8810_OPENPHONE
+#define CONFIG_OPENPHONE
+
+#define CONFIG_LCD_SP6810A
+
 
 #ifdef CONFIG_SC8800G
 #define PLATFORM_SC8800G
@@ -60,7 +63,7 @@
 #endif
 
 #define BB_DRAM_TYPE_256MB_32BIT
-#define  CONFIG_MTD_NAND_SC8810 1
+#define  CONFIG_MTD_NAND_SPRD 1
 
 #define CONFIG_SYS_HZ			1000
 #define CONFIG_SPRD_TIMER_CLK		1000 /*32768*/
@@ -84,9 +87,6 @@
 /* Start copying real U-boot from the second page */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
 #define CONFIG_SYS_NAND_U_BOOT_SIZE	0x60000
-
-#define RAM_TYPPE_IS_SDRAM	0
-
 #ifdef CONFIG_NAND_SPL
 /* Load U-Boot to this address */
 #define CONFIG_SYS_NAND_U_BOOT_DST	0x00f00000
@@ -101,9 +101,6 @@
 #define CONFIG_SYS_NAND_PAGE_COUNT	64
 #define CONFIG_SYS_NAND_SIZE		(128 * 1024 * 1024)
 #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0
-
-#define CONFIG_SYS_NAND_5_ADDR_CYCLE
-
 #else
 
 #define CONFIG_SYS_SDRAM_BASE 0x00000000
@@ -115,14 +112,12 @@
 
 #define CONFIG_SYS_NAND_PAGE_SIZE	2048
 /* Size of the block protected by one OOB (Spare Area in Samsung terminology) */
-#define CONFIG_SYS_NAND_ECCSIZE	512
+#define CONFIG_SYS_NAND_ECCSIZE	CONFIG_SYS_NAND_PAGE_SIZE
 /* Number of ECC bytes per OOB - S3C6400 calculates 4 bytes ECC in 1-bit mode */
-#define CONFIG_SYS_NAND_ECCBYTES	4
+//#define CONFIG_SYS_NAND_ECCBYTES	4
+#define CONFIG_SYS_NAND_ECCBYTES	16
 /* Number of ECC-blocks per NAND page */
 #define CONFIG_SYS_NAND_ECCSTEPS	(CONFIG_SYS_NAND_PAGE_SIZE / CONFIG_SYS_NAND_ECCSIZE)
-/* 2 bit correct, sc8810 support 1, 2, 4, 8, 12,14, 24 */
-#define CONFIG_SYS_NAND_ECC_MODE	2
-#define CONFIG_SYS_SPL_ECC_POS		8
 /* Size of a single OOB region */
 #define CONFIG_SYS_NAND_OOBSIZE	64
 /* Number of ECC bytes per page */
@@ -186,15 +181,13 @@
 */
 
 /* NAND */
-#define CONFIG_NAND_SC8810
+#define CONFIG_NAND_SPRD
 #define CONFIG_SPRD_NAND_REGS_BASE	(0x60000000)
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_SYS_NAND_BASE		(0x60000000)
 //#define CONFIG_JFFS2_NAND
-//#define CONFIG_SPRD_NAND_HWECC
-#define CONFIG_SYS_NAND_HW_ECC
+#define CONFIG_SPRD_NAND_HWECC
 #define CONFIG_SYS_NAND_LARGEPAGE
-//#define CONFIG_SYS_NAND_5_ADDR_CYCLE
 
 #define CONFIG_SYS_64BIT_VSPRINTF
 
@@ -248,16 +241,14 @@
 #ifdef CONFIG_G2PHONE
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
-#elif defined CONFIG_SC8810_OPENPHONE
-/*#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),384k(2ndbl),128k(params),512k(vmjaluna),6016k(modem),7680k(kernel),5120k(dsp),1280k(fixnv),2560k(runtimenv),6400k(recovery),100m(system),198m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"*/
-//#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),10m(recovery),150m(system),300m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot)"
-
+#elif defined CONFIG_OPENPHONE
+#ifdef MCP_F2R1
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),4m(modem),7m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),7m(recovery),100m(system),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc),2m(productinfo),102m(userdata)"
+#else
+#error "no MCP defined"
+#endif
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
-
-#define COPY_LINUX_KERNEL_SIZE	(0x600000)
-#define LINUX_INITRD_NAME	"modem"
 
 #define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
@@ -284,7 +275,7 @@
 //#define CONFIG_USB_ETHER
 #define CONFIG_CMD_FASTBOOT
 #define SCRATCH_ADDR    0x1000000
-#define FB_DOWNLOAD_BUF_SIZE (150*1024*1024)
+#define FB_DOWNLOAD_BUF_SIZE (112*1024*1024)
 
 #define CONFIG_MODEM_CALIBERATE
 /*
@@ -294,7 +285,7 @@
 #define CONFIG_SYS_MAX_FLASH_BANKS 1
 #define CONFIG_SYS_MAX_FLASH_SECT 128
 */
-//#define CONFIG_LCD
+#define CONFIG_LCD
 #ifdef CONFIG_LCD
 #define CONFIG_SPLASH_SCREEN
 #define LCD_BPP LCD_COLOR16

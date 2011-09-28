@@ -34,7 +34,7 @@ COBJS-y += alarm_mode.o
 COBJS-y += dloader_mode.o
 COBJS-y += android_boot.o
 COBJS-y += calibration_detect.o
-
+COBJS-y += engtest_mode.o
 
 
 COBJS	:= $(sort $(COBJS-y))

@@ -325,7 +325,7 @@ static struct info_mcu lcd_hx8357_info = {
 	.ops = NULL,
 };
 
-struct lcd_spec lcd_panel = {
+struct lcd_spec lcd_panel_hx8357 = {
 	.width = 320,
 	.height = 480,
 	.mode = LCD_MODE_MCU,
@@ -334,8 +334,8 @@ struct lcd_spec lcd_panel = {
 	.ops = &lcd_hx8357_operations,
 };
 
-vidinfo_t panel_info = {
-    .vl_col = 320,
-    .vl_bpix = 4,
-    .vl_row = 480,
-};
+//vidinfo_t panel_info = {
+    //.vl_col = 320,
+    //.vl_bpix = 4,
+    //.vl_row = 480,
+//};

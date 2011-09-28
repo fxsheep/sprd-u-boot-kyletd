@@ -20,7 +20,8 @@ extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
 
-#define FIXNV_SIZE	(64 * 1024)
+#define FIXNV_SIZE			(64 * 1024)
+#define PHASECHECK_SIZE		(3 * 1024)
 #endif
 
 typedef struct _DL_FILE_STATUS {
@@ -46,11 +47,29 @@ unsigned long FDL2_GetRecvDataSize(void)
 }
 
 static unsigned int is_nbl_write;
+static unsigned int is_phasecheck_write;
 #define ADDR_MASK				0x80000000
 static unsigned int g_NBLFixBufDataSize = 0;
 static unsigned char g_FixNBLBuf[0x8000];
 
-int FDL2_DataStart(PACKET_T * packet, void *arg)
+
+int FDL2_DataStart(PACKET_T * packet, void *arg);
+
+static unsigned int g_PhasecheckBUFDataSize = 0;
+static unsigned char g_PhasecheckBUF[0x2000];
+#define PHASECHECK_ADDRESS_F4R2		(0x8D960000 & (~ADDR_MASK))
+#define PHASECHECK_ADDRESS_F2R1		(0x88960000 & (~ADDR_MASK))
+#define ECC_NBL_SIZE 0x4000
+//bootloader header flag offset from the beginning
+#define BOOTLOADER_HEADER_OFFSET   32
+#define NAND_PAGE_LEN              512
+#define NAND_MAGIC_DATA            0xaa55a5a5
+//define nand data bus len
+#define NAND_BUS_SIZE_8              8
+#define NAND_BUS_SIZE_16              16
+#define NAND_BUS_SIZE_32              32
+
+int FDL2_DataStart (PACKET_T *packet, void *arg)
 {
 	unsigned long *data = (unsigned long *)(packet->packet_body.content);
 	unsigned long start_addr = *data;
@@ -71,7 +90,50 @@ int FDL2_DataStart(PACKET_T * packet, void *arg)
 	if (0 == (g_checksum & 0xffffff)) {
 		//The fixnv checksum is error.
 		SEND_ERROR_RSP(BSL_EEROR_CHECKSUM);	/*lint !e527 */
+#if 0		
+    if (packet->packet_body.size == 12)
+    {
+	memset(g_fixnv_buf, 0xff, FIXNV_SIZE + 4);
+        g_checksum = * (data+2);
+        g_sram_addr = (unsigned long) g_fixnv_buf;
+    }
+    else
+    {
+        g_checksum = CHECKSUM_OTHER_DATA;
+    }
+    if (0 == (g_checksum & 0xffffff))
+    {
+        //The fixnv checksum is error.
+        SEND_ERROR_RSP (BSL_EEROR_CHECKSUM); /*lint !e527*/
+    }
+
+    do
+    {
+        /* Check the validity of the address and size of the file to be downloaded,
+         * and erase this space of NAND flash. */
+        ret = nand_start_write (start_addr, size);
+
+        if (NAND_SUCCESS != ret)
+            break;
+
+	is_nbl_write = 0;
+	is_phasecheck_write = 0;
+	if((start_addr & ADDR_MASK) == ADDR_MASK) {
+		start_addr &= ~ADDR_MASK;
+		if (start_addr == 0x0) {
+			is_nbl_write = 1;
+			g_NBLFixBufDataSize = 0;
+		}
+		
+		if ((start_addr == PHASECHECK_ADDRESS_F4R2) || (start_addr == PHASECHECK_ADDRESS_F2R1)) {
+			is_phasecheck_write = 1;
+			g_PhasecheckBUFDataSize = 0;
+			memset(g_PhasecheckBUF, 0xff, 0x2000);
+		}
 	}
+	#endif
+	}
+
 
 	do {
 		/* Check the validity of the address and size of the file to be downloaded,
@@ -267,14 +329,65 @@ int FDL2_DataMidst(PACKET_T * packet, void *arg)
 		FDL_SendAckPacket(BSL_REP_ACK);
 		return 1;
 	}
+
+    if ( (g_status.recv_size + size) > g_status.total_size)
+    {
+        g_prevstatus = NAND_INVALID_SIZE;
+        FDL2_SendRep (g_prevstatus);
+        return 0;
+    }
+
+    if (CHECKSUM_OTHER_DATA == g_checksum)
+    {
+        if (is_nbl_write == 1) {
+		g_prevstatus = NandWriteAndCheck( (unsigned int) size, (unsigned char *) (packet->packet_body.content));
+	} else if (is_phasecheck_write == 1) {
+		//printf("g_PhasecheckBUFDataSize = %d\n", g_PhasecheckBUFDataSize);
+        	memcpy((g_PhasecheckBUF + g_PhasecheckBUFDataSize), (char *)(packet->packet_body.content), size);
+        	g_PhasecheckBUFDataSize += size;
+		g_prevstatus = NAND_SUCCESS;
+	} else {
+        	g_prevstatus = nand_write_fdl( (unsigned int) size, (unsigned char *) (packet->packet_body.content));
+	}
+
+        if (NAND_SUCCESS == g_prevstatus)
+        {
+            g_status.recv_size += size;
+
+            if (!packet->ack_flag)
+            {
+                packet->ack_flag = 1;
+                FDL_SendAckPacket (BSL_REP_ACK);
+                return NAND_SUCCESS == g_prevstatus;
+            }
+        }
+
+        FDL2_SendRep (g_prevstatus);
+        return NAND_SUCCESS == g_prevstatus;
+    }
+    else //It's fixnv data. We should backup it.
+    {
+        memcpy ( (unsigned char *) g_sram_addr, (char *) (packet->packet_body.content), size);
+        g_sram_addr += size;
+	g_status.recv_size += size;
+        FDL_SendAckPacket (BSL_REP_ACK);
+        return 1;
+    }
+
 }
 
 int FDL2_DataEnd(PACKET_T * packet, void *arg)
 {
 	unsigned long pos, size, ret;
+
 	unsigned long i, fix_nv_size, fix_nv_checksum;
 
 	if (CHECKSUM_OTHER_DATA != g_checksum) {
+
+    	//unsigned long i, fix_nv_size, fix_nv_checksum;
+		
+    	//if (CHECKSUM_OTHER_DATA != g_checksum) {
+
 		/* It's fixnv data */
 		fix_nv_size = g_sram_addr - (unsigned long)g_fixnv_buf;
 		fix_nv_checksum =
@@ -299,7 +412,9 @@ int FDL2_DataEnd(PACKET_T * packet, void *arg)
 			pos += size;
 		}
 
+
 #if 1
+
 		/* write fixnv to yaffs2 format */
 		char *backupfixnvpoint = "/backupfixnv";
 		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
@@ -314,6 +429,7 @@ int FDL2_DataEnd(PACKET_T * packet, void *arg)
 				      (FIXNV_SIZE + 4));
 		ret = cmd_yaffs_ls_chk(backupfixnvfilename);
 		cmd_yaffs_umount(backupfixnvpoint);
+
 #endif
 		//////////////////////////////
 	} else if (is_nbl_write == 1) {
@@ -340,7 +456,23 @@ int FDL2_DataEnd(PACKET_T * packet, void *arg)
 		}		//for (i = 0; i < 3; i++)
 #endif
 		is_nbl_write = 0;
-	}
+
+//	}
+
+   	} else if (is_phasecheck_write == 1) {
+		/* write phasecheck to yaffs2 format */
+		char *productinfopoint = "/productinfo";
+		char *productinfofilename = "/productinfo/productinfo.bin";
+
+		/* g_PhasecheckBUF : (PHASECHECK_SIZE + 4) instead of g_PhasecheckBUFDataSize */
+		g_PhasecheckBUF[PHASECHECK_SIZE + 0] = g_PhasecheckBUF[PHASECHECK_SIZE + 1] = 0x5a;
+		g_PhasecheckBUF[PHASECHECK_SIZE + 2] = g_PhasecheckBUF[PHASECHECK_SIZE + 3] = 0x5a;
+		cmd_yaffs_mount(productinfopoint);
+    		cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PHASECHECK_SIZE + 4));
+		ret = cmd_yaffs_ls_chk(productinfofilename);
+		cmd_yaffs_umount(productinfopoint);
+    	}
+
 
 	if (NAND_SUCCESS != g_prevstatus) {
 		FDL2_SendRep(g_prevstatus);

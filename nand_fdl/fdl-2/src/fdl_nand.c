@@ -10,7 +10,7 @@
 
 struct mtd_info *_local_mtd = 0;
 
-//#define FDL2_DEBUG 1
+#define FDL2_DEBUG 1
 typedef struct {
 		unsigned char colParity;
 		unsigned lineParity;
@@ -581,6 +581,11 @@ int nand_start_write(unsigned int addr, unsigned int size)
 	cur_partition.offset = addr;
 	cur_partition.size = 0;
 	parse_cmdline_partitions(&cur_partition, (unsigned long long)nand->size);
+
+	if (size >= cur_partition.size) {
+		printf("\n\nimage file size : 0x%08x is bigger than partition size : 0x%08x\n", size, cur_partition.size);
+		return NAND_INVALID_SIZE;
+	}
 
 	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
 		printf("erasing block : %d    %d % \r", (cur_partition.offset / nand->erasesize + erase_blk), (erase_blk * 100 ) / (cur_partition.size / nand->erasesize));

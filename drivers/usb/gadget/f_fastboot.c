@@ -965,7 +965,6 @@ static struct usb_gadget_driver fastboot_driver = {
 #define KERNEL_ADDR	(BASE_ADDR + 0x00800000)
 #define RAMDISK_ADDR	(BASE_ADDR + 0x01000000)
 //(BASE_ADDR + 0x02000000)
-
 extern int fastboot_init(void *base, unsigned size, struct usb_ep * in, struct usb_ep *out);
 
 int usb_fastboot_initialize(void)
@@ -985,7 +984,7 @@ int usb_fastboot_initialize(void)
 	mdelay(20);
 	usb_fastboot_start();
 
-	fastboot_init((void*) SCRATCH_ADDR, 100 * 1024 * 1024, l_fbdev.in_ep, l_fbdev.out_ep);
+	fastboot_init((void*) SCRATCH_ADDR, FB_DOWNLOAD_BUF_SIZE, l_fbdev.in_ep, l_fbdev.out_ep);
 	
 	if (status < 0)
 		goto fail;

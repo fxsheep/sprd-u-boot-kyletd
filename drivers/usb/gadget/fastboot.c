@@ -381,6 +381,23 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
     }
 
 	nand = &nand_info[dev->id->num];
+
+    nand_erase_options_t opts;
+    memset(&opts, 0, sizeof(opts));
+    opts.offset = (loff_t)part->offset;
+    opts.length = (loff_t)part->size;
+    opts.jffs2 = 0;
+	opts.quiet = 1;
+
+    fb_printf("opts off  0x%08x\n", (uint32_t)opts.offset);
+    fb_printf("opts size 0x%08x\n", (uint32_t)opts.length);
+	fb_printf("nand write size 0x%08x\n", nand->writesize);
+    ret = nand_erase_opts(nand, &opts);
+
+    if(ret){
+      fastboot_fail("nand erase error");
+      return;
+    }
 	
 	if (!strcmp(part->name, "boot") || !strcmp(part->name, "recovery")) {
 		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {

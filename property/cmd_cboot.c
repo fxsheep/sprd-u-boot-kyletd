@@ -19,6 +19,8 @@
 extern int power_button_pressed(void);
 extern int charger_connected(void);
 extern int alarm_triggered(void);
+extern void CHG_TurnOn (void);
+extern void CHG_ShutDown (void);
 #define mdelay(_ms) udelay(_ms*1000)
 
 int recheck_power_button(void)
@@ -49,6 +51,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     if(argc > 2)
       goto usage;
 
+    CHG_ShutDown();
     board_keypad_init();
 
     unsigned check_reboot_mode(void);
@@ -97,7 +100,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
                 recovery_mode();
                 break;
             case BOOT_CALIBRATE:
-                calibration_detect(1);
+                engtest_mode();
                 return; //back to normal boot
                 break;
             case BOOT_DLOADER:
@@ -117,6 +120,8 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         //if calibrate success, it will here
         DBG("%s: power done again\n", __FUNCTION__);
         power_down_devices();
+        while(1)
+          ;
     }
 
     if(argc == 1){
