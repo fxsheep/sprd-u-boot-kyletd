@@ -52,6 +52,10 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
       goto usage;
 
     CHG_ShutDown();
+    if(charger_connected()){
+        mdelay(10);
+        CHG_TurnOn();
+    }
     board_keypad_init();
 
     unsigned check_reboot_mode(void);

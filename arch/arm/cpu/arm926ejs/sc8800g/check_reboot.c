@@ -79,6 +79,7 @@ int charger_connected(void)
 //#define CHG_CTL (ANA_GPIN_PG0_BASE + 0x0)
  //   return ANA_REG_GET(CHG_CTL) & BIT_2;
     struct gpio_chip chg_chip;
+    sprd_gpio_init();
     sprd_mfp_config(&chg_gpio_cfg, 1);
     sprd_gpio_request(&chg_chip, CHG_GPIO_NUM);
     sprd_gpio_direction_input(&chg_chip,CHG_GPIO_NUM); 
