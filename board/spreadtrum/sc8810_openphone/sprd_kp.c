@@ -1,8 +1,8 @@
 #include <common.h>
 #include <malloc.h>
 #include "key_map.h"
-#ifdef CONFIG_SC8800G
-#include <asm/arch/sc8800g_keypad.h>
+#ifdef CONFIG_SC8810
+#include <asm/arch/sc8810_keypad.h>
 #else
 #error "no keypad definition file included"
 #endif

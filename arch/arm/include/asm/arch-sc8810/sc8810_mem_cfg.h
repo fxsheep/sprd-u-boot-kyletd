@@ -11,12 +11,12 @@
  ** DATE          NAME            DESCRIPTION                                 *
  ** 06/05/2010    Steve.Zhan      Create.                                     *
  ******************************************************************************/
-#ifndef _SC8800G_MEM_CFG_H_
-#define _SC8800G_MEM_CFG_H_
+#ifndef _SC8810_MEM_CFG_H_
+#define _SC8810_MEM_CFG_H_
 
 #include "sci_types.h"
-#include "sc8800g_reg_base.h"
-#include "sc8800g_reg_ahb.h"
+#include "sc8810_reg_base.h"
+#include "sc8810_reg_ahb.h"
 #include "iram_mgr.h"
 
 /*----------------------------------------------------------------------------*

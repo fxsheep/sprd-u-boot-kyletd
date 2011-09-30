@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:      sc8800g_sleep_cfg.h                                             *
+ ** File Name:      sc8810_sleep_cfg.h                                             *
  ** Author:         jiexia.yu                                                 *
  ** DATE:           07/09/2007                                                *
  ** Copyright:      2007 Spreatrum, Incoporated. All Rights Reserved.         *
@@ -12,8 +12,8 @@
  ** DATE           NAME             DESCRIPTION                               *
  ** 07/09/2007     jiexia.yu        Create.                                   *
  ******************************************************************************/
-#ifndef _SC8800G_SLEEP_CFG_H_
-#define _SC8800G_SLEEP_CFG_H_
+#ifndef _SC8810_SLEEP_CFG_H_
+#define _SC8810_SLEEP_CFG_H_
 
 /**---------------------------------------------------------------------------*
  **                         Dependencies                                      *
@@ -42,11 +42,7 @@ extern   "C"
 #define SLEEP_SUPPORT_BKLIGHT 1
 #define SLEEP_SUPPORT_MMI 1
 #define SLEEP_SUPPORT_USBD 0
-#ifdef CHIP_VER_8800G2
 #define SLEEP_SUPPORT_RETENTION 1
-#else
-#define SLEEP_SUPPORT_RETENTION 0
-#endif
 
 typedef void (*SLP_ENTER_FUNC) (uint8 slp_type);
 
@@ -212,4 +208,4 @@ PUBLIC int     tx_enter_deep_sleep (uint32 level);
 }
 #endif
 
-#endif // _LDO_MANAGER_H_
+#endif // _SC8810_SLEEP_CFG_H_

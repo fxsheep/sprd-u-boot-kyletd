@@ -23,8 +23,8 @@
 //#include <mach/regs_global.h>
 //#include <mach/regs_gpio.h>
 //#include <mach/regs_ana.h>
-#include <asm/arch/sc8800g_reg_global.h>
-#include <asm/arch/sc8800g_reg_base.h>
+#include <asm/arch/sc8810_reg_global.h>
+#include <asm/arch/sc8810_reg_base.h>
 #include <asm/arch/gpio_reg_v0.h>
 #include <asm/arch/gpio_phy.h>
 #include <asm/arch/asm_generic_gpio.h>

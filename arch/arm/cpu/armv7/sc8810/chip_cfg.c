@@ -82,6 +82,9 @@ uint32 FDL_GetBootMode (void)
 #ifdef  PLATFORM_SC8800G
     bootMode = (* (volatile uint32 *) (0x8b000020) >> 8) & 0xff; //read HWRST reg bit[15:8]
 #endif
+#ifdef  PLATFORM_SC8810
+    bootMode = (* (volatile uint32 *) (0x8b000020) >> 8) & 0xff; //read HWRST reg bit[15:8]
+#endif
 #ifdef  PLATFORM_SC6600L
     bootMode = (* (volatile uint32 *) (0x8b000020) >> 8) & 0xff; //read HWRST reg bit[15:8]
 #endif

@@ -6,7 +6,7 @@
 //#include <mach/gpio.h>
 //#include <mach/adi_hal_internal.h>
 #include <asm/arch/adi_hal_internal.h>
-#include <asm/arch/sc8800g_module_config.h>
+#include <asm/arch/sc8810_module_config.h>
 #define GPIO_DBG(fmt...) printf(fmt)
 
 enum gpio_section_type {

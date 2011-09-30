@@ -22,8 +22,8 @@
 //#include <mach/mfp.h>
 //#include <mach/regs_cpc.h>
 #include <asm/arch/mfp.h>
-#include <asm/arch/sc8800g_reg_base.h>
-#include <asm/arch/sc8800g_cpc.h>
+#include <asm/arch/sc8810_reg_base.h>
+#include <asm/arch/sc8810_cpc.h>
 #include <asm/io.h>
 
 /*

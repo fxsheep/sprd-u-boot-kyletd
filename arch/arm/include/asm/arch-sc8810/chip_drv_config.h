@@ -92,6 +92,21 @@ extern   "C"
 
 #define CHIP_PLATFORM_DEFINED
 #endif
+#if defined(PLATFORM_SC8810)
+//Special Chip platfrom io
+#include "sc8810_plf_io.h"
+//Chip module config header files.About some variant param. configs for the module.
+#include "sc8810_module_config.h"
+//end Chip Module config
+
+//Chip Global Function(Reg., BASE, Address,)definitions
+#include "sc8810_reg_base.h"
+//All chip module reg.
+#include "sc8810_module_ver.h"
+
+#define CHIP_PLATFORM_DEFINED
+#endif
+
 //End CHIP CONFIG
 
 

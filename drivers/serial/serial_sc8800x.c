@@ -21,7 +21,7 @@
 /* GEN0_UART0_EN    (0x1 << 1) */
 /* GEN0_UART1_EN    (0x1 << 2) */
 #define GR_UART_CTRL_EN    (0x3<<1)
-#elif defined(PLATFORM_SC8800G)
+#elif defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
 #define GR_CTRL_REG        0x8b000004
 /* GEN0_UART0_EN    (0x1 << 20) */
 /* GEN0_UART1_EN    (0x1 << 21) */

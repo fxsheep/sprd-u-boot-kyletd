@@ -696,15 +696,9 @@ typedef union _img_ctrl_tag
 {
     struct _img_ctrl_map
     {
-#ifdef CHIP_VER_8800G1
-        volatile unsigned int reserved          :26;    //[31:6]
-        volatile unsigned int img_endian        :1;     //[5] Image layer data endian; 0: big endian(0123); 1: little endian(3210)
-#endif
-#ifdef CHIP_VER_8800G2
         volatile unsigned int reserved            :23;    //[31:6]
         volatile unsigned int img_y_endian        :2;
         volatile unsigned int img_uv_endian      :2;
-#endif
         volatile unsigned int img_format        :4;     //[1:4] Image layer data format, it supports following ones:
         //0000-YUV422;
         //0001-YUV420;
@@ -778,15 +772,9 @@ typedef union _osd1_ctrl_tag
 {
     struct _osd1_ctrl_map
     {
-#ifdef CHIP_VER_8800G1
-        volatile unsigned int reserved          :24;    //[31:8] Reserved
-        volatile unsigned int blk_endian        :1;     //[7] block data endian, 0: big endian (0123); 1: little endian (3210)
-#endif
-#ifdef CHIP_VER_8800G2
         volatile unsigned int reserved          :21;    //[31:8] Reserved
         volatile unsigned int blk_endian        :2;     //[7] block data endian, 0: big endian (0123); 1: little endian (3210)
         volatile unsigned int alpha_endian        :2;
-#endif
         volatile unsigned int blk_format        :4;     //[6:3] osd data format
         volatile unsigned int blk_alpha_sel     :1;     //[1] OSD layer1 block1 alpha selection, 0: pixel alpha; 1: block alpha
         volatile unsigned int blk_ck_en         :1;     //[1] block color key enable, 0: disable; 1: enable
@@ -799,14 +787,8 @@ typedef union _osd2_ctrl_tag
 {
     struct _osd2_ctrl_map
     {
-#ifdef CHIP_VER_8800G1
-        volatile unsigned int reserved          :24;    //[31:10] Reserved
-        volatile unsigned int blk_endian        :1;     //[9] block data endian, 0: big endian (0123); 1: little endian (3210)
-#endif
-#ifdef CHIP_VER_8800G2
         volatile unsigned int reserved          :23;    //[31:10] Reserved
         volatile unsigned int blk_endian        :2;     //[9] block data endian, 0: big endian (0123); 1: little endian (3210)
-#endif
         volatile unsigned int blk_format        :4;     //[6:3] osd data format
         volatile unsigned int blk_alpha_sel     :1;     //[2] OSD layer1 block1 alpha selection, 0: pixel alpha; 1: block alpha
         volatile unsigned int blk_ck_en         :1;     //[1] block color key enable, 0: disable; 1: enable
@@ -819,14 +801,8 @@ typedef union _osd3_ctrl_tag
 {
     struct _osd3_ctrl_map
     {
-#ifdef CHIP_VER_8800G1
-        volatile unsigned int reserved          :24;    //[31:10] Reserved
-        volatile unsigned int blk_endian        :1;     //[9] block data endian, 0: big endian (0123); 1: little endian (3210)
-#endif
-#ifdef CHIP_VER_8800G2
         volatile unsigned int reserved          :23;    //[31:10] Reserved
         volatile unsigned int blk_endian        :2;
-#endif
         volatile unsigned int blk_format        :4;     //[6:3] osd data format
         volatile unsigned int blk_alpha_sel     :1;     //[2] OSD layer1 block1 alpha selection, 0: pixel alpha; 1: block alpha
         volatile unsigned int blk_ck_en         :1;     //[1] block color key enable, 0: disable; 1: enable
@@ -839,14 +815,8 @@ typedef union _osd4_ctrl_tag
 {
     struct _osd4_ctrl_map
     {
-#ifdef CHIP_VER_8800G1
-        volatile unsigned int reserved          :24;    //[31:10] Reserved
-        volatile unsigned int blk_endian        :1;     //[9] block data endian, 0: big endian (0123); 1: little endian (3210)
-#endif
-#ifdef CHIP_VER_8800G2
         volatile unsigned int reserved          :23;    //[31:10] Reserved
         volatile unsigned int blk_endian        :2;
-#endif
         volatile unsigned int blk_format        :4;     //[6:3] osd data format
         volatile unsigned int blk_alpha_sel     :1;     //[2] OSD layer1 block1 alpha selection, 0: pixel alpha; 1: block alpha
         volatile unsigned int blk_ck_en         :1;     //[1] block color key enable, 0: disable; 1: enable
@@ -859,14 +829,8 @@ typedef union _osd5_ctrl_tag
 {
     struct _osd5_ctrl_map
     {
-#ifdef CHIP_VER_8800G1
-        volatile unsigned int reserved          :24;    //[31:10] Reserved
-        volatile unsigned int blk_endian        :1;     //[9] block data endian, 0: big endian (0123); 1: little endian (3210)
-#endif
-#ifdef CHIP_VER_8800G2
         volatile unsigned int reserved          :23;    //[31:10] Reserved
         volatile unsigned int blk_endian        :2;
-#endif
         volatile unsigned int blk_format        :4;     //[6:3] osd data format
         volatile unsigned int blk_alpha_sel     :1;     //[2] OSD layer1 block1 alpha selection, 0: pixel alpha; 1: block alpha
         volatile unsigned int blk_ck_en         :1;     //[1] block color key enable, 0: disable; 1: enable
@@ -879,14 +843,8 @@ typedef union _osd_ctrl_tag
 {
     struct _osd_ctrl_map
     {
-#ifdef CHIP_VER_8800G1
-        volatile unsigned int reserved          :24;    //[31:10] Reserved
-        volatile unsigned int blk_endian        :1;     //[9] block data endian, 0: big endian (0123); 1: little endian (3210)
-#endif
-#ifdef CHIP_VER_8800G2
         volatile unsigned int reserved          :23;    //[31:10] Reserved
         volatile unsigned int blk_endian        :2;
-#endif
         volatile unsigned int blk_format        :4;     //[6:3] osd data format
         volatile unsigned int blk_alpha_sel     :1;     //[2] OSD layer1 block1 alpha selection, 0: pixel alpha; 1: block alpha
         volatile unsigned int blk_ck_en         :1;     //[1] block color key enable, 0: disable; 1: enable
@@ -984,14 +942,8 @@ typedef union _lcdc_cap_ctrl_tag
 {
     struct _lcdc_cap_ctrl_map
     {
-#ifdef CHIP_VER_8800G1
-        volatile unsigned int reserved          :28;     //[31:4] Reserved
-        volatile unsigned int cap_endian        :1;     //[3] Capture endian, 0: big endian, 1: little endian
-#endif
-#ifdef CHIP_VER_8800G2
         volatile unsigned int reserved          :27;     //[31:4] Reserved
         volatile unsigned int cap_endian        :2;
-#endif
         volatile unsigned int cap_format        :2;     //[2:1] data save format, 00: RGB888, 01: rgb666, 10: RGB565, 11: reserved
         volatile unsigned int cap_en            :1;     //[1] Capture blended data control, 0: disable, 1: enable
     } mBits;

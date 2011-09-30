@@ -11,15 +11,15 @@
  ** DATE           NAME             DESCRIPTION                               *
  ** 16/09/2010     Jeff.Li          Create.                                   *
  ******************************************************************************/
-#ifndef _SC8800G_AUDDEV_CFG_H_
-#define _SC8800G_AUDDEV_CFG_H_
+#ifndef _SC8810_AUDDEV_CFG_H_
+#define _SC8810_AUDDEV_CFG_H_
 
 /*----------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **------------------------------------------------------------------------- */
 #include "adi_hal_internal.h"
 #include "analog_reg_v3.h"
-#include "sc8800g_reg_global.h"
+#include "sc8810_reg_global.h"
 #include "chip_drv_common_io.h"
 
 /**---------------------------------------------------------------------------*

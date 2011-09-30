@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:      sc8800g_reg_base.h                                            *
+ ** File Name:      sc8810_reg_base.h                                            *
  ** Author:         Tim.Luo                                                   *
  ** DATE:           07/08/2010                                                *
  ** Copyright:      2010 Spreadtrum, Incoporated. All Rights Reserved.        *
@@ -14,8 +14,8 @@
  ** 07/08/2010     Tim.Luo          Create.                                   *
   ******************************************************************************/
 
-#ifndef _SC8800G_REG_BASE_H_
-#define _SC8800G_REG_BASE_H_
+#ifndef _SC8810_REG_BASE_H_
+#define _SC8810_REG_BASE_H_
 
 #ifdef   __cplusplus
 extern   "C"
@@ -193,5 +193,5 @@ extern   "C"
 }
 #endif
 
-#endif  //_SC6800H_REG_H_
+#endif  //_SC8810_REG_BASE_H_
 

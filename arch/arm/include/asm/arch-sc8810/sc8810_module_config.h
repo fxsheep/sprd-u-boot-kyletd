@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:    sc8800g_module_config.h                                        *
+ ** File Name:    sc8810_module_config.h                                        *
  ** Author:       Tim.Luo                                                 *
  ** DATE:         07/08/2010                                                  *
  ** Copyright:    2010 Spreatrum, Incoporated. All Rights Reserved.           *
@@ -11,8 +11,8 @@
  ** DATE          NAME            DESCRIPTION                                 *
  ** 07/08/2010    Tim.Luo         Create.                                     *
  ******************************************************************************/
-#ifndef _SC8800G_MODULE_CONFIG_H_
-#define _SC8800G_MODULE_CONFIG_H_
+#ifndef _SC8810_MODULE_CONFIG_H_
+#define _SC8810_MODULE_CONFIG_H_
 /*----------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **------------------------------------------------------------------------- */
@@ -219,15 +219,15 @@ extern   "C"
 #define SDIO_TRANSFER_CMPLETE       (BIT_1)
 #define SDIO_CMD_CMPLETE            (BIT_0)
 
-#include "sc8800g_int_cfg.h"
-#include "sc8800g_gpio_cfg.h"
-#include "sc8800g_i2c_cfg.h"
-#include "sc8800g_mem_cfg.h"
-#include "sc8800g_dma_cfg.h"
-#include "sc8800g_freq_cfg.h"
-#include "sc8800g_auddev_cfg.h"
-#include "sc8800g_sleep_cfg.h"
-#include "sc8800g_timer_cfg.h"
+#include "sc8810_int_cfg.h"
+#include "sc8810_gpio_cfg.h"
+#include "sc8810_i2c_cfg.h"
+#include "sc8810_mem_cfg.h"
+#include "sc8810_dma_cfg.h"
+#include "sc8810_freq_cfg.h"
+#include "sc8810_auddev_cfg.h"
+#include "sc8810_sleep_cfg.h"
+#include "sc8810_timer_cfg.h"
 /**----------------------------------------------------------------------------*
 **                         Local Function Prototype                           **
 **----------------------------------------------------------------------------*/

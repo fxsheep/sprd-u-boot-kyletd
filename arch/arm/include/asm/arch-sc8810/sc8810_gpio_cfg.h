@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:    sc8800g_gpio_cfg.h                                         *
+ ** File Name:    sc8810_gpio_cfg.h                                         *
  ** Author:       Steve.Zhan                                                 *
  ** DATE:         06/05/2010                                                  *
  ** Copyright:    2010 Spreatrum, Incoporated. All Rights Reserved.           *
@@ -11,13 +11,13 @@
  ** DATE          NAME            DESCRIPTION                                 *
  ** 06/05/2010    Steve.Zhan      Create.                                     *
  ******************************************************************************/
-#ifndef _SC8800G_GPIO_CFG_H_
-#define _SC8800G_GPIO_CFG_H_
+#ifndef _SC8810_GPIO_CFG_H_
+#define _SC8810_GPIO_CFG_H_
 #include "adi_reg_v3.h"
-#include "sc8800g_reg_base.h"
+#include "sc8810_reg_base.h"
 #include "chip_drv_common_io.h"
 #include "adi_hal_internal.h"
-#include "sc8800g_reg_base.h"
+#include "sc8810_reg_base.h"
 /*----------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **------------------------------------------------------------------------- */

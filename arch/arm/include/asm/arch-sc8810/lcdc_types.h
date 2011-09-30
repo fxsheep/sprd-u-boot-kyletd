@@ -21,7 +21,7 @@ typedef enum _lcd_layer_id_tag
     LCD_LAYER_OSD1,
     LCD_LAYER_OSD2,
     LCD_LAYER_OSD3,
-#ifdef PLATFORM_SC8800G
+#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
     LCD_LAYER_OSD4,
     LCD_LAYER_OSD5,
 #endif
@@ -102,7 +102,7 @@ typedef struct _lcd_img_blk_param_tag
     LCDC_POS_T              disp_pos;
     LCD_DATA_ADDR_T         src_base_addr;
     LCD_DATA_FORMAT_E       format;
-#ifdef PLATFORM_SC8800G
+#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
     uint32                 is_little_endian;
 #else
     BOOLEAN                 is_little_endian;
@@ -121,7 +121,7 @@ typedef struct _lcd_osd_blk_param_tag
     uint8                   alpha;
     LCD_DATA_FORMAT_E       format;
     LCD_OSD_ALPHA_E         alpha_mode;
-#ifdef PLATFORM_SC8800G
+#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
     uint32                 is_little_endian;
 #else
     BOOLEAN                 is_little_endian;

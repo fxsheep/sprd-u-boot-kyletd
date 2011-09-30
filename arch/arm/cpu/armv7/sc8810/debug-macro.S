@@ -13,7 +13,7 @@
  *
  */
 
-#include <asm/arch/sc8800g_reg_base.h>
+#include <asm/arch/sc8810_reg_base.h>
 
 .globl addruart
 addruart:

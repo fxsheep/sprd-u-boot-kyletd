@@ -170,7 +170,7 @@ reset:
 #endif
 
 	/* the mask ROM code should have PLL and others stable */
-#if (CONFIG_SC8810)
+#ifdef  CONFIG_SC8810
 #ifndef CONFIG_NAND_SPL
 #if 0
 	ldr	r1, =0xeffff

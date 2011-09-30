@@ -17,7 +17,7 @@
 #include <common.h>
 //#include <linux/delay.h>
 
-#include <asm/arch/sc8800g_lcd.h>
+#include <asm/arch/sc8810_lcd.h>
 #include <lcd.h>
 #define mdelay(a) udelay(a * 1000)
 #define printk printf

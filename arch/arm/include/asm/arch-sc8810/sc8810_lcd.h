@@ -1,4 +1,4 @@
-/* drivers/video/sc8800g/sc8800g_lcd.h
+/* drivers/video/sc8810/sc8810_lcd.h
  *
  * Spreadtrum LCD abstraction
  *
@@ -14,8 +14,8 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _SC8800G_LCD_H_
-#define _SC8800G_LCD_H_
+#ifndef _SC8810_LCD_H_
+#define _SC8810_LCD_H_
 
 #include <linux/types.h>
 

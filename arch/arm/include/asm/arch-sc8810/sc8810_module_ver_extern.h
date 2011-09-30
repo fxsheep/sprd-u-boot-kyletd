@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:    sc8800g_module_ver_extern.h                                            *
+ ** File Name:    sc8810_module_ver_extern.h                                            *
  ** Author:       Tim.Luo                                                    *
  ** DATE:         07/08/2010                                                  *
  ** Copyright:    2010  Spreatrum, Incoporated. All Rights Reserved.           *
@@ -11,13 +11,13 @@
  ** DATE          NAME            DESCRIPTION                                 *
  ** 07/08/2010    Tim.Luo         Create.                                     *
  ******************************************************************************/
-#ifndef _SC8800G_MODULE_VER_EXTERN_H_
-#define _SC8800G_MODULE_VER_EXTERN_H_
+#ifndef _SC8810_MODULE_VER_EXTERN_H_
+#define _SC8810_MODULE_VER_EXTERN_H_
 /*----------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **------------------------------------------------------------------------- */
 
-#include "sc8800g_reg_ahb.h"
+#include "sc8810_reg_ahb.h"
 //#include "sc8800g_reg_global.h"
 
 

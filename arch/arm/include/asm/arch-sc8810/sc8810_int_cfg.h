@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:    sc8800g_int_cfg.h                                            *
+ ** File Name:    sc8810_int_cfg.h                                            *
  ** Author:       steve.zhan                                                 *
  ** DATE:         11/13/2005                                                  *
  ** Copyright:    2010  Spreatrum, Incoporated. All Rights Reserved.           *
@@ -11,8 +11,8 @@
  ** DATE          NAME            DESCRIPTION                                 *
  ** 06/05/2010    Steve.zhan      Create.                                     *
  ******************************************************************************/
-#ifndef __SC8800G_INT_CFG_H__
-#define __SC8800G_INT_CFG_H__
+#ifndef __SC8810_INT_CFG_H__
+#define __SC8810_INT_CFG_H__
 
 #include "sci_types.h"
 /*----------------------------------------------------------------------------*

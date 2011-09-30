@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:    sc8800g_reg_global.h                                        *
+ ** File Name:    sc8810_reg_global.h                                        *
  ** Author:       Daniel.Ding                                                 *
  ** DATE:         11/13/2005                                                  *
  ** Copyright:    2005 Spreatrum, Incoporated. All Rights Reserved.           *
@@ -12,8 +12,8 @@
  ** 11/13/2005    Daniel.Ding     Create.                                     *
  ** 05/05/2010    Mingwei.Zhang   Modified for SC8800G                        *
  ******************************************************************************/
-#ifndef _SC8800G_REG_GLOBAL_H_
-#define _SC8800G_REG_GLOBAL_H_
+#ifndef _SC8810_REG_GLOBAL_H_
+#define _SC8810_REG_GLOBAL_H_
 /*----------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **-------------------------------------------------------------------------- */
@@ -411,7 +411,7 @@ typedef union _gr_glb_gen4_reg_tag
 }
 #endif
 /**---------------------------------------------------------------------------*/
-#endif //_SC8800G_REG_GLOBAL_H_
+#endif //_SC8810_REG_GLOBAL_H_
 // End
 
 

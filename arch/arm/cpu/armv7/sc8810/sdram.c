@@ -25,7 +25,7 @@ SC6800     -gtp -cpu ARM926EJ-S -D_REF_SC6800_ -D_BL_NF_SC6800_
 
 #define  SDRAM_EXT_INVALID     0xffffffff       //@David.Jia 2008.1.7
 
-#if defined(PLATFORM_SC8800G)
+#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
 uint32 g_emc_clk;
 uint32 s_colum;
 #endif //defined(PLATFORM_SC8800G) && defined(CHIP_VER_8800G2)
@@ -33,7 +33,7 @@ uint32 s_colum;
 uint32 g_ahb_clk; 
 SDRAM_TIMING_PARA_T_PTR sdram_parameters;
 
-#ifdef PLATFORM_SC8800G
+#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
 #define SDRAM_AUTODETECT_SUPPORT
 #endif
 #define _BL_NF_NBL_
@@ -66,7 +66,7 @@ SDRAM_TIMING_PARA_T_PTR sdram_parameters;
 SDRAM_CFG_INFO_T s_sdram_raw_cfg;
 #endif
 
-#ifdef PLATFORM_SC8800G
+#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
 #define INTERFACE_CLK_MAX   ARM_CLK_200M
 typedef struct ARM_EMC_AHB_CLK_TAG 
 {
@@ -335,7 +335,7 @@ LOCAL void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     REG32 (EXT_MEM_CFG0_CH4)  = 0x0003c31c;
     REG32 (EXT_MEM_CFG0_CH5)  = 0x0003c31c;
 
-#if defined(PLATFORM_SC8800G)
+#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
     REG32 (EXT_MEM_CFG0_CH6)  = 0x0001c31c; //for sc8800g emc sleep bug.
     REG32 (EXT_MEM_CFG0_CH7)  = 0x0001c31c;
     REG32 (EXT_MEM_CFG0_CH8)  = 0x0001c31c;
@@ -902,7 +902,7 @@ LOCAL void SDRAM_Init (uint32 clk)
 **---------------------------------------------------------------------------*/
 LOCAL void SDRAM_PinDrv_Set (void)
 {
-#if defined(PLATFORM_SC8800G)
+#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
 	uint32 i = 0;
 	uint32 clk_drv = 0x200;
 	uint32 ctl_drv = 0x100;
@@ -1023,7 +1023,7 @@ LOCAL uint32 Chip_ConfigClk (void)
 
     for (i=0; i<100; i++){}
 
-#elif defined(PLATFORM_SC8800G)
+#elif defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
     __ClkConfig(&g_emc_clk, (uint32*)&arm_ahb_clk);
 #endif
 

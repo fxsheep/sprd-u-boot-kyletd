@@ -1,9 +1,9 @@
-#ifndef _SC8800G_KEYPAD_H_
-#define _SC8800G_KEYPAD_H_
+#ifndef _SC8810_KEYPAD_H_
+#define _SC8810_KEYPAD_H_
 
-#include "sc8800g_reg_base.h"
+#include "sc8810_reg_base.h"
 #include "kpd_reg_v0.h"
-#include "sc8800g_reg_global.h"
+#include "sc8810_reg_global.h"
 #include "bits.h"
 
 #define REG_GR_GEN0 (*((volatile unsigned int *)(GR_GEN0)))
@@ -61,4 +61,4 @@
 
 #define INT_DIS (INTC_BASE + 0xc)
 #define REG_INT_DIS (*((volatile unsigned int *)(INT_DIS)))
-#endif //_SC8800G_KEYPAD_H_
+#endif //_SC8810_KEYPAD_H_

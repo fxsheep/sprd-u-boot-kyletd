@@ -99,6 +99,8 @@
 #define BURST_LEN 		BURST_LEN_2
 #elif defined(PLATFORM_SC8800G)
 #define BURST_LEN 		BURST_LEN_2
+#elif defined(PLATFORM_SC8810)
+#define BURST_LEN 		BURST_LEN_2
 #else
 #error do not select burst len for SDRAM
 #endif

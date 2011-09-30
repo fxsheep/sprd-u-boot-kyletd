@@ -1,5 +1,5 @@
 /******************************************************************************
- ** File Name:    sc8800g_reg_ahb.h                                            *
+ ** File Name:    sc8810_reg_ahb.h                                            *
  ** Author:       Daniel.Ding                                                 *
  ** DATE:         11/13/2005                                                  *
  ** Copyright:    2005 Spreatrum, Incoporated. All Rights Reserved.           *
@@ -12,8 +12,8 @@
  ** 11/13/2005    Daniel.Ding     Create.                                     *
  ** 05/07/2010    Mingwei.zhang   Modify it for SC8800G.                      *
  ******************************************************************************/
-#ifndef _SC8800G_REG_AHB_H_
-#define _SC8800G_REG_AHB_H_
+#ifndef _SC8810_REG_AHB_H_
+#define _SC8810_REG_AHB_H_
 /*----------------------------------------------------------------------------*
  **                         Dependencies                                      *
  **-------------------------------------------------------------------------- */
