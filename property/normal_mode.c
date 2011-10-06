@@ -53,7 +53,7 @@ extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 void set_vibrator(int on);
-
+void MMU_InvalideICACHEALL(void);
 
 void nand_block_info(struct mtd_info *nand, int *good, int *bad)
 {
@@ -534,6 +534,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
+    MMU_InvalideICACHEALL();
 	entry();
 }
 void normal_mode(void)

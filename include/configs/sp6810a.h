@@ -297,7 +297,7 @@
 #endif
 #endif // CONFIG_LCD
 
-#define CALIBERATE_DETECT_MS 20000
+#define CALIBERATE_DETECT_MS 30000
 
 
 #endif /* __CONFIG_H */

@@ -1,6 +1,7 @@
 #include <common.h>
 #include <android_boot.h>
 #include <asm/mach-types.h>
+void MMU_InvalideICACHEALL(void);
 void creat_atags(unsigned taddr, const char *cmdline,unsigned raddr, unsigned rsize)
 {
 	unsigned n = 0;
@@ -46,5 +47,6 @@ void boot_linux(unsigned kaddr, unsigned taddr)
 {
 	void (*entry)(unsigned,unsigned,unsigned) = (void*) kaddr;
 
+    MMU_InvalideICACHEALL();
 	entry(0, machine_arch_type, taddr);
 }

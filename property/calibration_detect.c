@@ -76,18 +76,20 @@ unsigned int check_caliberate(uint8_t * buf, int len)
 extern int power_button_pressed(void);
 extern int recheck_power_button(void);
 static int count_ms;
+static unsigned long long start_time;
+static unsigned long long now_time;
 int is_timeout(int key)
 {
     if(!key){
         if(!recheck_power_button() || charger_connected())
           return 2;
     }
+    
+    now_time = get_timer_masked();
 
-    if(count_ms <= 0)
+    if(now_time - start_time>count_ms)
       return 1;
     else{
-        count_ms--;
-        udelay(1);
         return 0;
     }
 }
@@ -145,6 +147,7 @@ void calibration_detect(int key)
 
 #endif
 #endif
+    start_time = get_timer_masked();
     while(!usb_is_configured()){
         ret = is_timeout(key);
         if(ret == 0)
