@@ -186,7 +186,7 @@ time:	subs	r1,r1,#0x1
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
 	bl	cpu_init_crit
 	bl cpu_spec
-	bl MMU_Init
+	@bl MMU_Init
 #endif
 
 /* Set stackpointer in internal RAM to call board_init_f */
