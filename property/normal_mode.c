@@ -78,13 +78,6 @@ int eng_getphasecheck(SP09_PHASE_CHECK_T* phase_check)
 	int aaa;
 
 	point = (unsigned char *)phase_check;
-
-	/*for (aaa = 0; aaa < SP09_MAX_PHASE_BUFF_SIZE; aaa ++) {
-		if ((aaa % 16) == 0)
-			printf("\n");
-		printf(" %02x", point[aaa]);
-	}*/
-
 	if (phase_check->Magic == SP09_SPPH_MAGIC_NUMBER) {
 		//printf("Magic = 0x%08x\n",phase_check->Magic);
 		printf("SN1 = %s   SN2 = %s\n",phase_check->SN1, phase_check->SN2);
@@ -207,6 +200,9 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	int ret;
 	size_t size;
 	loff_t off = 0;
+	char *fixnvpoint = "/fixnv";
+	char *fixnvfilename = "/fixnv/fixnv.bin";
+	char *fixnvfilename2 = "/fixnv/fixnvchange.bin";
 	char *backupfixnvpoint = "/backupfixnv";
 	char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
 	char *backupfixnvfilename2 = "/backupfixnv/fixnvchange.bin";
@@ -280,28 +276,32 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 					/* file is wrong */			
 					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 					/* read fixnv */
-					ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
-					if (ret) {
-						printf("No partition named %s\n", FIXNV_PART);
-						return;
-					} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-						printf("Partition %s not a NAND device\n", FIXNV_PART);
-						return;
+   			cmd_yaffs_mount(fixnvpoint);
+			ret = cmd_yaffs_ls_chk(fixnvfilename);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv backup */
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 					}
-
-					off = part->offset;
-					nand = &nand_info[dev->id->num];
-
-					size = (FIXNV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-					if(size <= 0) {
-						printf("fixnv image should not be zero\n");
-						return;
-					}
-					ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
-					if (ret != 0) {
-						printf("fixnv nand read error %d\n", ret);
-						return;
-					}
+					/* read fixnv backup */
+				}
+			} else {
+				/* read fixnv backup */
+				ret = cmd_yaffs_ls_chk(fixnvfilename2);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+				}
+				/* read fixnv backup */
+			}
+			cmd_yaffs_umount(fixnvpoint);
 					/*#########################*/
 				}
 			} else {
@@ -310,28 +310,32 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 				/* file is wrong */			
 				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 				/* read fixnv */
-				ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
-				if (ret) {
-					printf("No partition named %s\n", FIXNV_PART);
-					return;
-				} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-					printf("Partition %s not a NAND device\n", FIXNV_PART);
-					return;
+    			cmd_yaffs_mount(fixnvpoint);
+			ret = cmd_yaffs_ls_chk(fixnvfilename);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv backup */
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					}
+					/* read fixnv backup */
 				}
-
-				off = part->offset;
-				nand = &nand_info[dev->id->num];
-
-				size = (FIXNV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-				if(size <= 0) {
-					printf("fixnv image should not be zero\n");
-					return;
+			} else {
+				/* read fixnv backup */
+				ret = cmd_yaffs_ls_chk(fixnvfilename2);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 				}
-				ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
-				if (ret != 0) {
-					printf("fixnv nand read error %d\n", ret);
-					return;
-				}
+				/* read fixnv backup */
+			}
+			cmd_yaffs_umount(fixnvpoint);
 				/*#########################*/
 			}
 			//////////////////////
@@ -350,28 +354,32 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 				/* file is wrong */			
 				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 				/* read fixnv */
-				ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
-				if (ret) {
-					printf("No partition named %s\n", FIXNV_PART);
-					return;
-				} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-					printf("Partition %s not a NAND device\n", FIXNV_PART);
-					return;
+    				cmd_yaffs_mount(fixnvpoint);
+				ret = cmd_yaffs_ls_chk(fixnvfilename);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						/* read fixnv backup */
+						ret = cmd_yaffs_ls_chk(fixnvfilename2);
+						if (ret == (FIXNV_SIZE + 4)) {
+							cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+							if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+								memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						}
+						/* read fixnv backup */
+					}
+				} else {
+					/* read fixnv backup */
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					}
+					/* read fixnv backup */
 				}
-
-				off = part->offset;
-				nand = &nand_info[dev->id->num];
-
-				size = (FIXNV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-				if(size <= 0) {
-					printf("fixnv image should not be zero\n");
-					return;
-				}
-				ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
-				if (ret != 0) {
-					printf("fixnv nand read error %d\n", ret);
-					return;
-				}
+				cmd_yaffs_umount(fixnvpoint);
 				/*#########################*/
 			}
 		} else {
@@ -380,28 +388,32 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 			/* file is wrong */			
 			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 			/* read fixnv */
-			ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
-			if (ret) {
-				printf("No partition named %s\n", FIXNV_PART);
-				return;
-			} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-				printf("Partition %s not a NAND device\n", FIXNV_PART);
-				return;
+    			cmd_yaffs_mount(fixnvpoint);
+			ret = cmd_yaffs_ls_chk(fixnvfilename);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv backup */
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					}
+					/* read fixnv backup */
+				}
+			} else {
+				/* read fixnv backup */
+				ret = cmd_yaffs_ls_chk(fixnvfilename2);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+				}
+				/* read fixnv backup */
 			}
-
-			off = part->offset;
-			nand = &nand_info[dev->id->num];
-
-			size = (FIXNV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-			if(size <= 0) {
-				printf("fixnv image should not be zero\n");
-				return;
-			}
-			ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
-			if (ret != 0) {
-				printf("fixnv nand read error %d\n", ret);
-				return;
-			}
+			cmd_yaffs_umount(fixnvpoint);
 			/*#########################*/
 		}
 		///////////////////////////////

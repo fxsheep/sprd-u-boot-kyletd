@@ -7,7 +7,6 @@
 #include "fdl_stdio.h"
 
 
-#if 1
 #include "asm/arch/sci_types.h"
 #include "asm/arch/nand_controller.h"
 #include <linux/mtd/mtd.h>
@@ -23,7 +22,6 @@ extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
 
 #define FIXNV_SIZE			(64 * 1024)
 #define PHASECHECK_SIZE		(3 * 1024)
-#endif
 
 typedef struct _DL_FILE_STATUS
 {
@@ -32,7 +30,9 @@ typedef struct _DL_FILE_STATUS
 } DL_FILE_STATUS, *PDL_FILE_STATUS;
 static unsigned long g_checksum;
 static unsigned long g_sram_addr;
+static int read_yaffs_flag = 0;
 __align(4) unsigned char g_fixnv_buf[FIXNV_SIZE + 4];
+__align(4) unsigned char g_fixnv_buf_yaffs[FIXNV_SIZE + 4];
 
 #define CHECKSUM_OTHER_DATA       0x5555aaaa
 static DL_FILE_STATUS g_status;
@@ -64,6 +64,87 @@ static unsigned char g_PhasecheckBUF[0x2000];
 #define NAND_BUS_SIZE_8              8
 #define NAND_BUS_SIZE_16              16
 #define NAND_BUS_SIZE_32              32
+
+/*
+* retval : -1 is wrong  ;  1 is correct
+*/
+int nv_is_correct(unsigned char *array, unsigned long size)
+{
+	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a)) {
+		array[size] = 0xff; array[size + 1] = 0xff;
+		array[size + 2] = 0xff; array[size + 3] = 0xff;	
+		return 1;
+	} else
+		return -1;
+}
+
+/*
+   1 ; success
+   2 : error
+*/
+int nand_read_fdl_yaffs(unsigned int addr, unsigned int off, unsigned int size, unsigned char *buf)
+{
+	int ret = 0;
+	int pos;
+
+	/* for fixnv, read total 64KB */
+	char *fixnvpoint = "/fixnv";
+	char *fixnvfilename = "/fixnv/fixnv.bin";
+	char *fixnvfilename2 = "/fixnv/fixnvchange.bin";
+
+	if (addr != 0x81a60000)
+		return NAND_INVALID_ADDR;
+	if (size != 0x800)	
+		return NAND_INVALID_SIZE;
+
+	if (read_yaffs_flag == 0) {
+		memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
+		/* read fixnv */
+    		cmd_yaffs_mount(fixnvpoint);
+		ret = cmd_yaffs_ls_chk(fixnvfilename);
+		if (ret == (FIXNV_SIZE + 4)) {
+			cmd_yaffs_mread_file(fixnvfilename, g_fixnv_buf_yaffs);
+			if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
+				memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
+				/* read fixnv backup */
+				ret = cmd_yaffs_ls_chk(fixnvfilename2);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename2, g_fixnv_buf_yaffs);
+					if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
+						memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
+						read_yaffs_flag = 2;
+					} else
+						read_yaffs_flag = 1;
+				} else
+					read_yaffs_flag = 2;//error
+				/* read fixnv backup */
+			} else
+				read_yaffs_flag = 1;//success
+		} else {
+			/* read fixnv backup */
+			ret = cmd_yaffs_ls_chk(fixnvfilename2);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(fixnvfilename2, g_fixnv_buf_yaffs);
+				if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
+					memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
+					read_yaffs_flag = 2;
+				} else
+					read_yaffs_flag = 1;
+			} else
+				read_yaffs_flag = 2;//error
+			/* read fixnv backup */
+		}
+		cmd_yaffs_umount(fixnvpoint);
+	}
+
+	memcpy(buf, (unsigned char *)(g_fixnv_buf_yaffs + off), size);
+
+	if (read_yaffs_flag == 1)
+		return NAND_SUCCESS;
+
+	return NAND_SYSTEM_ERROR;
+}
+
 
 int FDL2_DataStart (PACKET_T *packet, void *arg)
 {
@@ -219,11 +300,6 @@ int NandChangeBootloaderHeader(unsigned int *bl_start_addr)
 
 int NandWriteAndCheck(unsigned int size, unsigned char *buf)
 {
-    unsigned int start, end;
-    unsigned int number;
-    unsigned int imageIndex;
-    unsigned int ecc_result;
-	int aaa;
 
     memcpy (g_FixNBLBuf + g_NBLFixBufDataSize, buf, size); /* copy the data to the temp buffer */
     g_NBLFixBufDataSize += size;
@@ -233,17 +309,13 @@ int NandWriteAndCheck(unsigned int size, unsigned char *buf)
         return NAND_SUCCESS;
     }
     NandChangeBootloaderHeader((unsigned int *) g_FixNBLBuf);
-	/*printf("\n\n");	
-	for (aaa = 32; aaa <= 55; aaa ++)
-		printf(" %02x ", g_FixNBLBuf[aaa]); 
-	printf("\n\n");*/
+
     return NAND_SUCCESS;
 }
 
 int FDL2_DataMidst (PACKET_T *packet, void *arg)
 {
     unsigned short  size;
-    int i;
 
     /* The previous download step failed. */
     if (NAND_SUCCESS != g_prevstatus)
@@ -313,21 +385,19 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
             		SEND_ERROR_RSP(BSL_CHECKSUM_DIFF);
 		
 		//////////////////////////////
-		pos = 0;
-		while (pos < fix_nv_size) {
-			if ((fix_nv_size - pos) >= 2048)
-				size = 2048;
-			else
-				size = fix_nv_size - pos;
-			//printf("pos = %d  size = %d\n", pos, size);
-			if (size == 0)
-				break;
-			if (nand_write_fdl (size, g_fixnv_buf + pos) == NAND_SUCCESS)
-                		g_prevstatus = NAND_SUCCESS;
-			pos += size;
-		}
-		
-		/* write fixnv to yaffs2 format */
+		/* write fixnv to yaffs2 format : orginal */
+		char *fixnvpoint = "/fixnv";
+		char *fixnvfilename = "/fixnv/fixnv.bin";
+
+		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
+		g_fixnv_buf[FIXNV_SIZE + 0] = g_fixnv_buf[FIXNV_SIZE + 1] = 0x5a;
+		g_fixnv_buf[FIXNV_SIZE + 2] = g_fixnv_buf[FIXNV_SIZE + 3] = 0x5a;
+		cmd_yaffs_mount(fixnvpoint);
+    		cmd_yaffs_mwrite_file(fixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
+		ret = cmd_yaffs_ls_chk(fixnvfilename);
+		cmd_yaffs_umount(fixnvpoint);
+
+		/* write fixnv to yaffs2 format : backup */
 		char *backupfixnvpoint = "/backupfixnv";
 		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
 
@@ -338,6 +408,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
     		cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
 		ret = cmd_yaffs_ls_chk(backupfixnvfilename);
 		cmd_yaffs_umount(backupfixnvpoint);
+		g_prevstatus = NAND_SUCCESS;
 		//////////////////////////////
     	} else if (is_nbl_write == 1) {
 	   	/* write the spl loader image to the nand*/
@@ -370,6 +441,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
     		cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PHASECHECK_SIZE + 4));
 		ret = cmd_yaffs_ls_chk(productinfofilename);
 		cmd_yaffs_umount(productinfopoint);
+		g_prevstatus = NAND_SUCCESS;
     	}
 
     	if (NAND_SUCCESS != g_prevstatus) {
@@ -405,8 +477,11 @@ int FDL2_ReadFlash (PACKET_T *packet, void *arg)
         off = EndianConv_32 (* (data + 2));
     }
 
+#if 0
     ret = nand_read_fdl (addr, off, size, (unsigned char *) (packet->packet_body.content));
-
+#else
+    ret = nand_read_fdl_yaffs (addr, off, size, (unsigned char *) (packet->packet_body.content));
+#endif
     if (NAND_SUCCESS == ret)
     {
 
@@ -436,12 +511,6 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
     	switch (ret) {
 		case 0:
 			ret = nand_erase_partition(addr, size);
-		break;
-		case 1:
-			ret = nand_erase_check_partition(addr & ~3, size);
-		break;
-		case 2:
-			ret = nand_erase_check_write_partition(addr & ~3, size);
 		break;
 		default:
 			ret = NAND_SUCCESS;
