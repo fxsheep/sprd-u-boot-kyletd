@@ -71,6 +71,8 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         normal_mode();
     }else if(rst_mode == ALARM_MODE){
 		alarm_mode();
+    }else if(rst_mode == SLEEP_MODE){
+		sleep_mode();
 	}
     DBG("func: %s line: %d\n", __func__, __LINE__);
 
