@@ -59,7 +59,7 @@ void CHIP_ResetMCU (void)  //reset interrupt disable??
     // @Richard
     uint32 i = 10000;
 
-    ANA_REG_OR (ANA_AGEN, (AGEN_WDG_EN | AGEN_RTC_WDG_EN));
+    ANA_REG_OR (ANA_APB_CLK_EN, WDG_EB);
     WDG_TimerInit ();
     
     while (i--);    

@@ -1232,7 +1232,11 @@ sp8805ga_config	: unconfig
 sc8810_openphone_config	: unconfig
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sc8810_openphone spreadtrum sc8810
-
+	
+sp8810_config	: unconfig
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sp8810 spreadtrum sc8810
+	
 #########################################################################
 #########################################################################
 

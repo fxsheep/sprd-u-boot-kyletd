@@ -3044,6 +3044,8 @@ extern unsigned int __machine_arch_type;
 #define MACH_TYPE_G2PHONE		2012
 #define MACH_TYPE_OPENPHONE		2013
 #define MACH_TYPE_8810_OPENPHONE	2014
+#define MACH_TYPE_SP8810	2015
+
 #ifdef CONFIG_ARCH_EBSA110
 # ifdef machine_arch_type
 #  undef machine_arch_type
@@ -39427,6 +39429,19 @@ extern unsigned int __machine_arch_type;
 #else
 # define machine_is_sc8810openphone()	(0)
 #endif
+
+#ifdef CONFIG_SP8810
+# ifdef machine_arch_type
+#  undef machine_arch_type
+#  define machine_arch_type	__machine_arch_type
+# else
+#  define machine_arch_type	MACH_TYPE_SP8810
+# endif
+# define machine_is_sc8810openphone()	(machine_arch_type == MACH_TYPE_8810_OPENPHONE)
+#else
+# define machine_is_sc8810openphone()	(0)
+#endif
+
 /*
  * These have not yet been registered
  */

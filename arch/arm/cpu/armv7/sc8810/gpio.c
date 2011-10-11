@@ -988,13 +988,12 @@ void sprd_gpio_init(void)
 //	  __raw_bits_or (GEN0_GPIO_EN | GEN0_GPIO_RTC_EN, GR_GEN0);
     unsigned int temp;
     temp = readl(GR_GEN0);
-    temp |= (GEN0_GPIO_EN | GEN0_GPIO_RTC_EN);
+    temp |= (GEN0_GPIO_EN);
     writel(temp, GR_GEN0);
-	ANA_REG_OR (ANA_AGEN,AGEN_RTC_GPIO_EN);
 	//msleep(5);
     volatile i = 0x2fff;
     while (i--);
-	ANA_REG_OR (ANA_AGEN,AGEN_GPIO_EN);
+	ANA_REG_OR (ANA_APB_CLK_EN,GPIO_EB);
 
 	//gpiochip_add(&sprd_gpio_chip);
 

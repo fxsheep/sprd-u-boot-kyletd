@@ -26,7 +26,7 @@ const unsigned char **FDL2_GetSig (void)
     return (const unsigned char **) FDL2_signature;
 }
 extern unsigned long _bss_end;
-#ifdef CONFIG_SC8810_OPENPHONE
+#ifdef CONFIG_SC8810
 extern unsigned long _bss_start;
 
 static int bss_end_end;
@@ -59,7 +59,7 @@ int main(void)
 #endif
 
        FDL_PacketInit();
-#ifdef CONFIG_SC8810_OPENPHONE	   
+#ifdef CONFIG_SC8810	   
 	   bss_start_start = _bss_start;
 	   bss_end_end = _bss_end;
 

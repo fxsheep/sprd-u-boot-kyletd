@@ -78,7 +78,7 @@ typedef struct
 #define     EXT_MODE_DS_FULL             0
 #define     EXT_MODE_DS_QUARTER          2
 #define     EXT_MODE_FLAG                1
-#define     SDRAM_EXT_MODE_REG           ((EXT_MODE_FLAG<<14) | (EXT_MODE_DS_FULL<<5) | EXT_MODE_PASR_ALL)
+#define     SDRAM_EXT_MODE_REG           ((EXT_MODE_FLAG<<15) | (EXT_MODE_DS_FULL<<5) | EXT_MODE_PASR_ALL)
 
 #define     SDR_SDRAM               0
 #define     DDR_SDRAM               1

@@ -55,14 +55,14 @@ static __inline void vb_switch_arm_ctl (BOOLEAN is_arm)
 {
     if (is_arm)
     {
-        ANA_REG_MSK_OR (ANA_CLK_CTL, (VBMCLK_ARM_EN | VBCTL_SEL),
-                        (VBMCLK_ARM_EN | VBCTL_SEL));
+        ANA_REG_MSK_OR (ANA_AUDIO_CTL, (VBMCLK_ARM_EN | VBMCLK_ARM_ACC),
+                        (VBMCLK_ARM_EN | VBMCLK_ARM_EN));
         REG32 (VB_CLK_CTL) |= ARM_VB_ACC;
     }
     else
     {
-        ANA_REG_MSK_OR (ANA_CLK_CTL, VBMCLK_ARM_EN,
-                        (VBMCLK_ARM_EN | VBCTL_SEL));
+        ANA_REG_MSK_OR (ANA_AUDIO_CTL, VBMCLK_ARM_EN,
+                        (VBMCLK_ARM_EN | VBMCLK_ARM_ACC));
         REG32 (VB_CLK_CTL) &= ~ARM_VB_ACC;
     }
 }

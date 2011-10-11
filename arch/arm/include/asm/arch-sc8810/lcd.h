@@ -25,7 +25,7 @@
 #include "com_drvapi.h"
 #include "chip.h"
 
-#if defined(PLATFORM_SC6800H) || defined(PLATFORM_SC8800G)|| defined(PLATFORM_SC8810)
+#if defined(PLATFORM_SC6800H) || defined(PLATFORM_SC8800G)|| defined(CONFIG_SC8810)
 #include "lcdc_types.h"
 #endif
 /**---------------------------------------------------------------------------*
@@ -401,7 +401,7 @@ PUBLIC ERR_LCD_E LCD_Init (void);
 //          other,if fail
 /**********************************************************************************************************/
 PUBLIC ERR_LCD_E LCD_SimpleInit (LCD_SIMPLE_INIT_PARAM_T *param_ptr);
-#if defined(PLATFORM_SC6800H) || defined(PLATFORM_SC8800G)|| defined(PLATFORM_SC8810)
+#if defined(PLATFORM_SC6800H) || defined(PLATFORM_SC8800G)|| defined(CONFIG_SC8810)
 /*****************************************************************************/
 //  Description: config lcd block of 6800h
 //  Global resource dependence:

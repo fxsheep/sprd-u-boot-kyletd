@@ -89,7 +89,7 @@ uint32 DMA_HALRegCallBack (uint32 channel, DMA_ISR_HANDLER callback);
 /*****************************************************************************/
 void DMA_SetBlockDelay (uint32 delay);
 
-#elif defined(PLATFORM_SC6800H) || defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8800H)|| defined(PLATFORM_SC8810)
+#elif defined(PLATFORM_SC6800H) || defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8800H)|| defined(CONFIG_SC8810)
 //=============================================================================
 // add function for new dma driver
 //=============================================================================

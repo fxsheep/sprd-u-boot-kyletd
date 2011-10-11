@@ -14,14 +14,14 @@
 #define AHB_CTRL5_REG 0x20900230
 #endif
 
-#ifdef PLATFORM_SC8810
+#ifdef CONFIG_SC8810
 #define REMAP 0x20900218
 #define SVC_STACK_TEMP 0x40008000
 #define GEN2_ADDR 0x8b00002c
 #define ON_CHIP_RAM_EN 0xF
 #endif
 
-#ifdef PLATFORM_SC8810
+#ifdef CONFIG_SC8810
 #define BIGEND_PROT_REG 0x20900290
 #define AHB_CTRL5_REG 0x20900230
 #endif
@@ -51,7 +51,7 @@ cpu_spec:
 	MCR p15,0,r0,c1,c0,0
 
 	/*Set Endian Regs of SC8800G*/
-#if defined(CHIP_ENDIAN_BIG) && defined(PLATFORM_SC8810)
+#if defined(CHIP_ENDIAN_BIG) && defined(CONFIG_SC8810)
 	LDR     R0, =BIGEND_PROT_REG
 	MOV     R2, #0xD4
 	ORR     R2, R2, #0xC300
@@ -71,7 +71,7 @@ cpu_spec:
 	MOV    R10, #0
 
 #if 0//sc8810
-#if defined(PLATFORM_SC8800H) || defined(PLATFORM_SC8810)
+#if defined(PLATFORM_SC8800H) || defined(CONFIG_SC8810)
 #else
 	/*Enable on chip ram for ARM*/
 	LDR     R0, =GEN2_ADDR

@@ -98,7 +98,7 @@ extern   "C"
 #endif
 
 
-#if defined(PLATFORM_SC8810)
+#if defined(CONFIG_SC8810)
 //Special Chip platfrom io
 #include "sc8810_plf_io.h"
 //Chip module config header files.About some variant param. configs for the module.

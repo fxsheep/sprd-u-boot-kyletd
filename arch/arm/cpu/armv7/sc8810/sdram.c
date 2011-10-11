@@ -24,8 +24,9 @@ SC6800     -gtp -cpu ARM926EJ-S -D_REF_SC6800_ -D_BL_NF_SC6800_
 /*lint -e765*/
 
 #define  SDRAM_EXT_INVALID     0xffffffff       //@David.Jia 2008.1.7
+#define  ROW_MODE_TO_NUM(_m)	(_m+11)
 
-#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
+#if defined(PLATFORM_SC8800G) || defined(CONFIG_SC8810)
 uint32 g_emc_clk;
 uint32 s_colum;
 #endif //defined(PLATFORM_SC8800G) && defined(CHIP_VER_8800G2)
@@ -33,7 +34,7 @@ uint32 s_colum;
 uint32 g_ahb_clk; 
 SDRAM_TIMING_PARA_T_PTR sdram_parameters;
 
-#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
+#if defined(PLATFORM_SC8800G) || defined(CONFIG_SC8810)
 #define SDRAM_AUTODETECT_SUPPORT
 #endif
 #define _BL_NF_NBL_
@@ -41,10 +42,14 @@ SDRAM_TIMING_PARA_T_PTR sdram_parameters;
 #ifdef SDRAM_AUTODETECT_SUPPORT
 #define MEM_REF_DATA0       0x12345678
 #define MEM_REF_DATA1       0x55AA9889
+#ifdef CHIP_VER_8810
+#define ZERO_ADDR           0x00000000UL
+#else
 #ifdef _BL_NF_NBL_
 #define ZERO_ADDR           0x00000000UL
 #else
 #define ZERO_ADDR           0x30000000UL
+#endif
 #endif
 #define STATE_SDRAM_TYPE    0UL
 #define STATE_BIT_WIDTH     1UL
@@ -66,7 +71,7 @@ SDRAM_TIMING_PARA_T_PTR sdram_parameters;
 SDRAM_CFG_INFO_T s_sdram_raw_cfg;
 #endif
 
-#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
+#ifdef PLATFORM_SC8800G
 #define INTERFACE_CLK_MAX   ARM_CLK_200M
 typedef struct ARM_EMC_AHB_CLK_TAG 
 {
@@ -98,10 +103,6 @@ LOCAL CONST ARM_EMC_AHB_CLK_T s_arm_emc_ahb_clk[] =
     {ARM_CLK_512M, ARM_CLK_256M, ARM_CLK_128M, ARM_CLK_64M},
     {ARM_CLK_384M, ARM_CLK_192M, ARM_CLK_192M, ARM_CLK_96M},
 };
-
-//unsigned short ADI_Analogdie_reg_read (unsigned int addr);
-
-//void ADI_Analogdie_reg_write (unsigned int addr, unsigned short data);
 
 uint32 __GetMPllClk (void)
 {
@@ -224,7 +225,7 @@ LOCAL void __ClkConfig(uint32 *emcclk, uint32 *ahbclk)
     return;
 }
 #endif
-
+#ifndef CONFIG_SC8810
 /**---------------------------------------------------------------------------*
  ** FUNCTION                                                                  *
  **     void SDRAM_GenMemCtlCfg(SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)           *
@@ -335,7 +336,7 @@ LOCAL void SDRAM_GenMemCtlCfg (SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr)
     REG32 (EXT_MEM_CFG0_CH4)  = 0x0003c31c;
     REG32 (EXT_MEM_CFG0_CH5)  = 0x0003c31c;
 
-#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
+#if defined(PLATFORM_SC8800G)
     REG32 (EXT_MEM_CFG0_CH6)  = 0x0001c31c; //for sc8800g emc sleep bug.
     REG32 (EXT_MEM_CFG0_CH7)  = 0x0001c31c;
     REG32 (EXT_MEM_CFG0_CH8)  = 0x0001c31c;
@@ -382,25 +383,8 @@ LOCAL void SDRAM_DMemCtlCfg (uint32 sdram_clk,SDRAM_CFG_INFO_T_PTR sdram_cfg_ptr
     uint32 t_ref;
     uint32 t_rtw = sdram_cfg_ptr->cas_latency;
 
-    switch(row_mode)
-    {
-    case ROW_MODE_14:
-        row_num = 14;
-        break;
-    case ROW_MODE_13:
-        row_num = 13;
-        break;
-    case ROW_MODE_12:
-        row_num = 12;
-        break;
-    case ROW_MODE_11:
-        row_num = 11;
-        break;
-    default:
-        for (;;){}
-    }
-    
-    t_ref = ((sdram_parameters->row_ref_max*6000)>>row_num) - 1; // t_ref*(1/6.5MHz)*2^row <= tREF
+    row_num = ROW_MODE_TO_NUM(row_mode);
+    t_ref = ((sdram_parameters->row_ref_max*6500)>>row_num) - 2; // t_ref*(1/6.5MHz)*2^row <= tREF
 
     //set data width mode
     if (data_width == DATA_WIDTH_32)
@@ -626,6 +610,531 @@ LOCAL void __sdram_set_param(uint32 clk, SDRAM_CFG_INFO_T_PTR pCfg)
    
     for (i=0; i<1000; i++){}
 }
+#else
+LOCAL CONST EMC_PHY_L1_TIMING_T EMC_PHY_TIMING_L1_INFO[EMC_PHY_TIMING_MATRIX_MAX] = 
+{
+	//dpad_ie, dpad_oe, dqs_gate_pst, dqs_gate_pre, dqs_ie, dqs_oe
+	{0x20,		1,		0,			0,			0,		0},	//sdram cas_latency = 2
+	{0x40,		1,		0,			0,			0,		0},  //sdram cas_latency = 3
+	{0xf,		0xe,		0x10,		8,			0xf,		0xe}, //ddram cas_latency = 2	
+	{0xf,		0xe,		0x40,		0x20,		0xf,		0xe},  //ddram cas_latency = 2		
+};
+
+LOCAL CONST EMC_PHY_L2_TIMING_T EMC_PHY_TIMING_L2_INFO[EMC_PHY_TIMING_MATRIX_MAX] = 
+{
+   //dl0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0,  0,  0,  0, 0,  0, 0, 0,  0, 0},	//sdram cas_latency = 2
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0,  0,  0,  0, 0,  0, 0, 0,  0, 0},	//sdram cas_latency = 3
+	{0, 0, 0, 6, 2, 2, 2, 2, 2, 2,  2,  2,  6,  6, 6,  6, 6, 6,  6, 6},	//ddram cas_latency = 2
+	{0, 0, 0, 6, 2, 2, 2, 2, 2, 2,  2,  2,  6,  6, 6,  6, 6, 6,  6, 6},	//ddram cas_latency = 3
+};
+
+
+EMC_PHY_L1_TIMING_T_PTR EMC_GetPHYL1_Timing(SDRAM_CFG_INFO_T_PTR mem_info)
+{
+	if(SDR_SDRAM == mem_info->sdram_type)
+	{
+		if(CAS_LATENCY_2 == mem_info->cas_latency)
+		{
+			return (EMC_PHY_L1_TIMING_T_PTR)(&(EMC_PHY_TIMING_L1_INFO[EMC_PHY_TIMING_SDRAM_LATENCY2]));
+		}
+		else
+		{
+			return (EMC_PHY_L1_TIMING_T_PTR)(&(EMC_PHY_TIMING_L1_INFO[EMC_PHY_TIMING_SDRAM_LATENCY3]));
+		}
+	}
+	else
+	{
+		if(CAS_LATENCY_2 == mem_info->cas_latency)
+		{
+			return (EMC_PHY_L1_TIMING_T_PTR)(&(EMC_PHY_TIMING_L1_INFO[EMC_PHY_TIMING_DDRAM_LATENCY2]));
+		}
+		else
+		{
+			return (EMC_PHY_L1_TIMING_T_PTR)(&(EMC_PHY_TIMING_L1_INFO[EMC_PHY_TIMING_DDRAM_LATENCY3]));
+		}
+	}
+}
+
+EMC_PHY_L2_TIMING_T_PTR EMC_GetPHYL2_Timing(SDRAM_CFG_INFO_T_PTR mem_info)
+{
+	if(SDR_SDRAM == mem_info->sdram_type)
+	{
+		if(CAS_LATENCY_2 == mem_info->cas_latency)
+		{
+			return (EMC_PHY_L2_TIMING_T_PTR)(&(EMC_PHY_TIMING_L2_INFO[EMC_PHY_TIMING_SDRAM_LATENCY2]));
+		}
+		else
+		{
+			return (EMC_PHY_L2_TIMING_T_PTR)(&(EMC_PHY_TIMING_L2_INFO[EMC_PHY_TIMING_SDRAM_LATENCY3]));
+		}
+	}
+	else
+	{
+		if(CAS_LATENCY_2 == mem_info->cas_latency)
+		{
+			return (EMC_PHY_L2_TIMING_T_PTR)(&(EMC_PHY_TIMING_L2_INFO[EMC_PHY_TIMING_DDRAM_LATENCY2]));
+		}
+		else
+		{
+			return (EMC_PHY_L2_TIMING_T_PTR)(&(EMC_PHY_TIMING_L2_INFO[EMC_PHY_TIMING_DDRAM_LATENCY3]));
+		}
+	}
+}
+/*****************************************************************************/
+//  Description:	EMC basic mode set function
+//				set the base mode like:
+//				EMC device endian
+//				EMC auto gate en for power saving
+//				EMC auto sleep en
+//				EMC cmd queue mode
+//  Global resource dependence:  NONE
+//  Related register: EMC_CFG0
+//  Author:		Johnny.Wang         
+//  Note:			The default cs map space is 4g, if dram capability is larger than 4g,
+//				emc_cs_map parameter must adjust.
+/*****************************************************************************/
+void EMC_Base_Mode_Set(void)
+{
+	REG32(EXT_MEM_CFG0) &= ~0x1fff;//clear bit0~12
+	REG32(EXT_MEM_CFG0) |= (EMC_DVC_ENDIAN_DEFAULT <<12) 	|
+							(EMC_AUTO_GATE_EN		<<11)	|
+							(EMC_AUTO_SLEEP_EN		<<10)	|
+							(EMC_2DB_1CB			<<6)	|
+							(EMC_CS_MODE_DEFAULT	<<3)	|
+							(EMC_CS_MAP_2G			<<0)	;
+	return;							
+}
+
+/*****************************************************************************/
+//  Description:	EMC each cs work mode set function
+//				set each cs work mode parameter like:
+//				memory write burst length
+//				memory read burst length
+//				memory write burst mode:wrap/increase
+//				memory read burst mode:wrap/increase
+//				AHB write busrt divided to single/busrt access
+//				AHB read busrt divided to single/busrt access
+//  Global resource dependence:  memory burst length type
+//  Related register: EMC_CFG0_CSx
+//  Author:		Johnny.Wang         
+//  Note:			There are two cs pin in sc8810 emc, we usuall use cs0 to control external memory
+//				
+/*****************************************************************************/
+void EMC_CSx_Set(EMC_CS_NUM_E emc_cs_num, SDRAM_CFG_INFO_T_PTR mem_info)
+{
+	uint32 emc_cs_cfg = EXT_MEM_CFG0_CS0 + emc_cs_num*4;
+
+	uint32 burst_len = 0;
+
+	if(DATA_WIDTH_16 == mem_info ->data_width)
+	{
+		burst_len = mem_info->burst_length -1;
+	}
+	else
+	{
+		burst_len = mem_info->burst_length;
+	}
+	
+	REG32(emc_cs_cfg) = 0;//clear emc cs cfg
+	REG32(emc_cs_cfg) |=((burst_len			<<8) | //write burst length
+						(burst_len			<<4) | //read burst length
+						(BURST_WRAP		<<3) | //write burst mode
+						(BURST_WRAP		<<2) | //write burst mod	e
+						(HBURST_TO_BURST	<<1) | //write hburst invert to mem burst
+						(HBURST_TO_BURST	<<0));  //rrite hburst invert to mem burst
+}
+
+/*****************************************************************************/
+//  Description:	EMC AXI channel set function
+//				set each axi channel parameter like:
+//				axi channel en
+//				axi channel auto sleep en
+//				channel endian switch
+//				channel priority
+//  Global resource dependence:  NONE
+//  Related register: EMC_CFG0_ACHx
+//				  EMC_CFG1_ACHx
+//  Author:		Johnny.Wang         
+//  Note:			There are two axi channel in sc8810 emc, one for A5,the other for GPU
+//				
+/*****************************************************************************/
+void EMC_AXI_CHL_Set(EMC_CHL_NUM_E emc_axi_num)
+{
+	uint32 emc_axi_cfg0 = EXT_MEM_CFG0_ACH0 + emc_axi_num*8;
+	uint32 emc_axi_cfg1 = EXT_MEM_CFG1_ACH0 + emc_axi_num*8;
+
+	REG32(emc_axi_cfg0) &= ~0xf0; //clear bit7~4
+	//REG32(emc_axi_cfg0) |= (TRUE<<7) | //channel auto sleep en
+	// 		      (TRUE<<6) | //channel en
+	//		      (EMC_ENDIAN_SWITCH_NONE<<4);
+
+	REG32(emc_axi_cfg0) |=      (TRUE<<6) | //channel en
+			      (EMC_ENDIAN_SWITCH_NONE<<4);
+	
+	REG32(emc_axi_cfg1) &= ~BIT_4; //clear bit7~4
+	REG32(emc_axi_cfg1) |= (EMC_CLK_ASYNC<<4); //emc clk async with axi clk
+	REG32(emc_axi_cfg1) |= (1<<6); //axi channel response mode  0:at once  1:delay several clk
+}
+
+/*****************************************************************************/
+//  Description:	EMC AHB channel set function
+//  Global resource dependence:  NONE
+//  Author:		Johnny.Wang         
+//  Note:			There are 7 ahb channel in sc8810 emc, but no one is relate with ARM,
+//				so don't used temporarily
+//				
+/*****************************************************************************/
+void EMC_AHB_CHL_Set(EMC_CHL_NUM_E emc_ahb_num,uint32 addr_offset)
+{
+	uint32 emc_ahb_cfg0 = EXT_MEM_CFG0_ACH0 + emc_ahb_num*8;
+	uint32 emc_ahb_cfg1 = EXT_MEM_CFG1_ACH0 + emc_ahb_num*8;
+
+	REG32(emc_ahb_cfg1) &= ~0x03ff0000;	//clear bit16~25
+	REG32(emc_ahb_cfg1) |= addr_offset<<16;
+
+}
+/*****************************************************************************/
+//  Description:	EMC Memroy all timing parameter set function
+//				set all timing parameter of EMC when operate external memory like:
+//				t_rtw,
+//				t_ras,
+//				t_xsr,
+//				t_rfc,
+//				t_wr,
+//				t_rcd,
+//				t_rp,
+//				t_rrd,
+//				t_mrd,
+//				t_wtr,
+//				t_ref,
+//  Global resource dependence:  NONE
+//  Author:		Johnny.Wang         
+//  Related register: EMC_DCFG1
+//				  EMC_DCFG2
+//  Note:			None
+//				
+/*****************************************************************************/
+void EMC_MEM_Timing_Set(uint32 emc_freq,
+						SDRAM_CFG_INFO_T_PTR     mem_info,
+						SDRAM_TIMING_PARA_T_PTR  mem_timing)
+{
+	uint32 cycle_ns = 2000*1000000/emc_freq;//2000/(clk); //device clock is half of emc clock.
+	//uint32 cycle_t_ref = 1000/EMC_T_REF_CLK;
+
+	uint32 row_mode    = mem_info->row_mode;	
+	uint32 t_rtw       = mem_info->cas_latency;		
+
+	//round all timing parameter
+	uint32  t_ras	= mem_timing->ras_min/cycle_ns;
+	uint32  t_xsr 	= mem_timing->xsr_min/cycle_ns;	
+	uint32  t_rfc 	= mem_timing->rfc_min/cycle_ns;	
+	uint32  t_wr  	= mem_timing->wr_min/cycle_ns+2; //note: twr should add 2 for ddr	
+	uint32  t_rcd 	= mem_timing->rcd_min/cycle_ns;    
+	uint32  t_rp  	= mem_timing->row_pre_min/cycle_ns;	
+	uint32  t_rrd 	= mem_timing->rrd_min/cycle_ns;	
+	//uint32  t_mrd	= mem_timing->mrd_min/cycle_ns;	
+	uint32  t_mrd	= mem_timing->mrd_min;	
+	//uint32  t_wtr 	= mem_timing->wtr_min/cycle_ns+1;	
+	uint32  t_wtr 	= mem_timing->wtr_min+1;	
+	uint32  t_ref 	= ((mem_timing->row_ref_max*EMC_T_REF_CLK)>>(ROW_MODE_TO_NUM(row_mode))) -2;
+
+	//prevent the maximun overflow of all timing parameter
+	t_ras	= (t_ras >= 0xf ) ? 0x7  : t_ras;
+	t_xsr 	= (t_xsr >= 0xff) ? 0x26 : t_xsr;   
+	t_rfc 	= (t_rfc >= 0x3f) ? 0x1a : t_rfc;
+	t_wr  	= (t_wr  >= 0xf ) ? 0x4  : t_wr;
+	t_rcd 	= (t_rcd >= 0xf ) ? 0x3  : t_rcd;
+	t_rp  	= (t_rp  >= 0xf ) ? 0x3  : t_rp;
+	t_rrd 	= (t_rrd >= 0xf ) ? 0x2  : t_rrd;
+	t_mrd	= (t_mrd >= 0xf ) ? 0x0  : t_mrd;
+	t_wtr 	= (t_wtr >= 0xf ) ? 0x3  : t_wtr;
+	t_ref 	= (t_ref >=0xfff) ? 0x100: t_ref ;  
+
+	//prevent the minmun value of all timing
+	t_ras	= (t_ras <= 0) ? 0x7  : t_ras;   
+	t_xsr 	= (t_xsr <= 0) ? 0x26 : t_xsr;   
+	t_rfc 	= (t_rfc <= 0) ? 0x1a : t_rfc;   
+	t_wr  	= (t_wr  <= 0) ? 0x4  : t_wr;    
+	t_rcd 	= (t_rcd <= 0) ? 0x3  : t_rcd;   
+	t_rp  	= (t_rp  <= 0) ? 0x3  : t_rp;    
+	t_rrd 	= (t_rrd <= 0) ? 0x2  : t_rrd;   
+	t_mrd	= (t_mrd <= 0) ? 0x2  : t_mrd;   
+	t_wtr 	= (t_wtr <= 0) ? 0x3  : t_wtr;   
+	t_ref 	= (t_ref <=00) ? 0x100: t_ref ;  
+
+
+
+	REG32(EXT_MEM_DCFG1) = ((0<<28)		|//read to read turn around time between different cs
+										 //default:0     2 cs or above:1
+							(t_wtr << 24) |
+							(t_rtw << 20) |
+							(t_ras << 16) |
+							(t_rrd << 12) |
+							(t_wr  << 8)  |
+							(t_rcd << 4)  |
+							(t_rp  << 0));
+
+	REG32(EXT_MEM_DCFG2) = ((t_rfc << 24) |
+							(t_xsr << 16) |
+							(t_ref << 4)  |
+							(t_mrd << 0));
+}
+
+/*****************************************************************************/
+//  Description:	EMC Memroy mode set function
+//				set external memory work mode parameter like:
+//				data width
+//				column mode
+//				row mode and so on
+//  Global resource dependence:  NONE
+//  Author:		Johnny.Wang         
+//  Related register: EMC_DCFG0
+//				  
+//  Note:			None
+//				
+/*****************************************************************************/
+void EMC_MEM_Mode_Set(SDRAM_CFG_INFO_T_PTR mem_info)
+{
+	REG32(EXT_MEM_DCFG0) = (EMC_CS_REF_SAME<<15) |
+							(TRUE			<< 14) |//hardware auto-refresh en
+							(TRUE			<< 13) |//mode1 en
+							(TRUE			<< 12) |//mode0 en
+							(TRUE			<< 11) |//dmem clock output phase
+							(TRUE			<< 10) |//dmem clock output en
+							(TRUE			<< 9)   |//row hit en
+							(mem_info->data_width<< 8)   |
+							(mem_info->col_mode << 4)   |
+							(EMC_PRE_BIT_A10<< 2)  |
+							(mem_info->row_mode);
+}
+
+
+/*****************************************************************************/
+//  Description:	EMC phy latency set function
+//				set parameter relate with cas latency like:
+//				timing adjustment sample clock latency
+//				DQS output latency
+//				write dm latency
+//				read dm latency
+//				write data latency
+//				read data latency
+//  Global resource dependence:  dram type , cas_latency
+//  Author:		Johnny.Wang   
+//  Related register: EMC_DCFG5
+//				
+//  Note:			None
+//				
+/*****************************************************************************/
+void EMC_PHY_Latency_Set(SDRAM_CFG_INFO_T_PTR mem_info)	
+{
+	if(SDR_SDRAM == mem_info->sdram_type)
+	{
+		if(CAS_LATENCY_2 == mem_info->cas_latency)
+		{
+			REG32(EXT_MEM_DCFG5) = 0x00420006;
+		}
+		else
+		{
+			REG32(EXT_MEM_DCFG5) = 0x00620208;
+		}
+	}
+	else
+	{
+		if(CAS_LATENCY_2 == mem_info->cas_latency)
+		{
+			REG32(EXT_MEM_DCFG5) = 0x00622726;
+		}
+		else
+		{
+			REG32(EXT_MEM_DCFG5) = 0x00622728;
+		}	
+
+		#if FPGA_TEST
+			//REG32(EXT_MEM_DCFG5) = 0x00633739;
+		#endif
+	}
+}
+
+/*****************************************************************************/
+//  Description:	EMC phy mode set function
+//				set parameter relate with emc phy work mode like:
+//				cke map to cs0 or cs1
+//				dqs gate delay,delay line or loopback
+//				dqs gate mode,mode0 or mode1
+//				DMEM data output mode,dff or dl
+//				DMEM DDR DQS[3:0] output mode,dff or dl
+//				DMEM DDR DQS PAD IE mode,dff or dl
+//				DMEM sample clock mode,internal or from dqs
+//				DMEM CK/CK# output mode,dff or dl
+//				DMEM READ strobe clock loopback dis/en
+//  Global resource dependence:  dll on or off, external memory type
+//  Author:		Johnny.Wang        
+//  Related register: EMC_CFG1
+//				
+//  Note:			None
+//				
+/*****************************************************************************/
+void EMC_PHY_Mode_Set(SDRAM_CFG_INFO_T_PTR mem_info)
+{
+	REG32(EXT_MEM_CFG1) = 0; //clear phy control register
+
+	REG32(EXT_MEM_CFG1) |= (EMC_CKE_SEL_DEFAULT << 14) |
+							(EMC_DQS_GATE_DEFAULT<< 8)	|
+							(EMC_DQS_GATE_MODE_DEFAULT<< 7) |
+							(mem_info->sdram_type<< 6) |//DMEM data output mode,dff or dl
+							(EMC_DLL_ON_OFF<< 5) |//DMEM DDR DQS[3:0] output mode,dff or dl
+							(EMC_DLL_ON_OFF<< 4) |//DMEM DDR DQS PAD IE mode,dff or dl
+							(mem_info->sdram_type<<3) |//DMEM sample clock mode,internal or from dqs
+							(0<<2) |//DMEM CK/CK# output mode,dff or dl
+							(0<<1) |//DMEM READ strobe clock loopback dis/en
+							mem_info->sdram_type;
+	#if FPGA_TEST
+	//REG32(EXT_MEM_CFG1) |= BIT_6;
+	#endif
+}
+
+
+/*****************************************************************************/
+//  Description:	EMC phy timing set function
+//				set parameter relate with emc phy work mode like:
+//				data pad ie delay
+//				data pad oe delay
+//				dqs pad ie delay
+//				dqs pad oe delay
+//				all delay line timing parameter
+//  Global resource dependence:  dll on or off, external memory type
+//  Author:		Johnny.Wang         
+//  Related register: EMC_DCFG6,7,8 and EMC_DMEM_DL0~DL19
+//  Note:			None
+//				
+/*****************************************************************************/
+void EMC_PHY_Timing_Set(uint32 emc_freq,
+					SDRAM_CFG_INFO_T_PTR mem_info,
+					EMC_PHY_L1_TIMING_T_PTR emc_phy_l1_timing,
+					EMC_PHY_L2_TIMING_T_PTR emc_phy_l2_timing)
+{
+	uint32 i = 0;
+	
+	REG32(EXT_MEM_DCFG8) = ((emc_phy_l1_timing->data_pad_ie_delay & 0xffff) <<16) |
+							(emc_phy_l1_timing->data_pad_oe_delay & 0xff);
+	
+	if(DDR_SDRAM == mem_info->sdram_type)
+	{
+		REG32(EXT_MEM_DCFG6) = ((emc_phy_l1_timing->dqs_gate_pst_delay& 0xffff) <<16) |
+								(emc_phy_l1_timing->dqs_gate_pre_delay& 0xffff);
+
+		REG32(EXT_MEM_DCFG7) = ((emc_phy_l1_timing->dqs_ie_delay& 0xffff) <<16) |
+								(emc_phy_l1_timing->dqs_oe_delay& 0xff);
+	}
+	
+	if(EMC_DLL_ON_OFF == TRUE && emc_freq >= ARM_CLK_96M)
+	{
+		for(i = EMC_DMEM_DL0; i < EMC_DMEM_MAX; i++)
+		{
+			REG32(EXT_MEM_DL0 + i*4 ) = REG32(REG32(emc_phy_l2_timing)+i*4);
+		}
+	}
+}
+
+/*****************************************************************************/
+//  Description:	EMC phy  set function
+//				include these subfunction:
+//				EMC_PHY_Latency_set(),
+//				EMC_PHY_Mode_Set(),
+//				EMC_PHY_Timing_Set()
+//  Global resource dependence:  dll on or off, external memory type
+//  Author:		Johnny.Wang         
+//  Related register: 
+//  Note:			None
+//				
+/*****************************************************************************/
+void EMC_PHY_Set(uint32 emc_freq,
+					SDRAM_CFG_INFO_T_PTR mem_info,
+					EMC_PHY_L1_TIMING_T_PTR emc_phy_l1_timing,
+					EMC_PHY_L2_TIMING_T_PTR emc_phy_l2_timing)
+{
+	EMC_PHY_Latency_Set(mem_info);
+	EMC_PHY_Mode_Set(mem_info);
+	EMC_PHY_Timing_Set(emc_freq,mem_info,emc_phy_l1_timing,emc_phy_l2_timing);
+}
+
+/*****************************************************************************/
+//  Description:	EMC software command send function
+//				this function will send software initialization command to external memory
+//  Global resource dependence:  memory type
+//  Author:		Johnny.Wang         
+//  Related register: 
+//  Note:			None
+//				
+/*****************************************************************************/
+void EMC_SCMD_Issue(SDRAM_CFG_INFO_T_PTR mem_info)
+{
+	uint32 i = 0;
+
+	//shut down auto-refresh
+	REG32(EXT_MEM_DCFG0) &= ~(DCFG0_AUTOREF_EN);
+
+	//precharge all bank
+	REG32(EXT_MEM_DCFG4) = 0x40010000;
+	while (REG32(EXT_MEM_DCFG4) & BIT_16);
+	for(i=0; i<=1000; i++);
+
+	//software auto refresh
+	REG32(EXT_MEM_DCFG4) = 0x40020000;
+	while (REG32(EXT_MEM_DCFG4) & BIT_17);		
+	for(i=0; i<=1000; i++);
+	 
+	//software auto refresh
+	REG32(EXT_MEM_DCFG4) = 0x40020000;
+	while (REG32(EXT_MEM_DCFG4) & BIT_17);		
+	for(i=0; i<=1000; i++);
+
+	//load nornal mode register
+	REG32(EXT_MEM_DCFG4) = 0x40040000 | (mem_info->cas_latency<<4) | (mem_info->burst_length); 
+	while (REG32(EXT_MEM_DCFG4) & BIT_18);				
+	for(i=0; i<=1000; i++);
+
+	if(SDRAM_EXT_MODE_INVALID != mem_info->ext_mode_val)
+	{
+		//load external mode register
+		REG32(EXT_MEM_DCFG4) = 0x40040000 | mem_info->ext_mode_val;
+		while (REG32(EXT_MEM_DCFG4) & BIT_18);				
+		for(i=0; i<=1000; i++);		
+	}
+
+	//open auto-refresh
+	REG32(EXT_MEM_DCFG0) |= (DCFG0_AUTOREF_EN);
+}
+
+
+void EMC_Init(uint32 emc_freq,
+				EMC_CS_NUM_E emc_cs_num,
+				EMC_CHL_NUM_E emc_axi_num,
+				SDRAM_CFG_INFO_T_PTR mem_info,
+				SDRAM_TIMING_PARA_T_PTR mem_timing,
+				EMC_PHY_L1_TIMING_T_PTR emc_phy_l1_timing,
+				EMC_PHY_L2_TIMING_T_PTR emc_phy_l2_timing)
+{
+	EMC_Base_Mode_Set();
+	EMC_CSx_Set(emc_cs_num,mem_info);
+	EMC_AXI_CHL_Set(emc_axi_num);
+	EMC_MEM_Mode_Set(mem_info);
+	EMC_MEM_Timing_Set(emc_freq,mem_info,mem_timing);
+	EMC_PHY_Set(emc_freq,mem_info,emc_phy_l1_timing,emc_phy_l2_timing);
+ 	EMC_SCMD_Issue(mem_info);
+}
+LOCAL void __sdram_set_param(uint32 clk, SDRAM_CFG_INFO_T_PTR pCfg)
+{
+	uint32 i;
+	EMC_PHY_L1_TIMING_T_PTR *emc_phy_l1_timing;
+	EMC_PHY_L2_TIMING_T_PTR   *emc_phy_l2_timing;
+	emc_phy_l1_timing = EMC_GetPHYL1_Timing(pCfg);
+	emc_phy_l2_timing = EMC_GetPHYL2_Timing(pCfg);
+	EMC_Init(clk, EMC_CS0, EMC_AXI_ARM, pCfg, sdram_parameters, emc_phy_l1_timing, emc_phy_l2_timing);
+    	for (i=0; i<1000; i++){}
+}
+#endif
 #ifdef SDRAM_AUTODETECT_SUPPORT
 LOCAL uint32 __colum_to_mode(uint32 colum)
 {
@@ -752,7 +1261,7 @@ LOCAL void __sdram_detect(uint32 clk)
     uint32 state = STATE_SDRAM_TYPE;
     uint32 colum, row;
 
-    pCfg->bank_mode    = BK_MODE_4;
+    //pCfg->bank_mode    = BK_MODE_4;
     pCfg->row_mode     = ROW_MODE_14;
     pCfg->col_mode     = COL_MODE_12;
     pCfg->data_width   = DATA_WIDTH_16;
@@ -853,32 +1362,6 @@ LOCAL void SDRAM_Init (uint32 clk)
     __sdram_set_param(clk, SDRAM_GetCfg());
     #endif
 
-#if 1
-    //ANA_REG_MSK_OR(ANA_DCDC_CTL, 4 << 6, 7 << 6);
-    ANA_REG_MSK_OR(ANA_DCDC_CTL, 0x1c << 6, 0x3f << 6);
-    {
-	 /* wait until voltage is stable */
-        volatile int32 i;
-	 for (i=0; i<3000; ++i)
-	 {
-	 }
-    }		
-
-    *(volatile uint32 *)(GREG_BASE + 0x18) |= BIT_9;
-    {
-        uint32 tmp = *(volatile uint32 *)(GREG_BASE + 0x24);
-	 tmp &= ~0x00000fff;
-	 //tmp |= 0xe1; // 450M
-	 //tmp |= 0x12c; // 600M
-	 tmp |= 0x113; // 550M
-	 //tmp |= 0xfa; // 500M
-	 //tmp |= 0x104; // 520M
-	 //tmp |= 0x145; // 650M
-	 *(volatile uint32 *)(GREG_BASE + 0x24) = tmp;
-    }
-    *(volatile uint32 *)(GREG_BASE + 0x18) &= ~BIT_9;	
-#endif
-
 }
 
 
@@ -902,7 +1385,7 @@ LOCAL void SDRAM_Init (uint32 clk)
 **---------------------------------------------------------------------------*/
 LOCAL void SDRAM_PinDrv_Set (void)
 {
-#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
+#if defined(PLATFORM_SC8800G)
 	uint32 i = 0;
 	uint32 clk_drv = 0x200;
 	uint32 ctl_drv = 0x100;
@@ -1023,8 +1506,11 @@ LOCAL uint32 Chip_ConfigClk (void)
 
     for (i=0; i<100; i++){}
 
-#elif defined(PLATFORM_SC8800G) || defined(PLATFORM_SC8810)
+#elif defined(PLATFORM_SC8800G)
+#ifdef CONFIG_SC8810
+#else
     __ClkConfig(&g_emc_clk, (uint32*)&arm_ahb_clk);
+#endif
 #endif
 
     //Delay some time
@@ -1123,6 +1609,16 @@ void sc8810_ram_init(void)
 	}
 
 }
+#if 1
+PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
+{
+    uint32 i = 0;
+	g_emc_clk =  ARM_CLK_48M;
+    //step3, initialize SDRAM init
+    SDRAM_Init (g_emc_clk/2);
+    for (i=0; i<5000; i++) {}
+}
+#else
 PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
 	volatile uint32 i = 0;
@@ -1133,3 +1629,4 @@ PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*
 	return;
 #endif
 }
+#endif

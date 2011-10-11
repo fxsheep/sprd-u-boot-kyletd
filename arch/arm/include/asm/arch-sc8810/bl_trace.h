@@ -22,9 +22,9 @@ SC6800     -gtp -cpu ARM926EJ-S -D_REF_SC6800_ -D_BL_NF_SC6800_
 #endif
 
 
-#if (defined PLATFORM_SC8800H)||(defined PLATFORM_SC6800H)||(defined PLATFORM_SC8800G)||(defined PLATFORM_SC8810)
+#if (defined PLATFORM_SC8800H)||(defined PLATFORM_SC6800H)||(defined PLATFORM_SC8800G)||(defined CONFIG_SC8810)
 #define BL_TRACE(...)
-#endif  //#if (defined PLATFORM_SC8800H)||(defined PLATFORM_SC6800H)||(defined PLATFORM_SC8800G)||(defined PLATFORM_SC8810)
+#endif  //#if (defined PLATFORM_SC8800H)||(defined PLATFORM_SC6800H)||(defined PLATFORM_SC8800G)||(defined CONFIG_SC8810)
 
 #else
 __inline int sio_putstr_stub (const char *str)

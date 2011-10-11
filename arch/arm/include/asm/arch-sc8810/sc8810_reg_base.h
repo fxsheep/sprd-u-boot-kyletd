@@ -145,7 +145,7 @@ extern   "C"
 #define TPC_BASE                        0x82000280
 #define ADC_BASE                        0x82000300
 #define ANA_INTC_BASE                   0x82000380
-#define ANA_REG_BASE                    0x82000480
+#define ANA_REG_BASE                    0x82000600
 #define ANA_GPIO_BASE                   0x82000600
 #define ARM_VBC_BASE                    0x82003000
 #define ARM_UART0_BASE                  0x83000000

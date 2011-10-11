@@ -102,23 +102,23 @@ LDO_CTL_T ldo_ctl_data[] =
         ANA_LDO_VCTL0,  BIT_2,  BIT_3,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
-        LDO_LDO_SDIO,  ANA_LDO_PD_CTL, BIT_2,  BIT_3,  ANA_LDO_VCTL1,  BIT_12,BIT_13,
+        LDO_LDO_SDIO,  ANA_LDO_PD_CTL0, BIT_2,  BIT_3,  ANA_LDO_VCTL1,  BIT_12,BIT_13,
         ANA_LDO_VCTL1,  BIT_14, BIT_15, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
-        LDO_LDO_AVBO,  ANA_LDO_PD_CTL, BIT_14, BIT_15, ANA_LDO_VCTL1,  BIT_8,  BIT_9,
+        LDO_LDO_AVBO,  ANA_LDO_PD_CTL0, BIT_14, BIT_15, ANA_LDO_VCTL1,  BIT_8,  BIT_9,
         ANA_LDO_VCTL1,  BIT_10, BIT_11, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
-        LDO_LDO_SIM1,  ANA_LDO_PD_CTL, BIT_6,  BIT_7,  ANA_LDO_VCTL1,  BIT_4,  BIT_5,
+        LDO_LDO_SIM1,  ANA_LDO_PD_CTL0, BIT_6,  BIT_7,  ANA_LDO_VCTL1,  BIT_4,  BIT_5,
         ANA_LDO_VCTL1,  BIT_6,  BIT_7,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
-        LDO_LDO_SIM0,  ANA_LDO_PD_CTL, BIT_4,  BIT_5,  ANA_LDO_VCTL1,  BIT_0,  BIT_1,
+        LDO_LDO_SIM0,  ANA_LDO_PD_CTL0, BIT_4,  BIT_5,  ANA_LDO_VCTL1,  BIT_0,  BIT_1,
         ANA_LDO_VCTL1,  BIT_2,  BIT_3,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
-        LDO_LDO_USB,   ANA_LDO_PD_CTL, BIT_0,  BIT_1,  ANA_LDO_VCTL2,  BIT_12, BIT_13,
+        LDO_LDO_USB,   ANA_LDO_PD_CTL0, BIT_0,  BIT_1,  ANA_LDO_VCTL2,  BIT_12, BIT_13,
         ANA_LDO_VCTL2,  BIT_14, BIT_15, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
@@ -126,15 +126,15 @@ LDO_CTL_T ldo_ctl_data[] =
         NULL,           NULL,   NULL,   NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
-        LDO_LDO_CAMA,  ANA_LDO_PD_CTL, BIT_12, BIT_13, ANA_LDO_VCTL2,  BIT_8,  BIT_9,
+        LDO_LDO_CAMA,  ANA_LDO_PD_CTL0, BIT_12, BIT_13, ANA_LDO_VCTL2,  BIT_8,  BIT_9,
         ANA_LDO_VCTL2,  BIT_10, BIT_11, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
-        LDO_LDO_CAMD1, ANA_LDO_PD_CTL, BIT_10, BIT_11, ANA_LDO_VCTL2,  BIT_4,  BIT_5,
+        LDO_LDO_CAMD1, ANA_LDO_PD_CTL0, BIT_10, BIT_11, ANA_LDO_VCTL2,  BIT_4,  BIT_5,
         ANA_LDO_VCTL2,  BIT_6,  BIT_7,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
-        LDO_LDO_CAMD0, ANA_LDO_PD_CTL, BIT_8,  BIT_9,  ANA_LDO_VCTL2,  BIT_0,  BIT_1,
+        LDO_LDO_CAMD0, ANA_LDO_PD_CTL0, BIT_8,  BIT_9,  ANA_LDO_VCTL2,  BIT_0,  BIT_1,
         ANA_LDO_VCTL2,  BIT_2,  BIT_3,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
     },
     {
@@ -157,22 +157,21 @@ LDO_CTL_T ldo_ctl_data[] =
 
 SLP_LDO_CTL_T slp_ldo_ctl_data[] =
 {
-    {SLP_LDO_PA,        ANA_LDO_SLP,    BIT_15, SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_DVDD18,    ANA_LDO_SLP,    BIT_14, SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_VDD25,     ANA_LDO_SLP,    BIT_13, SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_VDD18,     ANA_LDO_SLP,    BIT_12, SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_VDD28,     ANA_LDO_SLP,    BIT_11, SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_ABB,       ANA_LDO_SLP,    BIT_10, SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_SDIO,      ANA_LDO_SLP,    BIT_9,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_VBO,       ANA_LDO_SLP,    BIT_8,  SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_CAMA,      ANA_LDO_SLP,    BIT_7,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_CAMD1,     ANA_LDO_SLP,    BIT_6,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_CAMD0,     ANA_LDO_SLP,    BIT_5,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_USB,       ANA_LDO_SLP,    BIT_4,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_SIM1,      ANA_LDO_SLP,    BIT_3,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_SIM0,      ANA_LDO_SLP,    BIT_2,  SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_RF1,       ANA_LDO_SLP,    BIT_1,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_RF0,       ANA_LDO_SLP,    BIT_0,  SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_SDIO1,     ANA_LDO_SLP_CTL0,    BIT_15, SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_VDD25,     ANA_LDO_SLP_CTL0,    BIT_13, SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_VDD18,     ANA_LDO_SLP_CTL0,    BIT_12, SLP_BIT_CLR,    TRUE,   NULL},
+    {SLP_LDO_VDD28,     ANA_LDO_SLP_CTL0,    BIT_11, SLP_BIT_CLR,    TRUE,   NULL},
+    {SLP_LDO_ABB,       ANA_LDO_SLP_CTL0,    BIT_10, SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_SDIO,      ANA_LDO_SLP_CTL0,    BIT_9,  SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_VBO,       ANA_LDO_SLP_CTL0,    BIT_8,  SLP_BIT_CLR,    TRUE,   NULL},
+    {SLP_LDO_CAMA,      ANA_LDO_SLP_CTL0,    BIT_7,  SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_CAMD1,     ANA_LDO_SLP_CTL0,    BIT_6,  SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_CAMD0,     ANA_LDO_SLP_CTL0,    BIT_5,  SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_USB,       ANA_LDO_SLP_CTL0,    BIT_4,  SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_SIM1,      ANA_LDO_SLP_CTL0,    BIT_3,  SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_SIM0,      ANA_LDO_SLP_CTL0,    BIT_2,  SLP_BIT_CLR,    TRUE,   NULL},
+    {SLP_LDO_RF1,       ANA_LDO_SLP_CTL0,    BIT_1,  SLP_BIT_SET,    TRUE,   NULL},
+    {SLP_LDO_RF0,       ANA_LDO_SLP_CTL0,    BIT_0,  SLP_BIT_SET,    TRUE,   NULL},
     {SLP_LDO_MAX,       NULL,           NULL,   SLP_BIT_SET,    TRUE,   NULL}
 };
 
@@ -466,8 +465,9 @@ static void LDO_TurnOffCoreLDO (void)
 
 static void LDO_TurnOffAllModuleLDO (void)
 {
-    ANA_REG_SET (ANA_LDO_PD_CTL, ANA_LDO_PD_CTL_MSK);               ///turn off all module ldo
-    ANA_REG_MSK_OR (ANA_PA_CTL, LDO_PA_SET, (LDO_PA_SET|LDO_PA_RST)); ///PA poweroff
+    ANA_REG_SET (ANA_LDO_PD_CTL0, ANA_LDO_PD_CTL0_MSK);               
+    ANA_REG_SET (ANA_LDO_PD_CTL1, ANA_LDO_PD_CTL1_MSK);               
+    ANA_REG_MSK_OR (ANA_AUDIO_PA_CTL1, PA_EN, (PA_EN|PA_EN_RST)); ///PA poweroff
 }
 /*****************************************************************************/
 //  Description:  Shut down all LDO when system poweroff

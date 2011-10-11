@@ -107,7 +107,7 @@ extern   "C"
         data_size = (int) ((int)(_buf->size) + _buf->start_point - _buf->end_point);\
     }
 
-#if defined(PLATFORM_SC8800H) || defined(PLATFORM_SC8800G)  || defined(PLATFORM_SC8810)//modified by tyler.song for compiling error.
+#if defined(PLATFORM_SC8800H) || defined(PLATFORM_SC8800G)  || defined(CONFIG_SC8810)//modified by tyler.song for compiling error.
 #define ATC_REC_BUF_SIZE           2600
 #else
 #define ATC_REC_BUF_SIZE           1600

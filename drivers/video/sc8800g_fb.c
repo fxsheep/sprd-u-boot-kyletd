@@ -26,7 +26,7 @@
 #include <asm/arch/sc8800g_reg_base.h>
 #include <asm/arch/sc8800g_lcd.h>
 #endif
-#ifdef PLATFORM_SC8810
+#ifdef CONFIG_SC8810
 #include <asm/arch/sc8810_reg_base.h>
 #include <asm/arch/sc8810_lcd.h>
 #endif
@@ -38,7 +38,7 @@
 #include <asm/arch/sc8800g_reg_ahb.h>
 #include <asm/arch/sc8800g_reg_global.h>
 #endif
-#ifdef PLATFORM_SC8810
+#ifdef CONFIG_SC8810
 #include <asm/arch/sc8810_reg_ahb.h>
 #include <asm/arch/sc8810_reg_global.h>
 #endif

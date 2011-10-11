@@ -267,7 +267,7 @@ init_fnc_t *init_sequence[] = {
 #endif
 	NULL,
 };
-#ifdef CONFIG_SC8810_OPENPHONE
+#ifdef CONFIG_SC8810
 
 void sc8810_sdram_init(void)
 {
@@ -315,7 +315,7 @@ void board_init_f (ulong bootflag)
 	init_fnc_t **init_fnc_ptr;
 	gd_t *id;
 	ulong addr, addr_sp;
-#ifdef CONFIG_SC8810_OPENPHONE
+#ifdef CONFIG_SC8810
 	Chip_Init ();/*lint !e765 "Chip_Init" is used by init.s entry.s*/
 #endif
 	/* Pointer is writable since we allocated a register for it */
@@ -497,7 +497,7 @@ extern int LDO_Init(void);
 #define PIN_CTL_REG 0x8C000000
 static void chip_init(void)
 {
-    ANA_REG_SET(ANA_ADIE_CHIP_ID,0);
+    //ANA_REG_SET(ANA_ADIE_CHIP_ID,0);
     /* setup pins configration when LDO shutdown*/
     //__raw_writel(0x1fff00, PIN_CTL_REG);
      *(volatile unsigned int *)PIN_CTL_REG = 0x1fff00;

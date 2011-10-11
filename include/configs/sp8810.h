@@ -49,10 +49,9 @@
  */
 
 #define CONFIG_SC8810
-#define CONFIG_SC8810_OPENPHONE
+#define CONFIG_SP8810
 
 #ifdef CONFIG_SC8810
-#define CONFIG_SC8810_OPENPHONE
 #define CHIP_ENDIAN_LITTLE
 #define SC8800S_LITTLE_ENDIAN FALSE
 #define _LITTLE_ENDIAN 1
@@ -248,7 +247,7 @@
 #ifdef CONFIG_G2PHONE
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
-#elif defined CONFIG_SC8810_OPENPHONE
+#elif defined CONFIG_SP8810
 /*#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),384k(2ndbl),128k(params),512k(vmjaluna),6016k(modem),7680k(kernel),5120k(dsp),1280k(fixnv),2560k(runtimenv),6400k(recovery),100m(system),198m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"*/
 //#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),10m(recovery),150m(system),300m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot)"
