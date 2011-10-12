@@ -555,7 +555,7 @@ static void usb_enable_module(int en)
         if (en){
                 __raw_bits_or(BIT_6, AHB_CTL3);
                 __raw_bits_and(~BIT_9, GR_CLK_GEN5);
-                __raw_bits_or(BIT_5, AHB_CTL0);
+		//__raw_bits_or(BIT_5, AHB_CTL0);
         }else {
                 __raw_bits_and(~BIT_6, AHB_CTL3);
                 __raw_bits_or(BIT_9, GR_CLK_GEN5);
@@ -573,61 +573,38 @@ static void usb_startup(void)
         __raw_bits_or(BIT_6, AHB_CTL3);
 
 
-        __raw_bits_or(BIT_7, AHB_SOFT_RST);
-        dwc_mdelay(10);
-        __raw_bits_and(~BIT_7, AHB_SOFT_RST);
+	//__raw_bits_or(BIT_7, AHB_SOFT_RST);
+	//dwc_mdelay(10);
+	//__raw_bits_and(~BIT_7, AHB_SOFT_RST);
+
+	__raw_bits_or(BIT_5, AHB_CTL0);
         dwc_mdelay(30);
 }
 
-void udc_enable(void)
-{
-        usb_enable_module(1);
-        usb_ldo_switch(1);
-
-        //soft rest udc module
-        __raw_bits_or(BIT_7, AHB_SOFT_RST);
-        dwc_mdelay(10);
-        __raw_bits_and(~BIT_7, AHB_SOFT_RST);
-        dwc_mdelay(30);
-}
-
-void udc_disable(void)
+static void udc_disable(void)
 {
         usb_enable_module(0);
         usb_ldo_switch(0);
 }
+
 void udc_power_on(void)
 {
-	udc_enable();
-}
-void udc_power_off(void)
-{
-	udc_disable();
-}
+	__raw_bits_or(BIT_8, USB_PHY_CTRL);
+	__raw_bits_or(BIT_17, USB_PHY_CTRL);
+	__raw_bits_and(~BIT_16, USB_PHY_CTRL);
+	__raw_bits_and(~(BIT_13 | BIT_12), USB_PHY_CTRL);
+	__raw_bits_or(BIT_15 | BIT_14, USB_PHY_CTRL);
 
-static int pullup(struct usb_gadget *gadget, int is_on)
-{
-	if (is_on) {
-		udc_enable();
-	} else {
-		udc_disable();
-	}
-	
-	if (LDO_IsLDOOn(LDO_LDO_USB)){
-		printf("usb ldo is on\r\n");
-	}else
-		printf("usb ldo is off\r\n");
-	
-	return 0;
-}
-
-void dwc_power_on(void)
-{
-	 __raw_bits_or(BIT_8, USB_PHY_CTRL);
+	__raw_bits_and(~BIT_1, AHB_CTL3);
+	__raw_bits_and(~BIT_2, AHB_CTL3);
 
 	usb_startup();
 }
 
+void udc_power_off(void)
+{
+	udc_disable();
+}
 /**
  * Initiates Session Request Protocol (SRP) to wakeup the host if no
  * session is in progress. If a session is already in progress, but
@@ -652,7 +629,6 @@ static int wakeup(struct usb_gadget *gadget)
 static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 	.get_frame = get_frame_number,
 	.wakeup = wakeup,
-	.pullup = pullup,
 	// current versions must always be self-powered
 };
 
@@ -864,9 +840,9 @@ void gadget_add_eps(struct gadget_wrapper *d)
 
 		"ep0",
 		"ep1in",
-		//"ep2in",
+		"ep2in",
 		"ep3in",
-	//	"ep4in",
+		"ep4in",
 		"ep5in",
 		"ep6in",
 		"ep7in",
@@ -880,9 +856,9 @@ void gadget_add_eps(struct gadget_wrapper *d)
 		"ep15in",
 		"ep1out",
 		"ep2out",
-	//	"ep3out",
+		"ep3out",
 		"ep4out",
-//		"ep5out",
+		"ep5out",
 		"ep6out",
 		"ep7out",
 		"ep8out",
