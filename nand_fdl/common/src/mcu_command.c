@@ -21,10 +21,9 @@ void ResetMCU (void)
     // Set watchdog reset flag
     BOOT_ResetHWFlag ();
     BOOT_SetWDGHWFlag (TYPE_RESET, AUTO_TEST_MODE);
-
     // Reset the system via watchdog timeout
     CHIP_ResetMCU ();
-    
+
     while (1);
 }
 /* Sorry, I don't know what this function is for.
@@ -69,7 +68,7 @@ int FDL_McuResetBoot (PACKET_T *pakcet, void *arg)
 int FDL_McuResetNormal (PACKET_T *packet, void *arg)
 {
     int i;
-    BOOT_ENTRY boot_entry = (BOOT_ENTRY) 0x40000000; /* Start of internal RAM */
+    //BOOT_ENTRY boot_entry = (BOOT_ENTRY) 0x40000000; /* Start of internal RAM */
 #if 0
 
     /* Copy NBL to internal RAM */

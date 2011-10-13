@@ -103,13 +103,11 @@ PUBLIC void WDG_TimerInit (void)
     uint32       status;
     int32        ret;
 
-    WDG_TRACE ("Watch Dog Trace: WDG_TimerInit");
-
     config.state    = WDG_TIMER_STATE_START ;
     config.mode     = WDG_TIMEOUT_MODE_RESET;
     config.val      = WDG_INIT_COUNT;
-
     ret = WDG_PHY_CONFIG (&config);
+    printf("Watch Dog configuration is finished and ");
 #if 0   //added by mingwei
     status = FIQ_RegHandler (TB_WDG_INT, WDG_TimerHandler);
     SCI_PASSERT ( (FIQ_SUCCESS == status || FIQ_ISR_ASSIGNED == status),
@@ -127,12 +125,12 @@ PUBLIC void WDG_ResetMCU (void)
     WDG_CONFIG_T config;
     int32        ret;
 
-    WDG_TRACE ("Watch Dog Trace: WDG_ResetMCU");
     config.state    = WDG_TIMER_STATE_START ;
     config.mode     = WDG_TIMEOUT_MODE_RESET;
-    config.val      = 0x50;
+    config.val      = 20000/*0x50*/;
 
     ret = WDG_PHY_CONFIG (&config);
+	printf("Wait for watch dog to reset phone!\n");
 }
 
 /*****************************************************************************/

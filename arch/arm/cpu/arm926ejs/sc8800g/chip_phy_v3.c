@@ -34,7 +34,17 @@ extern   "C"
 /**---------------------------------------------------------------------------*
  **                         Macro defines.
  **---------------------------------------------------------------------------*/
+#define HW_RST_MASK       0x1F
 
+#define HWRST_ADDR     (DMA_REG_BASE + 0x400 + 31 * 0x20 + 8)  //src addr reg in chn 31
+
+#define ENABLE_DMA_MODULE \
+                do{ \
+                        if(!(CHIP_REG_GET(AHB_CTL0) & BIT_6)) \
+                        { \
+                            CHIP_REG_OR(AHB_CTL0, BIT_6);    \
+                        } \
+                    }while(0);
 
 /**---------------------------------------------------------------------------*
  **                         Struct defines.
@@ -58,18 +68,13 @@ void CHIP_ResetMCU (void)  //reset interrupt disable??
     // This loop is very important to let the reset process work well on V3 board
     // @Richard
     uint32 i = 10000;
-
     ANA_REG_OR (ANA_AGEN, (AGEN_WDG_EN | AGEN_RTC_WDG_EN));
     WDG_TimerInit ();
-    
     while (i--);    
-
     WDG_ResetMCU ();
-    
     {
         volatile uint32 tick1 = SCI_GetTickCount();
         volatile uint32 tick2 = SCI_GetTickCount();
-
         while ( (tick2 - tick1) < 500)
         {
             tick2 = SCI_GetTickCount();
@@ -86,7 +91,11 @@ void CHIP_ResetMCU (void)  //reset interrupt disable??
 LOCAL uint32 CHIP_PHY_GetHwRstAddr (void)
 {
     // Returns a DWORD of IRAM shared with DCAM
+#if 0
     return 0x4000A7FC;
+#else
+	return HWRST_ADDR;
+#endif
 }
 
 /*****************************************************************************/
@@ -172,13 +181,25 @@ PUBLIC uint32 CHIP_PHY_GetRstMode (void)
 /*****************************************************************************/
 PUBLIC void CHIP_PHY_ResetHWFlag (uint32 val)
 {
+#if 0
     // Reset the analog die register
-    ANA_REG_AND (ANA_HWRST_STATUS, ~0xFFF);
-    ANA_REG_OR (ANA_HWRST_STATUS, (val&0xFFF));
+    ANA_REG_AND (ANA_HWRST_STATUS, (~0xF));
+    ANA_REG_OR (ANA_HWRST_STATUS, (val & 0xF));
 
     // Reset the HW_RST
     CHIP_REG_AND (CHIP_PHY_GetHwRstAddr (), ~0xFFFF);
     CHIP_REG_OR (CHIP_PHY_GetHwRstAddr (), (val&0xFFFF));
+
+#else
+    //set WDG Mon to 0xF
+    ANA_REG_AND (ANA_HWRST_STATUS, (~0xF));
+    ANA_REG_OR (ANA_HWRST_STATUS, (val & 0xF));
+    
+    ENABLE_DMA_MODULE
+
+    CHIP_REG_AND(CHIP_PHY_GetHwRstAddr(), (~HW_RST_MASK));
+    CHIP_REG_OR(CHIP_PHY_GetHwRstAddr(), (val & HW_RST_MASK));
+#endif
 }
 
 /*****************************************************************************/
@@ -191,14 +212,19 @@ PUBLIC void CHIP_PHY_SetWDGHWFlag (WDG_HW_FLAG_T type, uint32 val)
 {
     if(TYPE_RESET == type)
     {
+#if 0
         // Switch IRAM from DCAM to ARM
         REG32 (AHB_CTL1) |= BIT_0;
         
         CHIP_REG_AND (CHIP_PHY_GetHwRstAddr (), ~0xFFFF);
         CHIP_REG_OR (CHIP_PHY_GetHwRstAddr (), (val&0xFFFF));
-    }
-    else
-    {
+#else
+        ENABLE_DMA_MODULE        
+
+        CHIP_REG_AND(CHIP_PHY_GetHwRstAddr(), (~HW_RST_MASK));
+        CHIP_REG_OR(CHIP_PHY_GetHwRstAddr(), (val & HW_RST_MASK));
+#endif
+    } else {
         //wrong type, TODO
     }
 }

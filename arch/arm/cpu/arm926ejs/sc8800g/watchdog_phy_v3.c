@@ -64,8 +64,6 @@ PUBLIC int32 WDG_PHY_CONFIG (WDG_CONFIG_T *cfg)
     uint32 ctrl = 0;
     uint32 val  = 0;
 
-    ///WDG_TRACE("Watch Dog Trace: Watch Dog Value 0x%8.8x", CHIP_REG_GET(WDG_VALUE));
-
     ANA_REG_SET (WDG_LOCK, WDG_UNLOCK_KEY);
 
     switch (cfg->mode)
@@ -101,8 +99,7 @@ PUBLIC int32 WDG_PHY_CONFIG (WDG_CONFIG_T *cfg)
             break;  //No need to change
     }
 
-    WDG_TRACE ("Watch Dog Trace: Watch Dog Control 0x%8.8x", ANA_REG_GET (WDG_CTRL));
-    ///    WDG_TRACE ("Watch Dog Trace: Watch Dog LOAD    0x%8.8x", CHIP_REG_GET (WDG_LOAD));
+    // WDG_TRACE ("Watch Dog Trace: Watch Dog LOAD    0x%8.8x", CHIP_REG_GET (WDG_LOAD));
 
     ANA_REG_SET (WDG_LOCK, (~WDG_UNLOCK_KEY));
 
