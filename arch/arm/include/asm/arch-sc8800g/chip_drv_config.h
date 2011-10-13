@@ -65,7 +65,7 @@ extern   "C"
 
 #if defined(PLATFORM_SC8800H)
 //Special Chip platfrom io
-#include "./sc8800h/sc8800h_plf_io.h"
+//#include "./sc8800h/sc8800h_plf_io.h"
 //Chip module config header files.About some variant param. configs for the module.
 #include "./sc8800h/sc8800h_module_config.h"
 //end Chip Module config
@@ -80,7 +80,7 @@ extern   "C"
 
 #if defined(PLATFORM_SC8800G)
 //Special Chip platfrom io
-#include "sc8800g_plf_io.h"
+//#include "sc8800g_plf_io.h"
 //Chip module config header files.About some variant param. configs for the module.
 #include "sc8800g_module_config.h"
 //end Chip Module config

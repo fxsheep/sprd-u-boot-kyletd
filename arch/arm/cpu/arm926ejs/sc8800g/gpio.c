@@ -17,6 +17,7 @@
 //#include <linux/module.h>
 //#include <linux/delay.h>
 #include <asm/io.h>
+#include <common.h>
 //#include <asm/gpio.h>
 #include <asm/arch/gpio.h>
 
@@ -38,7 +39,7 @@
 #define pr_err(fmt...) printf(fmt)
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
 #define pr_debug(fmt...) printf(fmt)
-
+#define pr_warning(fmt...)  printf(fmt)
 //#define DEBUG
 
 
@@ -106,7 +107,7 @@ static void __get_gpio_base_info (u32 gpio_id, struct gpio_info *info)
 
 
 
-static void __gpio_set_dir (struct gpio_info * info, int dir)
+static int __gpio_set_dir (struct gpio_info * info, int dir)
 {
 	int value = !!dir;
 	u32 reg_addr = 0;
@@ -117,26 +118,28 @@ static void __gpio_set_dir (struct gpio_info * info, int dir)
 	switch (info->gpio_type) {
 	case GPIO_SECTION_GPI:
 		if (dir) {
-		    WARN(1, "cannot set dir output with GPI");
+			WARN(1, "cannot set dir output with GPI");
+			return -EINVAL;
 		}
-		return;
+		return 0;
 
 	case GPIO_SECTION_GPO:
 		if (!dir) {
-		WARN(1, "cannot set dir input with GPO");
+			WARN(1, "cannot set dir input with GPO");
+			return -EINVAL;
 		}
-		return;
+		return 0;
 
 	case GPIO_SECTION_GPIO:
 		reg_addr += GPIO_DIR;
 		break;
 	case GPIO_SECTION_INVALID:
 	default:
-		    WARN(1, " the GPIO_ID is Invalid in this chip");
-		    return;
+		WARN(1, " the GPIO_ID is Invalid in this chip");
+		return -1;
 	}
 
-	//local_irq_save(flags);
+	local_irq_save(flags);
 	value = gpio_reg_get(reg_addr, info->die);
 
 	if (dir)
@@ -145,7 +148,9 @@ static void __gpio_set_dir (struct gpio_info * info, int dir)
 		value &= ~(1 << info->bit_num);
        gpio_reg_set(reg_addr, info->die, value);
 
-	//local_irq_restore(flags);
+	local_irq_restore(flags);
+
+	return 0;
 }
 
 /*
@@ -284,7 +289,7 @@ static void __gpio_set_pin_data (struct gpio_info *info ,int b_on)
 
 	reg_addr += offset_addr;
 
-	//local_irq_save(flags);
+	local_irq_save(flags);
 
 	value = gpio_reg_get(reg_addr, info->die);
 	if (b_on)
@@ -292,7 +297,7 @@ static void __gpio_set_pin_data (struct gpio_info *info ,int b_on)
 	else
 		value &= ~(1 << info->bit_num);
 	gpio_reg_set(reg_addr, info->die, value);
-	//local_irq_restore(flags);
+	local_irq_restore(flags);
 }
 
 /*
@@ -310,14 +315,14 @@ static void __gpio_set_data_mask (struct gpio_info *info, int b_on)
 	if (offset_addr != INVALID_REG) {
 		reg_addr += offset_addr;
 
-		//local_irq_save(flags);
+		local_irq_save(flags);
 		value = gpio_reg_get(reg_addr, info->die);
 		if (b_on)
 			value |= 1 << info->bit_num;
 		else
 			value &= ~(1 << info->bit_num);
 		gpio_reg_set(reg_addr, info->die, value);
-		//local_irq_restore(flags);
+		local_irq_restore(flags);
 
 		GPIO_DBG("After setting gpio_addr %x data mask :%x\r\n", reg_addr,
 		gpio_reg_get(reg_addr, info->die));
@@ -331,9 +336,14 @@ int sprd_gpio_direction_output(struct gpio_chip *chip,
 {
 	unsigned gpio_id = offset;
 	struct gpio_info gpio_info;
+	int res;
 
 	__get_gpio_base_info (gpio_id, &gpio_info);
-	__gpio_set_dir(&gpio_info, 1);
+	res = __gpio_set_dir(&gpio_info, 1);
+	if (res < 0){
+		pr_warning("GPIO: cannot set direction for %d\n", gpio_id);
+		return -EINVAL;
+	}
 	__gpio_set_pin_data(&gpio_info, value);
 	return 0;
 }
@@ -342,9 +352,14 @@ int sprd_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
 {
 	unsigned gpio_id = offset;
 	struct gpio_info gpio_info;
+	int res;
 
        __get_gpio_base_info (gpio_id, &gpio_info);
-	__gpio_set_dir(&gpio_info, 0);
+	res = __gpio_set_dir(&gpio_info, 0);
+	if (res < 0){
+		pr_warning("GPIO: cannot set direction for %d\n", gpio_id);
+		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -577,6 +592,7 @@ static void __gpio_clear_irq_status (struct gpio_info *info)
 	value &= ~ (1 << info->bit_num);
 	value |= 1 << info->bit_num;
 	gpio_reg_set(reg_addr, info->die, value);
+    local_irq_restore(flags);
 }
 
 static int __gpio_get_int_status (struct gpio_info *info)
@@ -885,6 +901,7 @@ static void sprd_gpio_demux_handler(unsigned int irq, struct irq_desc *desc)
 		  	generic_handle_irq(gpio_irq_table[i].irq_num);
 		}
 	}
+    desc->chip->unmask(irq);
 }
 static void sprd_gpio_irq_init(void)
 {
