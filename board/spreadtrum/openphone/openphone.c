@@ -2,10 +2,12 @@
 #include <asm/io.h>
 DECLARE_GLOBAL_DATA_PTR;
 
+extern void sprd_gpio_init(void);
 int board_init()
 {
 	gd->bd->bi_arch_number = MACH_TYPE_OPENPHONE;
 	gd->bd->bi_boot_params = PHYS_SDRAM_1 + 0x100;
+    sprd_gpio_init();
 	return 0;
 }
 

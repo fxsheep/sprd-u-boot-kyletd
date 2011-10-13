@@ -59,13 +59,11 @@ void power_down_devices(unsigned pd_cmd)
 #define POWER_BUTTON_GPIO_NUM 163
 extern int sprd_gpio_get( struct gpio_chip * chip, unsigned offset);
 extern int sprd_gpio_request(struct gpio_chip *chip, unsigned offset);
-extern void sprd_gpio_init(void);
 static unsigned long pwr_gpio_cfg =
     MFP_ANA_CFG_X(PBINT, AF0, DS1, F_PULL_UP,S_PULL_UP, IO_IE);
 int power_button_pressed(void)
 {
     struct gpio_chip power_button_chip;
-    sprd_gpio_init();
     sprd_mfp_config(&pwr_gpio_cfg, 1);
     sprd_gpio_request(&power_button_chip, POWER_BUTTON_GPIO_NUM);
     sprd_gpio_direction_input(&power_button_chip,POWER_BUTTON_GPIO_NUM); 
@@ -81,7 +79,6 @@ int charger_connected(void)
 //#define CHG_CTL (ANA_GPIN_PG0_BASE + 0x0)
  //   return ANA_REG_GET(CHG_CTL) & BIT_2;
     struct gpio_chip chg_chip;
-    sprd_gpio_init();
     sprd_mfp_config(&chg_gpio_cfg, 1);
     sprd_gpio_request(&chg_chip, CHG_GPIO_NUM);
     sprd_gpio_direction_input(&chg_chip,CHG_GPIO_NUM); 
