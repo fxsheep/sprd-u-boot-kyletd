@@ -192,7 +192,7 @@ void array_diff(unsigned char * array1, unsigned char * array2, int len)
 
 void vlx_nand_boot(char * kernel_pname, char * cmdline)
 {
-    	boot_img_hdr *hdr = (void *)raw_header;
+    boot_img_hdr *hdr = (void *)raw_header;
 	struct mtd_info *nand;
 	struct mtd_device *dev;
 	struct part_info *part;
@@ -212,6 +212,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	char *productinfopoint = "/productinfo";
 	char *productinfofilename = "/productinfo/productinfo.bin";
 	char *productinfofilename2 = "/productinfo/productinfochange.bin";
+    char * mtdpart_def = NULL;
 
 	ret = mtdparts_init();
 	if (ret != 0){
@@ -632,7 +633,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 #define VLX_TAG_ADDR 0x5100000 //after initrd
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     str_len = strlen(buf);
-    sprintf(&buf[str_len], " %s", MTDPARTS_DEFAULT);
+    mtdpart_def = get_mtdparts();
+    sprintf(&buf[str_len], " %s", mtdpart_def);
 
     if(cmdline && cmdline[0]){
             str_len = strlen(buf);
