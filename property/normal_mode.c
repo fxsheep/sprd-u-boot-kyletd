@@ -648,7 +648,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		if(lcd_id)
 		{
 			str_len = strlen(buf);
-			sprintf(&buf[str_len], " lcd_id=");
+			sprintf(&buf[str_len], " lcd_id=ID");
 			str_len = strlen(buf);
 			buf[str_len] = (char)((lcd_id>>8)&0xff);
 			buf[str_len+1] = (char)(lcd_id&0xff);
