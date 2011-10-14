@@ -16,13 +16,21 @@
 
 //#include <linux/init.h>
 
- 
-#define WARN(num, fmt...) printf(fmt)
-#define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
-#define GPIO_MAX_PIN_NUM 	176
+#ifndef WARN
+# define WARN(num, fmt...) printf(fmt)
+#endif
+
+#ifndef ARRAY_SIZE
+# define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
+#endif
+
+#define GPIO_MAX_PIN_NUM 	205
 
 #define ARCH_NR_GPIOS	GPIO_MAX_PIN_NUM
 
+#define CHG_GPIO_NUM 162
+
+#define POWER_BUTTON_GPIO_NUM 163
 //#define gpio_get_value __gpio_get_value
 //#define gpio_set_value __gpio_set_value
 //#define gpio_to_irq  __gpio_to_irq
@@ -31,6 +39,7 @@
 extern int sprd_alloc_gpio_irq(unsigned gpio);
 extern int irq_to_gpio(unsigned long irq);
 extern void sprd_free_gpio_irq(int irq);
+extern int board_gpio_init(void);
 #include <asm/arch/asm_generic_gpio.h>
 #include <asm/arch/gpio_phy.h>
 

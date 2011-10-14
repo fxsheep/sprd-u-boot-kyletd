@@ -2,11 +2,15 @@
 #define __GPIO_PHY_H__
 
 #include <linux/types.h>
+#include <asm/io.h>
+#include <asm/arch/io.h>
+#include <common.h>
 
-//#include <mach/gpio.h>
+#include <asm/arch/gpio.h>
 //#include <mach/adi_hal_internal.h>
 #include <asm/arch/adi_hal_internal.h>
 #include <asm/arch/sc8800g_module_config.h>
+
 #define GPIO_DBG(fmt...) printf(fmt)
 
 enum gpio_section_type {

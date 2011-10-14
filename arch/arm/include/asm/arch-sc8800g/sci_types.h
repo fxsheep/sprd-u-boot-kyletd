@@ -153,9 +153,14 @@ typedef uint32          BLOCK_ID;
 /* some usefule marcos */
 #define Bit(_i)              ((u32) 1<<(_i))
 
-#define  MAX( _x, _y ) ( ((_x) > (_y)) ? (_x) : (_y) )
+#ifndef MAX
+# define  MAX( _x, _y ) ( ((_x) > (_y)) ? (_x) : (_y) )
+#endif
 
-#define  MIN( _x, _y ) ( ((_x) < (_y)) ? (_x) : (_y) )
+#ifndef MIN
+# define  MIN( _x, _y ) ( ((_x) < (_y)) ? (_x) : (_y) )
+#endif
+
 #define  WORD_LO(_xxx)  ((uint8) ((int16)(_xxx)))
 #define  WORD_HI(_xxx)  ((uint8) ((int16)(_xxx) >> 8)) 
 

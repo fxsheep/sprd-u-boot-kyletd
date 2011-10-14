@@ -216,7 +216,7 @@ void calibration_detect(int key)
 			printf("func: %s line %d usb trans with error %d\n", __func__, __LINE__, usb_trans_status);
 		usb_wait_trans_done(1);
 		udc_power_off();
-        cmd_buf=malloc(30);
+        cmd_buf=malloc(50);
         if(cmd_buf==NULL){
             printf("%s: out of memory\n", __func__);
             return;

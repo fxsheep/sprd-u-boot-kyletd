@@ -1001,19 +1001,20 @@ void sprd_gpio_init(void)
 {
 	//enable gpio bank 0~10, that is, all 176 gpio
 	//__raw_writel(0x7fff, GR_GEN2);
-	  //CHIP_REG_OR ( (GR_GEN0), (GEN0_GPIO_EN | GEN0_GPIO_RTC_EN));
-//	  __raw_bits_or (GEN0_GPIO_EN | GEN0_GPIO_RTC_EN, GR_GEN0);
-    unsigned int temp;
-    temp = readl(GR_GEN0);
-    temp |= (GEN0_GPIO_EN | GEN0_GPIO_RTC_EN);
-    writel(temp, GR_GEN0);
+	//CHIP_REG_OR ( (GR_GEN0), (GEN0_GPIO_EN | GEN0_GPIO_RTC_EN));
+	//	  __raw_bits_or (GEN0_GPIO_EN | GEN0_GPIO_RTC_EN, GR_GEN0);
+	unsigned int temp;
+	temp = readl(GR_GEN0);
+	temp |= (GEN0_GPIO_EN | GEN0_GPIO_RTC_EN);
+	writel(temp, GR_GEN0);
 	ANA_REG_OR (ANA_AGEN,AGEN_RTC_GPIO_EN);
 	//msleep(5);
-    volatile i = 0x2fff;
-    while (i--);
+	volatile i = 0x2fff;
+	while (i--);
 	ANA_REG_OR (ANA_AGEN,AGEN_GPIO_EN);
 
 	//gpiochip_add(&sprd_gpio_chip);
 
-//	sprd_gpio_irq_init();
+	//	sprd_gpio_irq_init();
 }
+

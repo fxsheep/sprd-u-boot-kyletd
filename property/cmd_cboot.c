@@ -6,6 +6,7 @@
 #include <linux/keypad.h>
 #include <linux/key_code.h>
 #include <boot_mode.h>
+#include <asm/arch/gpio.h>
 
 #define COMMAND_MAX 128
 
@@ -51,6 +52,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     if(argc > 2)
       goto usage;
 
+    board_gpio_init();
     CHG_ShutDown();
     if(charger_connected()){
         mdelay(10);
