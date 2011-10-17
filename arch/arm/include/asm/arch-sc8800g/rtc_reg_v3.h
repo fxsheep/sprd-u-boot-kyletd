@@ -69,6 +69,11 @@ extern   "C"
 
 #define RTC_INT_ALL_MSK (0xFFFF&(~(BIT_5|BIT_6|BIT_7)))
 
+#define RTC_SEC_MASK 0x3F
+#define RTC_MIN_MASK 0x3F
+#define RTC_HOUR_MASK 0x1F
+#define RTC_DAY_MASK 0xFFFF
+#define RTC_UPD_TIME_MASK (RTC_SEC_ACK_BIT | RTC_MIN_ACK_BIT | RTC_HOUR_ACK_BIT | RTC_DAY_ACK_BIT)
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

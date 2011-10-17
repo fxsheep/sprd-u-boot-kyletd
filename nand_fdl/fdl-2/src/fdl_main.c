@@ -12,6 +12,7 @@
 #include "sc_reg.h"
 
 extern  const unsigned char FDL2_signature[][24];
+int sprd_clean_rtc(void);
 
 static void error (void)
 {
@@ -54,6 +55,7 @@ int main(void)
        FDL_PacketInit();
 	   mem_malloc_init (_bss_end, CONFIG_SYS_MALLOC_LEN);
 	   timer_init();
+       sprd_clean_rtc();
 
 //        FDL_SendAckPacket (BSL_REP_ACK);
 	do {
