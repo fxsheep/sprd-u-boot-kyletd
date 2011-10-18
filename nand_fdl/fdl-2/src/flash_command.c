@@ -5,6 +5,7 @@
 #include "fdl_conf.h"
 #include "fdl_crc.h"
 #include "fdl_stdio.h"
+#include "parsemtdparts.h"
 
 
 #include "asm/arch/sci_types.h"
@@ -46,6 +47,7 @@ unsigned long FDL2_GetRecvDataSize (void)
     return g_status.recv_size;
 }
 
+struct real_mtd_partition phy_partition;
 static unsigned int is_nbl_write;
 static unsigned int is_phasecheck_write;
 #define ADDR_MASK				0x80000000
@@ -53,8 +55,18 @@ static unsigned int g_NBLFixBufDataSize = 0;
 static unsigned char g_FixNBLBuf[0x8000];
 static unsigned int g_PhasecheckBUFDataSize = 0;
 static unsigned char g_PhasecheckBUF[0x2000];
-#define PHASECHECK_ADDRESS_F4R2		(0x8D960000 & (~ADDR_MASK))
-#define PHASECHECK_ADDRESS_F2R1		(0x88960000 & (~ADDR_MASK))
+typedef struct _CUSTOM2LOG
+{
+    unsigned long   custom;
+    unsigned long   log;
+} CUSTOM2LOG;
+
+static CUSTOM2LOG custom2log_table[] = {
+	{0x90000001, 0x80000005}, 
+	{0x90000003, 0x80000008}, 
+	{0x90000002, 0x80000011},
+	{0xffffffff, 0xffffffff}
+};
 #define ECC_NBL_SIZE 0x4000
 //bootloader header flag offset from the beginning
 #define BOOTLOADER_HEADER_OFFSET   32
@@ -65,6 +77,35 @@ static unsigned char g_PhasecheckBUF[0x2000];
 #define NAND_BUS_SIZE_16              16
 #define NAND_BUS_SIZE_32              32
 
+unsigned long custom2log(unsigned long custom)
+{
+	unsigned long idx, log = 0xffffffff;
+
+	if ((custom & 0xf0000000) == 0x80000000)
+		return custom;
+	for (idx = 0; custom2log_table[idx].custom != 0xffffffff; idx ++) {
+		if (custom2log_table[idx].custom == custom) {
+			log = custom2log_table[idx].log;
+			break;
+		}
+	}
+	
+	return log;
+}
+
+void phy_partition_info(struct real_mtd_partition phy)
+{
+	int i;
+
+	if (phy.offset == 0xffffffff) {
+		printf("\n\nInvaild partition address\n\n");
+		return;
+	}
+
+	//printf("name : %20s, offset : 0x%08x, size : 0x%08x, yaffs : %d\n", phy.name, phy.offset, phy.size, phy.yaffs);
+
+	return;
+}
 /*
 * retval : -1 is wrong  ;  1 is correct
 */
@@ -82,17 +123,20 @@ int nv_is_correct(unsigned char *array, unsigned long size)
    1 ; success
    2 : error
 */
-int nand_read_fdl_yaffs(unsigned int addr, unsigned int off, unsigned int size, unsigned char *buf)
+int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, unsigned int size, unsigned char *buf)
 {
 	int ret = 0;
 	int pos;
+	unsigned long addr = phypart->offset;
 
 	/* for fixnv, read total 64KB */
 	char *fixnvpoint = "/fixnv";
 	char *fixnvfilename = "/fixnv/fixnv.bin";
 	char *fixnvfilename2 = "/fixnv/fixnvchange.bin";
 
-	if (addr != 0x81a60000)
+	//printf("name : %20s, offset : 0x%08x, size : 0x%08x, yaffs : %d\n", phypart->name, phypart->offset, phypart->size, phypart->yaffs);
+
+	if (strcmp(phypart->name, "fixnv") != 0)
 		return NAND_INVALID_ADDR;
 	if (size != 0x800)	
 		return NAND_INVALID_SIZE;
@@ -156,15 +200,14 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
     start_addr = EndianConv_32 (start_addr);
     size = EndianConv_32 (size);
 #endif
+
     if (packet->packet_body.size == 12)
     {
 	memset(g_fixnv_buf, 0xff, FIXNV_SIZE + 4);
         g_checksum = * (data+2);
         g_sram_addr = (unsigned long) g_fixnv_buf;
-    }
-    else
-    {
-        g_checksum = CHECKSUM_OTHER_DATA;
+    } else {
+	        g_checksum = CHECKSUM_OTHER_DATA;
     }
     if (0 == (g_checksum & 0xffffff))
     {
@@ -174,27 +217,37 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 
     do
     {
-        /* Check the validity of the address and size of the file to be downloaded,
-         * and erase this space of NAND flash. */
-        ret = nand_start_write (start_addr, size);
+	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+	phy_partition.offset = custom2log(start_addr);
+	ret = log2phy_table(&phy_partition);
+	phy_partition_info(phy_partition);
+
+	if (NAND_SUCCESS != ret)
+        	break;
+
+	if (size >= phy_partition.size) {
+		printf("\n\nimage file size : 0x%08x is bigger than partition size : 0x%08x\n", size, phy_partition.size);
+		ret = NAND_INVALID_SIZE;
+	}
+
+	if (NAND_SUCCESS != ret)
+        	break;
+
+        ret = nand_start_write (&phy_partition, size);
 
         if (NAND_SUCCESS != ret)
             break;
 
 	is_nbl_write = 0;
 	is_phasecheck_write = 0;
-	if((start_addr & ADDR_MASK) == ADDR_MASK) {
-		start_addr &= ~ADDR_MASK;
-		if (start_addr == 0x0) {
-			is_nbl_write = 1;
-			g_NBLFixBufDataSize = 0;
-		}
-		
-		if ((start_addr == PHASECHECK_ADDRESS_F4R2) || (start_addr == PHASECHECK_ADDRESS_F2R1)) {
-			is_phasecheck_write = 1;
-			g_PhasecheckBUFDataSize = 0;
-			memset(g_PhasecheckBUF, 0xff, 0x2000);
-		}
+
+	if (strcmp(phy_partition.name, "spl") == 0) {
+		is_nbl_write = 1;
+		g_NBLFixBufDataSize = 0;
+	} else if (strcmp(phy_partition.name, "productinfo") == 0) {
+		is_phasecheck_write = 1;
+		g_PhasecheckBUFDataSize = 0;
+		memset(g_PhasecheckBUF, 0xff, 0x2000);
 	}
 
         g_status.total_size  = size;
@@ -466,6 +519,11 @@ int FDL2_ReadFlash (PACKET_T *packet, void *arg)
     addr = EndianConv_32 (addr);
     size = EndianConv_32 (size);
 #endif
+
+	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+	phy_partition.offset = custom2log(addr);
+	ret = log2phy_table(&phy_partition);
+	phy_partition_info(phy_partition);
     if (size > MAX_PKT_SIZE)
     {
         FDL_SendAckPacket (BSL_REP_DOWN_SIZE_ERROR);
@@ -478,9 +536,9 @@ int FDL2_ReadFlash (PACKET_T *packet, void *arg)
     }
 
 #if 0
-    ret = nand_read_fdl (addr, off, size, (unsigned char *) (packet->packet_body.content));
+    ret = nand_read_fdl (&phy_partition, off, size, (unsigned char *) (packet->packet_body.content));
 #else
-    ret = nand_read_fdl_yaffs (addr, off, size, (unsigned char *) (packet->packet_body.content));
+    ret = nand_read_fdl_yaffs (&phy_partition, off, size, (unsigned char *) (packet->packet_body.content));
 #endif
     if (NAND_SUCCESS == ret)
     {
@@ -506,15 +564,14 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 	
     addr = EndianConv_32 (addr);
     size = EndianConv_32 (size);
-	
-    	ret = addr & 0x3;
-    	switch (ret) {
-		case 0:
-			ret = nand_erase_partition(addr, size);
-		break;
-		default:
-			ret = NAND_SUCCESS;
-	}
+
+	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+	phy_partition.offset = custom2log(addr);
+	ret = log2phy_table(&phy_partition);
+	phy_partition_info(phy_partition);
+	if (NAND_SUCCESS == ret)
+		ret = nand_erase_partition(phy_partition.offset, phy_partition.size);
+
     FDL2_SendRep (ret);
     return (NAND_SUCCESS == ret);
 }

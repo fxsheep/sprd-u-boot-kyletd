@@ -33,10 +33,8 @@ unsigned char raw_header[2048];
 #define RUNTIMENV_SIZE		(256 * 1024)
 #ifdef MCP_F2R1
 #define MODEM_SIZE		(3500 * 1024)  	/* 3.5MB */
-#define KERNEL_SIZE		(6500 * 1024)	/* 6.5MB */
 #else
 #define MODEM_SIZE		(8 * 1024 * 1024)
-#define KERNEL_SIZE		(10 * 1024 * 1024)
 #endif
 
 #define DSP_ADR			0x00020000

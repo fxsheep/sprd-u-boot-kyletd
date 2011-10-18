@@ -1,3 +1,4 @@
+#include "parsemtdparts.h"
 #ifndef FDL_NAND_H
 #define FDL_NAND_H
 
@@ -21,10 +22,10 @@ int nand_change_bootloader_header (unsigned int *bl_start_addr);
 int nand_flash_init (void);
 int nand_format (void);
 int nand_erase_fdl (unsigned int addr, unsigned int size);
-int nand_start_write (unsigned int addr, unsigned int size);
+int nand_start_write (struct real_mtd_partition *phypart, unsigned int size);
 int nand_write_fdl (unsigned int size, unsigned char *buf);
 int nand_end_write (void);
-int nand_read_fdl (unsigned int addr, unsigned int off, unsigned int size, unsigned char *buf);
+int nand_read_fdl (struct real_mtd_partition *phypart, unsigned int off, unsigned int size, unsigned char *buf);
 int nand_read_NBL (void *buf);
 
 #ifdef __cplusplus

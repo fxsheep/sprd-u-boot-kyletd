@@ -85,20 +85,8 @@ int nand_erase_partition(unsigned int addr, unsigned int size)
 
 	nand = &nand_info[nand_curr_device];
 
-	if(addr & (nand->erasesize - 1))
-	  	return NAND_INVALID_ADDR;
-
-	if((addr & SYSTEM_WRITE_MASK)==SYSTEM_WRITE_MASK){
-		addr &= ~SYSTEM_WRITE_MASK;
-	}else if((addr & ADDR_MASK)==ADDR_MASK){
-		addr &= ~ADDR_MASK;
-	}else 
-	  	return NAND_INVALID_ADDR;
-
 	cur_partition.offset = addr;
-	cur_partition.size = 0;
-	parse_cmdline_partitions(&cur_partition, (unsigned long long)nand->size);
-	//printf("\naddr = 0x%08x  size = 0x%08x  offset %08x, size %08x\n", addr, size, cur_partition.offset, cur_partition.size);
+	cur_partition.size = size;
 
 	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
 		printf("erasing block : %d    %d % \r", (cur_partition.offset / nand->erasesize + erase_blk), (erase_blk * 100 ) / (cur_partition.size / nand->erasesize));
@@ -347,14 +335,30 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 	return nand_erase_opts(nand, &opts);
 }
 
-int nand_start_write(unsigned int addr, unsigned int size)
+unsigned long log2phy_table(struct real_mtd_partition *phypart)
+{
+	struct mtd_info *nand;
+	unsigned long ret;
+	
+	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
+		return NAND_SYSTEM_ERROR;
+	nand = &nand_info[nand_curr_device];
+	if (phypart->offset == 0xffffffff)
+		return NAND_INVALID_ADDR;
+	//printf("nand->size = 0x%016Lx\n", (unsigned long long)nand->size);
+	real_parse_cmdline_partitions(phypart, (unsigned long long)nand->size);
+	if (phypart->offset == 0xffffffff)
+		return NAND_INVALID_ADDR;
+	if ((phypart->offset) & (nand->erasesize - 1))
+	  	return NAND_INVALID_ADDR;
+
+	return NAND_SUCCESS;
+}
+int nand_start_write(struct real_mtd_partition *phypart, unsigned int size)
 {
 	struct mtd_partition cur_partition;
 	int erase_blk, ret = 0;
 
-#ifdef FDL2_DEBUG
-	printf("function: %s\n", __FUNCTION__);
-#endif
 	struct mtd_info *nand;
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  return NAND_SYSTEM_ERROR;
@@ -363,17 +367,10 @@ int nand_start_write(unsigned int addr, unsigned int size)
 #ifdef FDL2_DEBUG
 	printf("function: %s write addr: 0x%x erasesize: 0x%x\n", __FUNCTION__, addr, nand->erasesize);
 #endif
-	if(addr & (nand->erasesize - 1))
-	  return NAND_INVALID_ADDR;
+	//printf("addr = 0x%08x  size = 0x%08x  flag = %d  part_size = 0x%08x\n", phypart->offset, size, phypart->yaffs, phypart->size);
 
-	if((addr & SYSTEM_WRITE_MASK)==SYSTEM_WRITE_MASK){
-		addr &= ~SYSTEM_WRITE_MASK;
-		is_system_write = 1;
-	}else if((addr & ADDR_MASK)==ADDR_MASK){
-		addr &= ~ADDR_MASK;
-		is_system_write = 0;
-	}else 
-	  return NAND_INVALID_ADDR;
+		is_system_write = phypart->yaffs;
+
 
 #ifdef FDL2_DEBUG
 	printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
@@ -383,18 +380,12 @@ int nand_start_write(unsigned int addr, unsigned int size)
 	backupblk_len = 0;
 	backupblk_flag = 0;
 
-	nand_write_addr = addr;
-	cur_write_pos = addr;
+	nand_write_addr = phypart->offset;
+	cur_write_pos = phypart->offset;
 	nand_write_size = size;
 
-	cur_partition.offset = addr;
-	cur_partition.size = 0;
-	parse_cmdline_partitions(&cur_partition, (unsigned long long)nand->size);
-
-	if (size >= cur_partition.size) {
-		printf("\n\nimage file size : 0x%08x is bigger than partition size : 0x%08x\n", size, cur_partition.size);
-		return NAND_INVALID_SIZE;
-	}
+	cur_partition.offset = phypart->offset;
+	cur_partition.size = phypart->size;
 
 	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
 		printf("erasing block : %d    %d % \r", (cur_partition.offset / nand->erasesize + erase_blk), (erase_blk * 100 ) / (cur_partition.size / nand->erasesize));
@@ -595,29 +586,21 @@ int nand_end_write(void)
 	backupblk_flag = 0;
 	return NAND_SUCCESS;
 }
-int nand_read_fdl(unsigned int addr, unsigned int off, unsigned int size, unsigned char *buf)
+int nand_read_fdl(struct real_mtd_partition *phypart, unsigned int off, unsigned int size, unsigned char *buf)
 {
 	struct mtd_info *nand;
 	int ret=0;
 	int pos;
 	unsigned char buffer[64];
+	unsigned long addr = phypart->offset;
 
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  	return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 
-	if(addr & (nand->erasesize - 1))
-	  	return NAND_INVALID_ADDR;
-
-	if((addr & SYSTEM_WRITE_MASK)==SYSTEM_WRITE_MASK){
-		addr &= ~SYSTEM_WRITE_MASK;
-		is_system_write = 1;
-	}else if((addr & ADDR_MASK)==ADDR_MASK){
-		addr &= ~ADDR_MASK;
 		is_system_write = 0;
-	}else 
-	  	return NAND_INVALID_ADDR;
-	//printf("addr = 0x%08x  size = %d  off = %d\n", addr, size, off);
+	
+	printf("addr = 0x%08x  size = %d  off = %d\n", addr, size, off);
 	while (!(addr & (nand->erasesize - 1))) {
 		if (nand_block_isbad(nand, addr & (~(nand->erasesize - 1)))) {
 			printf("skip bad block 0x%x\n", addr & (~(nand->erasesize - 1)));
