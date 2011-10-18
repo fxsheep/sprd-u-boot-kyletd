@@ -264,10 +264,11 @@ static u32 sc8810_get_decode_sts(void)
 static u32 sc8810_ecc_decode(struct sc8810_ecc_param *param)
 {
 	u32 reg;
-	u32 ret;
-	reg = (param->m_size - 1);
+	u32 ret = 0;
+	s32 size = 0;
 	nand_copy((void *)NFC_MBUF_ADDR, param->p_mbuf, param->m_size);
 	nand_copy((void *)NFC_SBUF_ADDR, param->p_sbuf, param->sp_size);
+	reg = (param->m_size - 1);
 	nfc_reg_write(NFC_ECC_CFG1, reg);	
 	reg = 0;
 	reg = (ecc_mode_convert(param->mode)) << NFC_ECC_MODE_OFFSET;
@@ -277,12 +278,39 @@ static u32 sc8810_ecc_decode(struct sc8810_ecc_param *param)
 	nfc_reg_write(NFC_ECC_CFG0, reg);
 	sc8810_nfc_wait_command_finish(NFC_ECC_EVENT);
 	ret = sc8810_get_decode_sts();
+	if (ret != 0 && ret != -1) {
 	//printk(KERN_INFO "sc8810_ecc_decode sts = %x\n",ret);
+	}
+	if (ret == -1) {
+		size = param->sp_size;
+		if (size > 0) {
+			while (size--)
+			{
+				if (param->p_sbuf[size] != 0xff)
+					break;
+			}
+			if (size < 0)
+			{
+				size = param->m_size;
+				if (size > 0)
+				{
+					while (size--)
+					{
+						if (param->p_mbuf[size] != 0xff)
+							break;
+					}
+					if (size < 0) {
+						ret = 0;
+					}
+				}
+			}
+		}
+	}
 	if((ret != -1) && (ret != 0))
 	{
 		nand_copy(param->p_mbuf, (void *)NFC_MBUF_ADDR, param->m_size);
 		nand_copy(param->p_sbuf, (void *)NFC_SBUF_ADDR, param->sp_size);	
-		return 0;
+		ret = 0;
 	}
 	return  ret;
 }
@@ -360,7 +388,7 @@ static void sc8810_nand_data_add(unsigned int bytes, unsigned int bus_width, uns
 	else
 	{
 		blk = bytes >> 9;
-		word = bytes & 0x1ff;
+		word = (bytes & 0x1ff) >> 1;
 	}
 	if(read)
 	{
