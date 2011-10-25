@@ -57,7 +57,15 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     if(charger_connected()){
         mdelay(10);
         CHG_TurnOn();
+    }else{
+        if(is_bat_low()){
+            printf("shut down again for low battery\n");
+            power_down_devices();
+            while(1)
+              ;
+        }
     }
+
     board_keypad_init();
 
     unsigned check_reboot_mode(void);

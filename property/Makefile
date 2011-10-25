@@ -36,6 +36,7 @@ COBJS-y += android_boot.o
 COBJS-y += calibration_detect.o
 COBJS-y += engtest_mode.o
 COBJS-y += sleep_mode.o
+COBJS-y += vbat_check.o
 
 
 

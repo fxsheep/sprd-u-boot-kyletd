@@ -305,5 +305,6 @@
 #endif // CONFIG_LCD
 
 #define CALIBERATE_DETECT_MS 30000
+#define LOW_BAT_ADC_LEVEL 0x320 /*phone battery adc value low than this value will not boot up*/
 
 #endif /* __CONFIG_H */
