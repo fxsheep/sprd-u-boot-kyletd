@@ -16,17 +16,13 @@ if [ $argu = "clean" ]; then
     find $dir -name *.c -o -name *.S | xargs rm -f
     done
 
-    for file in $PRODUCTS; do
-    echo "CONFIG_IDH_BUILD = 1" >> ./board/spreadtrum/$file/config.mk
-    done
+    echo "CONFIG_IDH_BUILD = 1" > ./include/idh_config.mk
 fi 
 
 if [ $argu = "restore" ]; then
     for dir in $DIR_PROTECT; do
     git checkout -- $dir
     done
-    for file in $PRODUCTS; do
-    git checkout -- ./board/spreadtrum/$file/config.mk
-    done
+    rm ./include/idh_config.mk 2>/dev/null
 fi
 

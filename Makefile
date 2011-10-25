@@ -150,6 +150,7 @@ ifeq ($(obj)include/config.mk,$(wildcard $(obj)include/config.mk))
 all:
 sinclude $(obj)include/autoconf.mk.dep
 sinclude $(obj)include/autoconf.mk
+sinclude $(src)include/idh_config.mk
 
 # load ARCH, BOARD, and CPU configuration
 include $(obj)include/config.mk
