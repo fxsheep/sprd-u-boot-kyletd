@@ -27,13 +27,14 @@ unsigned char raw_header[2048];
 #define DSP_PART "dsp"
 
 #define DSP_SIZE		(3968 * 1024)
-#define VMJALUNA_SIZE		(256 * 1024)
+#define VMJALUNA_SIZE		(300 * 1024)
 #define FIXNV_SIZE		(64 * 1024)
 #define PRODUCTINFO_SIZE	(3 * 1024)
 #define RUNTIMENV_SIZE		(256 * 1024)
 #ifdef MCP_F2R1
 #define MODEM_SIZE		(3500 * 1024)  	/* 3.5MB */
 #define KERNEL_SIZE		(6500 * 1024)	/* 6.5MB */
+iiiiii
 #else
 #define MODEM_SIZE		(8 * 1024 * 1024)
 #define KERNEL_SIZE		(10 * 1024 * 1024)
@@ -45,15 +46,57 @@ unsigned char raw_header[2048];
 #define PRODUCTINFO_ADR		0x00490000
 #define RUNTIMENV_ADR		0x004a0000
 #define MODEM_ADR		0x00500000
-#define KERNEL_ADR		0x00008000
-#define RAMDISK_ADR 		0X1a00000
+#define KERNEL_ADR		0x04508000
+#define RAMDISK_ADR 		0x04c00000
 
+#define MAX_SN_LEN 			(24)
+#define SP09_MAX_SN_LEN			MAX_SN_LEN
+#define SP09_MAX_STATION_NUM		(15)
+#define SP09_MAX_STATION_NAME_LEN	(10)
+#define SP09_SPPH_MAGIC_NUMBER          (0X53503039)    // "SP09"
+#define SP09_MAX_LAST_DESCRIPTION_LEN   (32)
+typedef struct _tagSP09_PHASE_CHECK
+{
+	unsigned long 	Magic;                	// "SP09"
+	char    	SN1[SP09_MAX_SN_LEN]; 	// SN , SN_LEN=24
+	char    	SN2[SP09_MAX_SN_LEN];    // add for Mobile
+	int     	StationNum;                 	// the test station number of the testing
+	char    	StationName[SP09_MAX_STATION_NUM][SP09_MAX_STATION_NAME_LEN];
+	unsigned char 	Reserved[13];               	// 
+	unsigned char 	SignFlag;
+	char    	szLastFailDescription[SP09_MAX_LAST_DESCRIPTION_LEN];
+	unsigned short  iTestSign;				// Bit0~Bit14 ---> station0~station 14 
+	unsigned short  iItem;    // part1: Bit0~ Bit_14 indicate test Station,1¡À¨ª¨º\u0178Pass,    
+}SP09_PHASE_CHECK_T, *LPSP09_PHASE_CHECK_T;
+const static int SP09_MAX_PHASE_BUFF_SIZE = sizeof(SP09_PHASE_CHECK_T);
+int eng_getphasecheck(SP09_PHASE_CHECK_T* phase_check)
+{
+	unsigned char *point;
+	int aaa;
+	point = (unsigned char *)phase_check;
+	if (phase_check->Magic == SP09_SPPH_MAGIC_NUMBER) {
+		printf("SN1 = %s   SN2 = %s\n",phase_check->SN1, phase_check->SN2);
+		for (aaa = 0; aaa < phase_check->StationNum/*SP09_MAX_STATION_NUM*/; aaa ++) {
+			printf("%s  ", phase_check->StationName[aaa]);
+		}
+		printf("\n");
+	} else
+		printf("no production information / phase check!\n");
+	return 0;
+}
+int eng_phasechecktest(unsigned char *array, int len)
+{
+	SP09_PHASE_CHECK_T phase;
+	memset(&phase, 0, sizeof(SP09_PHASE_CHECK_T));
+	memcpy(&phase, array, len);
+	return eng_getphasecheck(&phase);
+}
 extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 void set_vibrator(int on);
-
+void MMU_InvalideICACHEALL(void);
 
 void nand_block_info(struct mtd_info *nand, int *good, int *bad)
 {
@@ -147,12 +190,14 @@ static int start_linux()
 	*(volatile u32*)0x84001000 = 'p';
 #define VLX_TAG_ADDR 0x100 //after initrd
 
-	//remap 
+	//remap  = 0x
 	*(volatile u32*)(0x20900000 + 0x218) |= (0x1);//internal ram using 0xffff0000
 	theKernel(0, machine_type, VLX_TAG_ADDR);    /* jump to kernel with register set */
 	while(1);
 	return 0;
 }
+
+
 void vlx_nand_boot(char * kernel_pname, char * cmdline)
 {
     	boot_img_hdr *hdr = (void *)raw_header;
@@ -163,19 +208,26 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	int ret;
 	size_t size;
 	loff_t off = 0;
+	char *fixnvpoint = "/fixnv";
+	char *fixnvfilename = "/fixnv/fixnv.bin";
+	char *fixnvfilename2 = "/fixnv/fixnvchange.bin";
 	char *backupfixnvpoint = "/backupfixnv";
 	char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
+	char *backupfixnvfilename2 = "/backupfixnv/fixnvchange.bin";
 	char *runtimenvpoint = "/runtimenv";
 	char *runtimenvfilename = "/runtimenv/runtimenv.bin";
+	char *runtimenvfilename2 = "/runtimenv/runtimenvchange.bin";
 	char *productinfopoint = "/productinfo";
 	char *productinfofilename = "/productinfo/productinfo.bin";
+	char *productinfofilename2 = "/productinfo/productinfochange.bin";
+    char * mtdpart_def = NULL;
 
 	ret = mtdparts_init();
 	if (ret != 0){
 		printf("mtdparts init error %d\n", ret);
 		return;
 	}
-#if 0	
+
 #ifdef CONFIG_SPLASH_SCREEN 
 #define SPLASH_PART "boot_logo"
 
@@ -208,7 +260,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
     lcd_display_bitmap((ulong)bmp_img, 0, 0);
     lcd_display();
     set_backlight(50);
-#endif
+#endif//CONFIG_SPLASH_SCREEN
+
     set_vibrator(0);
 
 	/*int good_blknum, bad_blknum;
@@ -217,68 +270,81 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	///////////////////////////////////////////////////////////////////////
 	/* FIXNV_PART */
 	printf("Reading fixnv to 0x%08x\n", FIXNV_ADR);
-	memset((unsigned char *)DSP_ADR, 0xff, FIXNV_SIZE + 4);
 	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
-#if 0
-	/* mtd nv */
-	ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
-	if (ret) {
-		printf("No partition named %s\n", FIXNV_PART);
-		return;
-	} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-		printf("Partition %s not a NAND device\n", FIXNV_PART);
-		return;
-	}
-
-	off = part->offset;
-	nand = &nand_info[dev->id->num];
-
-	size = (FIXNV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-	if(size <= 0) {
-		printf("fixnv image should not be zero\n");
-		return;
-	}
-	ret = nand_read_offset_ret(nand, off, &size, (void*)FIXNV_ADR, &off);
-	if (ret != 0) {
-		printf("fixnv nand read error %d\n", ret);
-		return;
-	}
-#else
-	/* fixnv */
     	cmd_yaffs_mount(backupfixnvpoint);
 	ret = cmd_yaffs_ls_chk(backupfixnvfilename);
+	if (ret == (FIXNV_SIZE + 4)) {
+		cmd_yaffs_mread_file(backupfixnvfilename, (unsigned char *)FIXNV_ADR);
+		if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+			ret = cmd_yaffs_ls_chk(backupfixnvfilename2);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(backupfixnvfilename2, (unsigned char *)FIXNV_ADR);
+				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					cmd_yaffs_umount(backupfixnvpoint);
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+	/* mtd nv */
+   			cmd_yaffs_mount(fixnvpoint);
+			ret = cmd_yaffs_ls_chk(fixnvfilename);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv backup */
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+	}
+				}
+			} else {
+				/* read fixnv backup */
+				ret = cmd_yaffs_ls_chk(fixnvfilename2);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+				}
+				/* read fixnv backup */
+	}
+			cmd_yaffs_umount(fixnvpoint);
+					/*#########################*/
+	}
+			} else {
+				cmd_yaffs_umount(backupfixnvpoint);
+				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+	/* fixnv */
+    			cmd_yaffs_mount(fixnvpoint);
+			ret = cmd_yaffs_ls_chk(fixnvfilename);
 	if (ret == (FIXNV_SIZE + 4)) {
 		/* there is need FIXNV_ADR instead of DSP_ADR, but FIXNV_ADR is 0x00000000, 
 	 	* yaffs_read occur error at first page, so i use DSP_ADR, then copy data from DSP_ADR to FIXNV_ADR.
 		*/
-		cmd_yaffs_mread_file(backupfixnvfilename, (unsigned char *)DSP_ADR);
-		if (-1 == nv_is_correct((unsigned char *)DSP_ADR, FIXNV_SIZE)) {
-			cmd_yaffs_umount(backupfixnvpoint);
-			/* file is wrong */			
-			memset((unsigned char *)DSP_ADR, 0xff, FIXNV_SIZE + 4);
+				cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					}
 			/* read fixnv */
 			//////////////////////
-			ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
-			if (ret) {
-				printf("No partition named %s\n", FIXNV_PART);
-				return;
-			} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-				printf("Partition %s not a NAND device\n", FIXNV_PART);
-				return;
 			}
-
-			off = part->offset;
-			nand = &nand_info[dev->id->num];
-
-			size = (FIXNV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-			if(size <= 0) {
-				printf("fixnv image should not be zero\n");
-				return;
+			} else {
+				/* read fixnv backup */
+				ret = cmd_yaffs_ls_chk(fixnvfilename2);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+				}
+				/* read fixnv backup */
 			}
-			ret = nand_read_offset_ret(nand, off, &size, (void*)DSP_ADR, &off);
-			if (ret != 0) {
-				printf("fixnv nand read error %d\n", ret);
-				return;
+			cmd_yaffs_umount(fixnvpoint);
+				/*#########################*/
 			}
 			//////////////////////
 		} else {
@@ -286,37 +352,68 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 			cmd_yaffs_umount(backupfixnvpoint);
 		}
 	} else {
+		memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+		ret = cmd_yaffs_ls_chk(backupfixnvfilename2);
+		if (ret == (FIXNV_SIZE + 4)) {
+			cmd_yaffs_mread_file(backupfixnvfilename2, (unsigned char *)FIXNV_ADR);
+			if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
 		cmd_yaffs_umount(backupfixnvpoint);
 		/* file do not exist */
-		memset((unsigned char *)DSP_ADR, 0xff, FIXNV_SIZE + 4);
+				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 		/* read fixnv */
-		//////////////////////
-		ret = find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
-		if (ret) {
-			printf("No partition named %s\n", FIXNV_PART);
-			return;
-		} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-			printf("Partition %s not a NAND device\n", FIXNV_PART);
-			return;
+    				cmd_yaffs_mount(fixnvpoint);
+				ret = cmd_yaffs_ls_chk(fixnvfilename);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						ret = cmd_yaffs_ls_chk(fixnvfilename2);
+						if (ret == (FIXNV_SIZE + 4)) {
+							cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+							if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+								memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						}
+						/* read fixnv backup */
+					}
+				} else {
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 		}
-
-		off = part->offset;
-		nand = &nand_info[dev->id->num];
-
-		size = (FIXNV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-		if(size <= 0) {
-			printf("fixnv image should not be zero\n");
-			return;
+				}
+				cmd_yaffs_umount(fixnvpoint);
+				/*#########################*/
+			}
+		} else {
+			cmd_yaffs_umount(backupfixnvpoint);
+			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+    			cmd_yaffs_mount(fixnvpoint);
+			ret = cmd_yaffs_ls_chk(fixnvfilename);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					}
 		}
-		ret = nand_read_offset_ret(nand, off, &size, (void*)DSP_ADR, &off);
-		if (ret != 0) {
-			printf("fixnv nand read error %d\n", ret);
-			return;
+			} else {
+				ret = cmd_yaffs_ls_chk(fixnvfilename2);
+				if (ret == (FIXNV_SIZE + 4)) {
+					cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+				}
+			}
+			cmd_yaffs_umount(fixnvpoint);
 		}
 		//////////////////////
 	}
-	memcpy((unsigned char *)FIXNV_ADR, (unsigned char *)DSP_ADR, FIXNV_SIZE);
-#endif
 	//array_value((unsigned char *)FIXNV_ADR, FIXNV_SIZE);
 
 	///////////////////////////////////////////////////////////////////////
@@ -327,57 +424,68 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	ret = cmd_yaffs_ls_chk(productinfofilename);
 	if (ret == (PRODUCTINFO_SIZE + 4)) {
 		cmd_yaffs_mread_file(productinfofilename, (unsigned char *)PRODUCTINFO_ADR);
-		if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE))
+		if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
 			memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
-	} else
+			ret = cmd_yaffs_ls_chk(productinfofilename2);
+			if (ret == (PRODUCTINFO_SIZE + 4)) {
+				cmd_yaffs_mread_file(productinfofilename2, (unsigned char *)PRODUCTINFO_ADR);
+				if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
+					memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+				}
+			}
+		}
+	} else {
 		memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+		ret = cmd_yaffs_ls_chk(productinfofilename2);
+		if (ret == (PRODUCTINFO_SIZE + 4)) {
+			cmd_yaffs_mread_file(productinfofilename2, (unsigned char *)PRODUCTINFO_ADR);
+			if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
+				memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+			}
+		}
+	}
 	cmd_yaffs_umount(productinfopoint);
 	//array_value((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE);
+	eng_phasechecktest((unsigned char *)PRODUCTINFO_ADR, SP09_MAX_PHASE_BUFF_SIZE);
 	///////////////////////////////////////////////////////////////////////
 
 
 	///////////////////////////////////////////////////////////////////////
 	/* RUNTIMEVN_PART */
 	printf("Reading runtimenv to 0x%08x\n", RUNTIMENV_ADR);
-#if 0
 	/* mtd nv */
-	ret = find_dev_and_part(RUNTIMEVN_PART, &dev, &pnum, &part);
-	if (ret) {
-		printf("No partition named %s\n", RUNTIMEVN_PART);
-		return;
-	} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
-		printf("Partition %s not a NAND device\n", RUNTIMEVN_PART);
-		return;
-	}
 
-	off = part->offset;
-	nand = &nand_info[dev->id->num];
 
-	size = (RUNTIMENV_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-	if(size <= 0) {
-		printf("runtimenv image should not be zero\n");
-		return;
-	}
-	ret = nand_read_offset_ret(nand, off, &size, (void*)RUNTIMENV_ADR, &off);
-	if (ret != 0) {
-		printf("runtimenv nand read error %d\n", ret);
-		return;
-	}
-#else
 	/* runtimenv */
     	cmd_yaffs_mount(runtimenvpoint);
 	ret = cmd_yaffs_ls_chk(runtimenvfilename);
 	if (ret == (RUNTIMENV_SIZE + 4)) {
 		cmd_yaffs_mread_file(runtimenvfilename, (unsigned char *)RUNTIMENV_ADR);
-		if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE))
+		if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 			memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
-	} else
+			ret = cmd_yaffs_ls_chk(runtimenvfilename2);
+			if (ret == (RUNTIMENV_SIZE + 4)) {
+				cmd_yaffs_mread_file(runtimenvfilename2, (unsigned char *)RUNTIMENV_ADR);
+				if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+					memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+				}
+			}	
+		}
+	} else {
 		memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+		ret = cmd_yaffs_ls_chk(runtimenvfilename2);
+		if (ret == (RUNTIMENV_SIZE + 4)) {
+			cmd_yaffs_mread_file(runtimenvfilename2, (unsigned char *)RUNTIMENV_ADR);
+			if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+				memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+			}
+		}
+	}
 	cmd_yaffs_umount(runtimenvpoint);
-#endif
 	//array_value((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE);
 	////////////////////////////////////////////////////////////////
 	/* DSP_PART */
+#if 1
 	printf("Reading dsp to 0x%08x\n", DSP_ADR);
 	ret = find_dev_and_part(DSP_PART, &dev, &pnum, &part);
 	if (ret) {
@@ -402,8 +510,9 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		return;
 	}
 #endif
-	//array_value((unsigned char *)DSP_ADR, DSP_SIZE);
 
+	//array_value((unsigned char *)DSP_ADR, DSP_SIZE);
+#if 1
 	////////////////////////////////////////////////////////////////
 	/* KERNEL_PART */
 	printf("Reading kernel to 0x%08x\n", KERNEL_ADR);
@@ -455,7 +564,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		return;
 	}
 	//array_value((unsigned char *)KERNEL_ADR, KERNEL_SIZE);
-#if 0
+#endif
 	////////////////////////////////////////////////////////////////
 	/* MODEM_PART */
 	printf("Reading modem to 0x%08x\n", MODEM_ADR);
@@ -509,17 +618,17 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		printf("modem nand read error %d\n", ret);
 		return;
 	}
-#endif
+
 	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
     //check caliberation mode
     int str_len;
     char * buf;
     buf = malloc(384);
-#define VLX_TAG_ADDR 0x100 //after initrd
+#define VLX_TAG_ADDR 0x5100000 //after initrd
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     str_len = strlen(buf);
-    sprintf(&buf[str_len], " %s", MTDPARTS_DEFAULT);
-
+    mtdpart_def = get_mtdparts();
+    sprintf(&buf[str_len], " %s", mtdpart_def);
     if(cmdline && cmdline[0]){
             str_len = strlen(buf);
             sprintf(&buf[str_len], " %s", cmdline);
@@ -534,7 +643,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		if(lcd_id)
 		{
 			str_len = strlen(buf);
-			sprintf(&buf[str_len], " lcd_id=");
+			sprintf(&buf[str_len], " lcd_id=ID");
 			str_len = strlen(buf);
 			buf[str_len] = (char)((lcd_id>>8)&0xff);
 			buf[str_len+1] = (char)(lcd_id&0xff);
@@ -559,11 +668,14 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
+#if 0
 	start_linux();
-	//entry();
+#else
+	entry();
+#endif
 }
 void normal_mode(void)
 {
     set_vibrator(1);
-    vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS);
+    vlx_nand_boot(BOOT_PART, NULL);
 }

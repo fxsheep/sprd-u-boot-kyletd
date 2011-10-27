@@ -14,6 +14,10 @@
 struct mtd_info *_local_mtd = 0;
 
 //#define FDL2_DEBUG 1
+#ifdef FDL2_DEBUG
+#else
+#define printf(arg...) do{}while(0)
+#endif
 typedef struct {
 		unsigned char colParity;
 		unsigned lineParity;
