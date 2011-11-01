@@ -25,6 +25,9 @@ int is_bat_low(void);
 #define BOOT_DLOADER 0xf5
 #define BOOT_CHARGE 0xf6
 
+#define BACKLIGHT_ON 1
+#define BACKLIGHT_OFF 0
+
 extern unsigned int check_key_boot(unsigned char key);
-extern void vlx_nand_boot(char * kernel_pname, char * cmdline);
+extern void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set);
 #endif

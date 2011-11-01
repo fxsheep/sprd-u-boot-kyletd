@@ -222,7 +222,7 @@ void calibration_detect(int key)
             return;
         }
         sprintf(cmd_buf, "calibration=%d,%d", caliberate_mode&0xff, (caliberate_mode&(~0xff))>>8);
-        vlx_nand_boot(BOOT_PART, cmd_buf);
+        vlx_nand_boot(BOOT_PART, cmd_buf, BACKLIGHT_OFF);
 	}	
     
     //nerver come to here

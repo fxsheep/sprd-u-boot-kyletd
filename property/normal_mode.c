@@ -188,7 +188,7 @@ void array_diff(unsigned char * array1, unsigned char * array2, int len)
 	printf("arrar diff is finished\n");
 }
 
-void vlx_nand_boot(char * kernel_pname, char * cmdline)
+void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 {
     boot_img_hdr *hdr = (void *)raw_header;
 	struct mtd_info *nand;
@@ -246,9 +246,11 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
     extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
     extern void lcd_display(void);
     extern void set_backlight(uint32_t value);
-    lcd_display_bitmap((ulong)bmp_img, 0, 0);
-    lcd_display();
-    set_backlight(50);
+    if(backlight_set == BACKLIGHT_ON){
+        lcd_display_bitmap((ulong)bmp_img, 0, 0);
+        lcd_display();
+        set_backlight(50);
+    }
 #endif
     set_vibrator(0);
 
@@ -679,5 +681,5 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 void normal_mode(void)
 {
     set_vibrator(1);
-    vlx_nand_boot(BOOT_PART, NULL);
+    vlx_nand_boot(BOOT_PART, NULL, BACKLIGHT_ON);
 }

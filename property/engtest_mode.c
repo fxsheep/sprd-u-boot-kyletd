@@ -23,5 +23,5 @@
 void engtest_mode(void)
 {
     printf("%s\n", __func__);
-    vlx_nand_boot(BOOT_PART, "engtest_mode");
+    vlx_nand_boot(BOOT_PART, "engtest_mode", BACKLIGHT_ON);
 }

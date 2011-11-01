@@ -15,5 +15,5 @@
 void sleep_mode(void)
 {
     printf("%s\n", __func__);
-    vlx_nand_boot(BOOT_PART, "androidboot.mode=fastsleep");
+    vlx_nand_boot(BOOT_PART, "androidboot.mode=fastsleep", BACKLIGHT_ON);
 }
