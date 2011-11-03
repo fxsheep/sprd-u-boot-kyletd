@@ -12,3 +12,8 @@ unsigned int get_bat_low_level(void)
 {
     return LOW_BAT_ADC_LEVEL;
 }
+
+unsigned int get_pwr_key_cnt(void)
+{
+    return PWR_KEY_DETECT_CNT;
+}

@@ -32,6 +32,7 @@ extern int usb_is_trans_done(int direct);
 extern int usb_is_configured(void);
 extern void udc_power_on(void);
 extern void udc_power_off(void);
+#define mdelay(_ms) udelay(_ms*1000)
 
 //#define DEBUG
 #ifdef DEBUG
@@ -74,10 +75,28 @@ unsigned int check_caliberate(uint8_t * buf, int len)
 }
 
 extern int power_button_pressed(void);
-extern int recheck_power_button(void);
 static int count_ms;
 static unsigned long long start_time;
 static unsigned long long now_time;
+
+static int recheck_power_button(void)
+{
+    int cnt = 0;
+    int ret = 0;
+    do{
+        ret = power_button_pressed();
+        if(ret == 0)
+          cnt++;
+        else
+          return 1;
+
+        if(cnt>4)
+          return 0;
+        else{
+            mdelay(1);
+        }
+    }while(1);
+}
 int is_timeout(int key)
 {
     if(!key){

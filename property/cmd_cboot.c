@@ -22,26 +22,17 @@ extern int charger_connected(void);
 extern int alarm_triggered(void);
 extern void CHG_TurnOn (void);
 extern void CHG_ShutDown (void);
+
+int boot_pwr_check(void)
+{
+    static int total_cnt = 0;
+    if(!power_button_pressed())
+      total_cnt ++;
+
+    return total_cnt;
+}
 #define mdelay(_ms) udelay(_ms*1000)
 
-int recheck_power_button(void)
-{
-    int cnt = 0;
-    int ret = 0;
-    do{
-        ret = power_button_pressed();
-        if(ret == 0)
-          cnt++;
-        else
-          return 1;
-
-        if(cnt>4)
-          return 0;
-        else{
-            mdelay(1);
-        }
-    }while(1);
-}
 
 int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
@@ -52,7 +43,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     if(argc > 2)
       goto usage;
 
-    board_gpio_init();
+    boot_pwr_check();
     CHG_ShutDown();
     if(charger_connected()){
         mdelay(10);
@@ -65,8 +56,10 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
               ;
         }
     }
-
+    
+    boot_pwr_check();
     board_keypad_init();
+    boot_pwr_check();
 
     unsigned check_reboot_mode(void);
     unsigned rst_mode= check_reboot_mode();
@@ -95,7 +88,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     }
 
     //find the power up trigger
-    if(!recheck_power_button()){
+    if(boot_pwr_check() >= get_pwr_key_cnt()){
         DBG("%s: power button press\n", __FUNCTION__);
 
         //go on to check other keys

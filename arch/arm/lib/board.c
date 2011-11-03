@@ -111,6 +111,7 @@ void blue_LED_on(void) __attribute__((weak, alias("__blue_LED_on")));
 void inline __blue_LED_off(void) {}
 void blue_LED_off(void) __attribute__((weak, alias("__blue_LED_off")));
 
+extern int boot_pwr_check(void);
 /************************************************************************
  * Init Utilities							*
  ************************************************************************
@@ -445,21 +446,6 @@ static char *failed = "*** failed ***\n";
  ************************************************************************
  */
 
-extern void ADI_init (void);
-extern int LDO_Init(void);
-
-#include <asm/arch/regs_ana.h>
-#include <asm/arch/adi_hal_internal.h>
-
-#define PIN_CTL_REG 0x8C000000
-static void chip_init(void)
-{
-    ANA_REG_SET(ANA_ADIE_CHIP_ID,0);
-    /* setup pins configration when LDO shutdown*/
-    //__raw_writel(0x1fff00, PIN_CTL_REG);
-     *(volatile unsigned int *)PIN_CTL_REG = 0x1fff00;
-}
-
 void board_init_r (gd_t *id, ulong dest_addr)
 {
 	char *s;
@@ -477,6 +463,8 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	monitor_flash_len = _bss_start_ofs;
 	debug ("monitor flash len: %08lX\n", monitor_flash_len);
 	board_init();	/* Setup chipselects */
+
+    boot_pwr_check();
 
 #ifdef CONFIG_SERIAL_MULTI
 	serial_initialize();
@@ -500,6 +488,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 #ifdef SPRD_EVM_TAG_ON
 		SPRD_EVM_TAG(5);
 #endif
+    boot_pwr_check();
 
 #if !defined(CONFIG_SYS_NO_FLASH)
 	puts ("FLASH: ");
@@ -527,11 +516,13 @@ void board_init_r (gd_t *id, ulong dest_addr)
 		hang ();
 	}
 #endif
+    boot_pwr_check();
 
 #if defined(CONFIG_CMD_NAND)
 	puts ("NAND:  ");
 	nand_init();		/* go init the NAND */
 #endif
+    boot_pwr_check();
 #ifdef SPRD_EVM_TAG_ON
 		SPRD_EVM_TAG(6);
 #endif
@@ -552,6 +543,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 
 	/* initialize environment */
 	env_relocate ();
+    boot_pwr_check();
 
 #ifdef CONFIG_VFD
 	/* must do this after the framebuffer is allocated */
@@ -562,8 +554,10 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	gd->bd->bi_ip_addr = getenv_IPaddr ("ipaddr");
 
 	stdio_init ();	/* get the devices list going. */
+    boot_pwr_check();
 
 	jumptable_init ();
+    boot_pwr_check();
 
 #if defined(CONFIG_API)
 	/* Initialize API */
@@ -573,6 +567,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
     setenv("splashimage", fake);
 
 	console_init_r ();	/* fully init console as a device */
+    boot_pwr_check();
 
 #if defined(CONFIG_ARCH_MISC_INIT)
 	/* miscellaneous arch dependent initialisations */
@@ -587,6 +582,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	interrupt_init ();
 	/* enable exceptions */
 	enable_interrupts ();
+    boot_pwr_check();
 
 	/* Perform network card initialisation if necessary */
 #if defined(CONFIG_DRIVER_SMC91111) || defined (CONFIG_DRIVER_LAN91C96)
@@ -607,9 +603,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 		copy_filename (BootFile, s, sizeof (BootFile));
 	}
 #endif
-	ADI_init();
-	chip_init();
-	LDO_Init();
+    boot_pwr_check();
 	//usb_eth_initialize(NULL);
 #ifdef BOARD_LATE_INIT
 	board_late_init ();
@@ -633,6 +627,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 #ifdef CONFIG_POST
 	post_run (NULL, POST_RAM | post_bootmode_get(0));
 #endif
+    boot_pwr_check();
 
 #if defined(CONFIG_PRAM) || defined(CONFIG_LOGBUFFER)
 	/*
@@ -668,6 +663,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 		SPRD_EVM_TAG(11);
 #endif
     extern int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]);
+    boot_pwr_check();
 
     do_cboot(NULL, 0, 1, NULL);
 	/* main_loop() can return to retry autoboot, if so just run it again. */
