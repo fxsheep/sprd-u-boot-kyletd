@@ -118,9 +118,8 @@ static inline int BITRATE(struct usb_gadget *g)
  * Thanks to NetChip Technologies for donating this product ID.
  * It's for devices with only CDC Ethernet configurations.
  */
-#define FASTBOOT_VENDOR_NUM		0x0BB4	/* NetChip */
-//#define FASTBOOT_VENDOR_NUM		0x18D1	/* NetChip */
-#define FASTBOOT_PRODUCT_NUM		0x0FFF	/* Linux-USB Ethernet Gadget */
+#define FASTBOOT_VENDOR_NUM		0x18D1	/* Goolge VID */
+#define FASTBOOT_PRODUCT_NUM		0x0FFF	/* Fastboot Product ID */
 //#define FASTBOOT_PRODUCT_NUM		0x0C02	/* Linux-USB Ethernet Gadget */
 
 
@@ -137,8 +136,6 @@ static char *iManufacturer = "Spreadtrum";
 
 static char *iProduct;
 static char *iSerialNumber = "20080823";
-static char dev_addr[18];
-static char host_addr[18];
 
 /*-------------------------------------------------------------------------*/
 
@@ -965,6 +962,7 @@ static struct usb_gadget_driver fastboot_driver = {
 #define KERNEL_ADDR	(BASE_ADDR + 0x00800000)
 #define RAMDISK_ADDR	(BASE_ADDR + 0x01000000)
 //(BASE_ADDR + 0x02000000)
+
 extern int fastboot_init(void *base, unsigned size, struct usb_ep * in, struct usb_ep *out);
 
 int usb_fastboot_initialize(void)

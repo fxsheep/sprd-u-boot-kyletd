@@ -140,8 +140,8 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.host_ls_low_power_phy_clk = -1,
 	.enable_dynamic_fifo = -1,
 	.data_fifo_size = -1,
-	.dev_rx_fifo_size = -1,
-	.dev_nperio_tx_fifo_size = -1,
+	.dev_rx_fifo_size = 0x114,
+	.dev_nperio_tx_fifo_size = 0x10,
 	.dev_perio_tx_fifo_size = {
 				   /* dev_perio_tx_fifo_size_1 */
 				   -1,
@@ -178,12 +178,12 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.en_multiple_tx_fifo = -1,
 	.dev_tx_fifo_size = {
 			     /* dev_tx_fifo_size */
-			     -1,
-			     -1,
-			     -1,
-			     -1,
-			     -1,
-			     -1,
+			     0x80,
+			     0x80,
+			     0x80,
+			     0x80,
+			     0x80,
+			     0x80,
 			     -1,
 			     -1,
 			     -1,
@@ -559,7 +559,7 @@ static int dwc_otg_driver_remove(void)
 	return 0;
 }
 
-void dwc_power_on(void);
+void udc_power_on(void);
 #define USB_PHYS            0x20300000
 /**
  * This function is called when an lm_device is bound to a
@@ -768,7 +768,7 @@ int dwc_otg_driver_init(void)
 	       DWC_DRIVER_VERSION);
 	dwc_debug("Working version %s\n", "No 007 - 10/24/2007");
 
-	dwc_power_on();
+	udc_power_on();
 	
 	//retval = platform_driver_probe(&dwc_otg_driver, dwc_otg_driver_probe);
 	retval = dwc_otg_driver_probe();

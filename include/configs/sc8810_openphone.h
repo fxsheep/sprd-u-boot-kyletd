@@ -21,8 +21,8 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 //only used in fdl2 .in uart download, the debug infors  from  serial will break the download process.
-#define CONFIG_FDL2_PRINT	0
-#define BOOT_NATIVE_LINUX (0)
+#define CONFIG_FDL2_PRINT  0	
+#define BOOT_NATIVE_LINUX (1)
 
 #define CONFIG_SILENT_CONSOLE
 #define CONFIG_GPIOLIB 1

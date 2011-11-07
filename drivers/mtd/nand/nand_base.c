@@ -631,6 +631,7 @@ static void nand_command_lp(struct mtd_info *mtd, unsigned int command,
 			if (chip->options & NAND_BUSWIDTH_16)
 				column >>= 1;
 #ifdef CONFIG_MTD_NAND_SPRD
+]
 			chip->cmd_ctrl(mtd, column, ctrl);
 #else
 			chip->cmd_ctrl(mtd, column, ctrl);

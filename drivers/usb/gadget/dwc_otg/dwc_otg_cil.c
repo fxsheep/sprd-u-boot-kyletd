@@ -3635,7 +3635,8 @@ void dwc_otg_core_reset(dwc_otg_core_if_t * core_if)
 	while (greset.b.csftrst == 1);
 
 	/* Wait for 3 PHY Clocks */
-	dwc_mdelay(100);
+	/* orignal 100ms is too long, change to 5ms, sword */
+	dwc_mdelay(5);
 }
 
 uint8_t dwc_otg_is_device_mode(dwc_otg_core_if_t * _core_if)

@@ -9,10 +9,13 @@ void fastboot_mode(void);
 void alarm_mode(void);
 void calibration_detect(int key);
 void engtest_mode(void);
+void sleep_mode(void);
 
 #define RECOVERY_MODE   0x77665502
 #define FASTBOOT_MODE   0x77665500
 #define NORMAL_MODE   0x77665503
+#define ALARM_MODE   0x77665504
+#define SLEEP_MODE   0x77665505
 
 #define BOOT_NORAML 0xf1
 #define BOOT_FASTBOOT 0xf2

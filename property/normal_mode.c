@@ -211,7 +211,7 @@ static int start_linux()
 
 void vlx_nand_boot(char * kernel_pname, char * cmdline)
 {
-    	boot_img_hdr *hdr = (void *)raw_header;
+   boot_img_hdr *hdr = (void *)raw_header;
 	struct mtd_info *nand;
 	struct mtd_device *dev;
 	struct part_info *part;
@@ -236,7 +236,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	ret = mtdparts_init();
 	if (ret != 0){
 		printf("mtdparts init error %d\n", ret);
-		return;
+		//return;
 	}
 
 #ifdef CONFIG_SPLASH_SCREEN 
@@ -245,10 +245,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	ret = find_dev_and_part(SPLASH_PART, &dev, &pnum, &part);
 	if(ret){
 		printf("No partition named %s\n", SPLASH_PART);
-		return;
+		//return;
 	}else if(dev->id->type != MTD_DEV_TYPE_NAND){
 		printf("Partition %s not a NAND device\n", SPLASH_PART);
-		return;
+		//return;
 	}
 
 	off=part->offset;
@@ -258,12 +258,12 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
     char * bmp_img = malloc(size);
     if(!bmp_img){
         printf("not enough memory for splash image\n");
-        return;
+        //return;
     }
 	ret = nand_read_offset_ret(nand, off, &size, (void *)bmp_img, &off);
 	if(ret != 0){
 		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
-		return;
+		//return;
 	}
     extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
     extern void lcd_display(void);
@@ -275,6 +275,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 
     set_vibrator(0);
 
+#if !(BOOT_NATIVE_LINUX)
 	/*int good_blknum, bad_blknum;
 	nand_block_info(nand, &good_blknum, &bad_blknum);
 	printf("good is %d  bad is %d\n", good_blknum, bad_blknum);*/
@@ -466,8 +467,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	printf("Reading runtimenv to 0x%08x\n", RUNTIMENV_ADR);
 	/* mtd nv */
 
-#if !(BOOT_NATIVE_LINUX)
-
 	/* runtimenv */
     	cmd_yaffs_mount(runtimenvpoint);
 	ret = cmd_yaffs_ls_chk(runtimenvfilename);
@@ -502,10 +501,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	ret = find_dev_and_part(DSP_PART, &dev, &pnum, &part);
 	if (ret) {
 		printf("No partition named %s\n", DSP_PART);
-		return;
+		//return;
 	} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
 		printf("Partition %s not a NAND device\n", DSP_PART);
-		return;
+		//return;
 	}
 
 	off = part->offset;
@@ -514,12 +513,12 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	size = (DSP_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
 	if(size <= 0) {
 		printf("dsp image should not be zero\n");
-		return;
+		//return;
 	}
 	ret = nand_read_offset_ret(nand, off, &size, (void*)DSP_ADR, &off);
 	if(ret != 0) {
 		printf("dsp nand read error %d\n", ret);
-		return;
+		//return;
 	}
 #endif
 #endif
@@ -532,10 +531,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	ret = find_dev_and_part(kernel_pname, &dev, &pnum, &part);
 	if(ret){
 		printf("No partition named %s\n", kernel_pname);
-		return;
+		//return;
 	}else if(dev->id->type != MTD_DEV_TYPE_NAND){
 		printf("Partition %s not a NAND device\n", kernel_pname);
-		return;
+		//return;
 	}
 
 	off=part->offset;
@@ -545,37 +544,38 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	ret = nand_read_offset_ret(nand, off, &size, (void *)hdr, &off);
 	if(ret != 0){
 		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
-		return;
+		//return;
 	}
 
 	if(memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)){
-		printf("bad boot image header\n");
-		return;
+		printf("bad boot image header, give up read!!!!\n");
+		//return;
 	}
-
-	//read kernel image
-	size = (hdr->kernel_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-	if(size <=0){
-		printf("kernel image should not be zero\n");
-		return;
+	else
+	{
+		//read kernel image
+		size = (hdr->kernel_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+		if(size <=0){
+			printf("kernel image should not be zero\n");
+			//return;
+		}
+		ret = nand_read_offset_ret(nand, off, &size, (void *)KERNEL_ADR, &off);
+		if(ret != 0){
+			printf("kernel nand read error %d\n", ret);
+			//return;
+		}
+		//read ramdisk image
+		size = (hdr->ramdisk_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+		if(size<0){
+			printf("ramdisk size error\n");
+			//return;
+		}
+		ret = nand_read_offset_ret(nand, off, &size, (void *)RAMDISK_ADR, &off);
+		if(ret != 0){
+			printf("ramdisk nand read error %d\n", ret);
+			//return;
+		}
 	}
-	ret = nand_read_offset_ret(nand, off, &size, (void *)KERNEL_ADR, &off);
-	if(ret != 0){
-		printf("kernel nand read error %d\n", ret);
-		return;
-	}
-	//read ramdisk image
-	size = (hdr->ramdisk_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-	if(size<0){
-		printf("ramdisk size error\n");
-		return;
-	}
-	ret = nand_read_offset_ret(nand, off, &size, (void *)RAMDISK_ADR, &off);
-	if(ret != 0){
-		printf("ramdisk nand read error %d\n", ret);
-		return;
-	}
-	//array_value((unsigned char *)KERNEL_ADR, KERNEL_SIZE);
 #endif
 
 #if !(BOOT_NATIVE_LINUX)
@@ -633,6 +633,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		return;
 	}
 #endif
+
 	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
     //check caliberation mode
     int str_len;
