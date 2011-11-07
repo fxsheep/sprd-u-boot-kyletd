@@ -43,7 +43,7 @@ FDL1_SOBJS_LIST = init.o
 COM_COBJS	= dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o mcu_command.o usb_boot.o drv_usb.o virtual_com.o
 COM_OBJS = $(addprefix $(COM_PATH)/src/,$(COM_COBJS))
 
-FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o parsemtdparts.o rtc-sprd.o
+FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o parsemtdparts.o
 FDL1_COBJS_LIST = board_init.o chip_init.o fdl_command.o fdl_main.o fdl_stdio.o sdram_init.o sdram_prod.o
 FDL1_COBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_COBJS_LIST))
 FDL1_SOBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_SOBJS_LIST))
@@ -60,7 +60,7 @@ COMMON_OBJ = dlmalloc.o idh_layout.o
 COMMON_LIB = $(addprefix $(TOPDIR)/common/,$(COMMON_OBJ))
 DRIVERS_LIB = $(TOPDIR)/drivers/serial/serial_sc8800x.o
 ARCH_LIB = 
-CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_cfg.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/boot_mode.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_hal.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/adi_drv.o $(TOPDIR)/nand_spl/board/$(BOARDDIR)/mmu.o $(TOPDIR)/nand_spl/board/$(BOARDDIR)/mmu_asm.o
+CPU_LIB = $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/timer.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_cfg.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/chip_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/boot_mode.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_hal.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/watchdog_phy_v3.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/adi_drv.o $(TOPDIR)/nand_spl/board/$(BOARDDIR)/mmu.o $(TOPDIR)/nand_spl/board/$(BOARDDIR)/mmu_asm.o $(TOPDIR)/arch/arm/cpu/arm926ejs/sc8800g/rtc-sprd.o
 
 GENERIC_LIB = $(TOPDIR)/lib/libgeneric.o
 UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(YAFFS2_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB) $(ARCH_LIB)

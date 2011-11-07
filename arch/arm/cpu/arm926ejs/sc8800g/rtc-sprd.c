@@ -78,7 +78,7 @@ static inline unsigned get_day(void)
     return day;
 }
 
-static inline unsigned long sprd_rtc_get_sec(void)
+unsigned long sprd_rtc_get_sec(void)
 {
 	unsigned sec, min, hour, day;
 
@@ -137,7 +137,7 @@ static inline void sprd_rtc_set_sec(unsigned long secs)
 	return;
 }
 
-static inline unsigned long sprd_rtc_get_alarm_sec(void)
+unsigned long sprd_rtc_get_alarm_sec(void)
 {
 	unsigned sec, min, hour, day;
 	day = ANA_REG_GET(ANA_RTC_DAY_ALM) & RTC_DAY_MASK;
@@ -170,7 +170,6 @@ static inline void sprd_rtc_set_alarm_sec(unsigned long secs)
 int sprd_clean_rtc(void)
 {
 	int err;
-    struct rtc_device * rtc = NULL;
 	ANA_REG_AND(ANA_RTC_INT_EN, ~(RTC_INT_ALL_MSK)); // disable all interrupt
 	ANA_REG_OR(ANA_AGEN, AGEN_RTC_EN | AGEN_RTC_RTC_EN); //enable rtc device
 	CLEAR_RTC_INT(RTC_INT_ALL_MSK);
@@ -180,4 +179,8 @@ int sprd_clean_rtc(void)
     printf("now alarm sec %lu\n", sprd_rtc_get_alarm_sec());
 
 	return 0;
+}
+void sprd_rtc_init(void)
+{
+	ANA_REG_OR(ANA_AGEN, AGEN_RTC_EN | AGEN_RTC_RTC_EN); //enable rtc device
 }
