@@ -17,3 +17,8 @@ unsigned int get_pwr_key_cnt(void)
 {
     return PWR_KEY_DETECT_CNT;
 }
+
+unsigned int get_alarm_lead_set(void)
+{
+    return ALARM_LEAD_SET_MS;
+}

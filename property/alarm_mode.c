@@ -15,6 +15,7 @@
 extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
+extern unsigned int get_alarm_lead_set(void);
 void alarm_mode(void)
 {
     printf("%s\n", __func__);
@@ -32,6 +33,7 @@ int alarm_flag_check(void)
     char time_buf[20]={0};
     long time = 0;
     unsigned long now_rtc = 0;
+    int time_lead = 0;
 
     cmd_yaffs_mount(file_partition);
     ret = cmd_yaffs_ls_chk(file_name);
@@ -46,7 +48,9 @@ int alarm_flag_check(void)
         sprd_rtc_init();
         now_rtc = sprd_rtc_get_sec();
         printf("now rtc %lu\n", now_rtc);
-        if((time - 120 < now_rtc) && (time > now_rtc + 110))
+        time = time - now_rtc;
+        time_lead = get_alarm_lead_set();
+        if((time < time_lead) && (time > time_lead -10))
           ret = 1;
         else
           ret = 0;
