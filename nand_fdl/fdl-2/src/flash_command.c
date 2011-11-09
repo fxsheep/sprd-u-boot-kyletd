@@ -14,6 +14,7 @@
 #include <nand.h>
 #include <linux/mtd/nand.h>
 #include <jffs2/jffs2.h>
+#include <malloc.h>
 
 extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
@@ -21,8 +22,9 @@ extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
 
-#define FIXNV_SIZE			(64 * 1024)
+#define FIXNV_SIZE		(64 * 1024)
 #define PHASECHECK_SIZE		(3 * 1024)
+#define TRANS_CODE_SIZE		(MAX_PKT_SIZE - (2 * 1024))
 
 typedef struct _DL_FILE_STATUS
 {
@@ -50,11 +52,21 @@ unsigned long FDL2_GetRecvDataSize (void)
 struct real_mtd_partition phy_partition;
 static unsigned int is_nbl_write;
 static unsigned int is_phasecheck_write;
-#define ADDR_MASK				0x80000000
 static unsigned int g_NBLFixBufDataSize = 0;
 static unsigned char g_FixNBLBuf[0x8000];
 static unsigned int g_PhasecheckBUFDataSize = 0;
 static unsigned char g_PhasecheckBUF[0x2000];
+#ifdef  TRANS_CODE_SIZE
+#define min(A,B)		(((A) < (B)) ? (A) : (B))
+#define PAGE_SIZE		(2048)
+#define PAGE_OOB		(64)
+#define	DATA_BUFFER_SIZE	(TRANS_CODE_SIZE * 2)
+#define YAFFS_BUFFER_SIZE	(DATA_BUFFER_SIZE + (DATA_BUFFER_SIZE / PAGE_SIZE) * PAGE_OOB)
+static unsigned long g_BigSize = 0;
+static unsigned long code_yaffs_buflen	= 0;
+static unsigned long code_yaffs_onewrite = 0;
+static unsigned char *g_BigBUF = NULL;
+#endif
 typedef struct _CUSTOM2LOG
 {
     unsigned long   custom;
@@ -250,6 +262,27 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 		memset(g_PhasecheckBUF, 0xff, 0x2000);
 	}
 
+#ifdef TRANS_CODE_SIZE
+	if (phy_partition.yaffs == 0) {
+		code_yaffs_buflen = DATA_BUFFER_SIZE;
+		code_yaffs_onewrite = PAGE_SIZE;
+	} else if (phy_partition.yaffs == 1) {
+		code_yaffs_buflen = YAFFS_BUFFER_SIZE;
+		code_yaffs_onewrite = PAGE_SIZE + PAGE_OOB;
+	}
+
+	g_BigSize = 0;
+	if (g_BigBUF == NULL)
+		g_BigBUF = (unsigned char *)malloc(YAFFS_BUFFER_SIZE);
+
+	if (g_BigBUF == NULL) {
+		printf("malloc is wrong : %d\n", YAFFS_BUFFER_SIZE);
+		ret = NAND_SYSTEM_ERROR;		
+		break;
+	}
+	memset(g_BigBUF, 0xff, YAFFS_BUFFER_SIZE);
+#endif
+
         g_status.total_size  = size;
         g_status.recv_size   = 0;
         g_prevstatus = NAND_SUCCESS;
@@ -368,7 +401,8 @@ int NandWriteAndCheck(unsigned int size, unsigned char *buf)
 
 int FDL2_DataMidst (PACKET_T *packet, void *arg)
 {
-    unsigned short  size;
+    	unsigned long size;
+	unsigned long ii;
 
     /* The previous download step failed. */
     if (NAND_SUCCESS != g_prevstatus)
@@ -396,7 +430,32 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
         	g_PhasecheckBUFDataSize += size;
 		g_prevstatus = NAND_SUCCESS;
 	} else {
+#ifdef TRANS_CODE_SIZE
+		//printf("g_BigSize = %d  buflen = %d, onewrite = %d  size = %d\n", g_BigSize, code_yaffs_buflen, code_yaffs_onewrite, size);
+		memcpy((g_BigBUF + g_BigSize), (char *)(packet->packet_body.content), size);
+		g_BigSize += size;
+
+		if (g_BigSize < code_yaffs_buflen) {
+			//printf("continue to big buffer\n");
+			g_prevstatus = NAND_SUCCESS;
+		} else {
+			//printf("big buffer is full. g_BigSize = %d\n", g_BigSize);
+			for (ii = 0; ii < g_BigSize; ii += code_yaffs_onewrite) {
+				//printf(".");
+				g_prevstatus = nand_write_fdl( (unsigned int) code_yaffs_onewrite, (unsigned char *) (g_BigBUF + ii));
+				if (NAND_SUCCESS != g_prevstatus) {
+					//printf("\n");
+					printf("big buffer write error.\n");				
+					break;
+				}
+			}
+			//printf("\n");
+			g_BigSize = 0;
+			memset(g_BigBUF, 0xff, YAFFS_BUFFER_SIZE);
+		}
+#else
         	g_prevstatus = nand_write_fdl( (unsigned int) size, (unsigned char *) (packet->packet_body.content));
+#endif
 	}
 
         if (NAND_SUCCESS == g_prevstatus)
@@ -427,7 +486,7 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
 int FDL2_DataEnd (PACKET_T *packet, void *arg)
 {
 	unsigned long pos, size, ret;
-    	unsigned long i, fix_nv_size, fix_nv_checksum;
+    	unsigned long i, fix_nv_size, fix_nv_checksum, ii, realii;
 		
     	if (CHECKSUM_OTHER_DATA != g_checksum) {
 		/* It's fixnv data */
@@ -496,6 +555,25 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		cmd_yaffs_umount(productinfopoint);
 		g_prevstatus = NAND_SUCCESS;
     	}
+#ifdef	TRANS_CODE_SIZE
+	else {
+		//printf("data end, g_BigSize = %d\n", g_BigSize);
+		ii = 0;
+		while (ii < g_BigSize) {
+			realii = min(g_BigSize - ii, code_yaffs_onewrite);
+			//printf(".");
+			g_prevstatus = nand_write_fdl( (unsigned int) realii, (unsigned char *) (g_BigBUF + ii));
+			if (NAND_SUCCESS != g_prevstatus) {
+				//printf("\n");
+				printf("big buffer write error.\n");				
+				break;
+			}
+			ii += realii;
+		}
+		//printf("\n");
+		g_BigSize = 0;
+	}
+#endif
 
     	if (NAND_SUCCESS != g_prevstatus) {
         	FDL2_SendRep (g_prevstatus);

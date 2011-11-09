@@ -9,7 +9,7 @@
 #include "virtual_com.h"
 #include "fdl_channel.h"
 
-//#define	MODIFY_REC_DATA	1
+#define	MODIFY_REC_DATA	1
 
 extern void FDL_SendAckPacket (cmd_pkt_type pkt_type);
 
@@ -143,7 +143,7 @@ void FDL_PacketDoIdle (void)
         {
             packet_receiving = NULL;
             FDL_FreePacket (packet_ptr);
-            sio_trace ("data_size error");
+            sio_trace ("data_size error : datasize = %d  MAX_PKT_SIZE = %d\n", packet_ptr->data_size, MAX_PKT_SIZE);
 		printf("\n\n\n%s %s %d\n\n\n", __FILE__, __FUNCTION__, __LINE__);
 		printf("data_size error");
 		printf("\n\n\n%s %s %d\n\n\n", __FILE__, __FUNCTION__, __LINE__);

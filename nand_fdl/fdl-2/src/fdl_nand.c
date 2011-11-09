@@ -26,9 +26,6 @@ typedef struct {
 		yaffs_ECCOther ecc;
 } yaffs_PackedTags2;
 
-#define ADDR_MASK				0x80000000
-#define SYSTEM_WRITE_MASK (0xC0000000)
-
 static unsigned int nand_write_size ;
 static unsigned int nand_write_addr;
 static unsigned int cur_write_pos;
@@ -364,9 +361,6 @@ int nand_start_write(struct real_mtd_partition *phypart, unsigned int size)
 	  return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 	//printf("nand->size = 0x%016Lx\n", (unsigned long long)nand->size);
-#ifdef FDL2_DEBUG
-	printf("function: %s write addr: 0x%x erasesize: 0x%x\n", __FUNCTION__, addr, nand->erasesize);
-#endif
 	//printf("addr = 0x%08x  size = 0x%08x  flag = %d  part_size = 0x%08x\n", phypart->offset, size, phypart->yaffs, phypart->size);
 
 		is_system_write = phypart->yaffs;
