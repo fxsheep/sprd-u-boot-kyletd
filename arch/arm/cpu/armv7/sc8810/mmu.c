@@ -50,10 +50,11 @@ const uint32 const_MMUTableStartAddrRemap1 = 0x31600000 - 16*1024;//remap = 1,sd
 #define MMU_TABLE_ADDR         ((const_MMUTableStartAddr) & 0xFFFFC000 )
 #define MMU_TABLE_ADDR_REMAP   ((const_MMUTableStartAddrRemap1) & 0xFFFFC000 )
 
+
 // MMU page table starting address to be referred in mmu_asm.s
 unsigned int *g_mmu_page_table;
 
-void MMU_Init (void)
+void MMU_Init (unsigned pageBaseAddr)
 {
     unsigned int *page_table;
     uint32 remap;
@@ -65,6 +66,17 @@ void MMU_Init (void)
     remap = * (volatile uint32 *) 0x20900218;
 #endif
 
+#ifdef CONFIG_SC8810
+
+    if (pageBaseAddr != 0 && (pageBaseAddr & (~0xFFFFC000) == 0) )
+    {
+	g_mmu_page_table = pageBaseAddr;
+    }
+    else
+    {
+    	g_mmu_page_table = (unsigned int *) MMU_TABLE_ADDR;
+    }
+#else
     if (remap&0x01)
     {
         g_mmu_page_table = (unsigned int *) MMU_TABLE_ADDR_REMAP;
@@ -73,18 +85,26 @@ void MMU_Init (void)
     {
         g_mmu_page_table = (unsigned int *) MMU_TABLE_ADDR;
     }
+#endif
     // 15Mb physical addr for page table
     page_table = g_mmu_page_table;
 
     // Create page table 1mb entries
     for (i = 0; i < 0x1000; i++)
     {
+#ifdef CONFIG_SC8810 		  
+       if (i < 0x100)
+       {
+       		page_table[i] = (MMU_SD_CONST|MMU_AP_B11|MMU_C_BIT |MMU_B_BIT) + (i << 20);
+       }
+#else	
         // SDRAM -> CB (write back):0x0-0x0FFFFFFF
         if (i < 0xA)
         {
-            page_table[i] = (MMU_SD_CONST|MMU_AP_B11|MMU_C_BIT|MMU_B_BIT) + (i << 20);
+            page_table[i] = (MMU_SD_CONST|MMU_AP_B11|MMU_C_BIT |MMU_B_BIT) + (i << 20);
         }
-        //else if (( i>=0x12 )&&(i <= 0x15)){
+		
+//else if (( i>=0x12 )&&(i <= 0x15)){
         //  page_table[i] = (MMU_SD_CONST|MMU_AP_B11) + (i << 20);
         //}
         else if ( (i>0x14) && (i < 0x100))
@@ -95,6 +115,7 @@ void MMU_Init (void)
         //else if ((i >= 0x100) && (i < 0x200))
         //  page_table[i] = 0x00000C1E + (i << 20);
         // Internal RAM Memeory: CB
+#endif        
         else if (( (i >= 0x300) && (i <= 0x400)) )//  || (mustSetIramCached == TRUE && i == 0x400) )
         {
             page_table[i] = (MMU_SD_CONST|MMU_AP_B11|MMU_C_BIT|MMU_B_BIT) + (i << 20);

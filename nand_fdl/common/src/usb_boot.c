@@ -46,7 +46,7 @@ extern   "C"
 **---------------------------------------------------------------------------*/
 
 /*--------------------------- Local Data ------------------------------------*/
-LOCAL __align (4) uint8 s_usb_snd_buff[USB_BUFF_SIZE];
+LOCAL __align(32) uint8 s_usb_snd_buff[USB_BUFF_SIZE];
 /*--------------------------- Global Data -----------------------------------*/
 /*--------------------------- External Data ---------------------------------*/
 /*----------------------------------------------------------------------------*
@@ -135,7 +135,7 @@ PUBLIC void usb_ldo_enable (BOOLEAN is_usb_ldo_enabled)
 void usb_write (unsigned char *write_buf,unsigned int write_len)
 {
     memcpy (s_usb_snd_buff, write_buf, write_len);
-    USB_EPxSendData (USB_EP5 , (unsigned int *) s_usb_snd_buff,write_len);
+    USB_EPxSendData (USB_EP5 , (unsigned int *) s_usb_snd_buff, write_len);
 }
 extern char VCOM_GetChar (void);
 extern int VCOM_GetSingleChar (void);

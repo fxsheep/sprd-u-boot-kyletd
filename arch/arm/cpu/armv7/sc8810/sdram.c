@@ -1609,25 +1609,19 @@ void sc8810_ram_init(void)
 	}
 
 }
-void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv)
+void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv, uint32 dqs_drv)
 {
 	uint32 i = 0;
+
 	REG32(PINMAP_REG_BASE + 0x27C) = clk_drv;
 	REG32(PINMAP_REG_BASE + 0x280) = clk_drv;
+
 	for(i = 0; i < 15; i++)
 	{
 		REG32(PINMAP_REG_BASE + 0x19c + i * 4) = ctl_drv;
 	}
 	REG32(PINMAP_REG_BASE + 0x1d8) = ctl_drv;
 
-	REG32(PINMAP_REG_BASE + 0x1fc) = ctl_drv;
-	REG32(PINMAP_REG_BASE + 0x200) = ctl_drv;	
-	REG32(PINMAP_REG_BASE + 0x224) = ctl_drv;
-	REG32(PINMAP_REG_BASE + 0x228) = ctl_drv;	
-	REG32(PINMAP_REG_BASE + 0x24c) = ctl_drv;
-	REG32(PINMAP_REG_BASE + 0x250) = ctl_drv;	
-	REG32(PINMAP_REG_BASE + 0x274) = ctl_drv;
-	REG32(PINMAP_REG_BASE + 0x278) = ctl_drv;
 	for(i = 0; i < 10; i++)
 	{
 		REG32(PINMAP_REG_BASE + 0x284 + i * 4) = ctl_drv;
@@ -1640,6 +1634,18 @@ void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv)
 		REG32(PINMAP_REG_BASE + 0X22C + i * 4) = dat_drv;
 		REG32(PINMAP_REG_BASE + 0X254 + i * 4) = dat_drv;
 	}
+
+	//dqs
+	REG32(PINMAP_REG_BASE + 0x200 + i * 4) = dqs_drv;
+	REG32(PINMAP_REG_BASE + 0X228 + i * 4) = dqs_drv;
+	REG32(PINMAP_REG_BASE + 0X250 + i * 4) = dqs_drv;
+	REG32(PINMAP_REG_BASE + 0X278 + i * 4) = dqs_drv;
+
+	//dqm	
+	REG32(PINMAP_REG_BASE + 0X1fc + i * 4) = dat_drv;
+	REG32(PINMAP_REG_BASE + 0X224 + i * 4) = dat_drv;
+	REG32(PINMAP_REG_BASE + 0X24c + i * 4) = dat_drv;
+	REG32(PINMAP_REG_BASE + 0X274 + i * 4) = dat_drv;
 }
 void ddr_init()
 {
@@ -1678,71 +1684,58 @@ void ddr_init()
 	REG32(0x2000014C) = 0x018;
 
 	REG32(0x20000190) = 0x40010000;
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 	
 	REG32(0x20000190) = 0x40020000;
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 
 	REG32(0x20000190) = 0x40020000;
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 
 	REG32(0x20000190) = 0x40040031;
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 
 	REG32(0x20000190) = 0x40048000;
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 
 	REG32(0x20000180) |= BIT_14;
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 
 	REG32(0x20000180) &= ~(0x70);
 	REG32(0x20000180) |= (0x20);
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 	
 	//set row mode = 14
 	REG32(0x20000180) &= ~(0x3);
 	REG32(0x20000180) |= (0x3);
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 	//set cs map to 2G bit
 	REG32(0x20000000) &= ~(0x7);
 	REG32(0x20000000) |= (0x6);
-	for(i =0 ; i < 1000; i++)
+	for(i =0 ; i < 1000; i++);
 	
 	REG32(0x20000024) |=  BIT_6;
 	REG32(0x2000002c) |=  BIT_6;	
+	for (i= 0; i< 1000; i++);
 }
 void sc8810_emc_Init()
 {
-	set_emc_pad(0x200, 0x100,0x00);
+	set_emc_pad(0x200, 0x100, 0x0, 0x100);
+
 	REG32(0x20900224) = (3 << 23) | (3 << 12);
-	REG32(0x20900238) |= (3 << 11);
-	REG32(0x20900224) |= (7 << 4) | (3 << 8) | (3 << 14);
-	REG32(0x20900224) = (7 << 4) | (3 << 8) | (3 << 14);
-	REG32(0x8b00002c) |= (1<<4);
+	REG32(0x20900238) |= (1 << 11);
+	REG32(0x20900224) |= ( 1 | (3 << 4) | (7<< 8)  | (3 << 14));
+	REG32(0x20900224)  =  ( 1 | (3 << 4) | (7 << 8) | (3 << 14));
 
 	ddr_init();
 }
-#if 0
-PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
-{
-    uint32 i = 0;
-	g_emc_clk =  ARM_CLK_48M;
-    //step3, initialize SDRAM init
-    SDRAM_Init (g_emc_clk/2);
-    for (i=0; i<5000; i++) {}
-}
-#else
+
 PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
 	volatile uint32 i = 0;
-	for (i = 0; i < 0xff1; ++i){}
-	
-#if 1//for sc8810,
-	//sc8810_ram_init();
+	for (i = 0; i < 0xff1; ++i);	
 	sc8810_emc_Init();
 	g_ahb_clk = 100000000;
-	for (i=0; i<0xff1; i++) {}
-	return;
-#endif
+	for (i=0; i<0xff1; i++);
 }
-#endif
+

@@ -111,7 +111,7 @@ void Chip_Init (void)
 	SDRAM_Init(80);
 	
 #if defined (NAND_FDL_SC8800H) 
-    MMU_Init();
+    MMU_Init(0);
 #endif
 }
 /**---------------------------------------------------------------------------*

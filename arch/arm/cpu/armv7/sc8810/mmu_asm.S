@@ -1,16 +1,8 @@
 /* ============================================================================
 @
-@ Enable the MMU function
-@
-@ @Liu Jun 2005-07-27
+@ MMU function for armV7
+@ steve.zhan
 @ Spreadtrum Communications Inc.
-@
-@ NOTE:
-@ 1. The ARM9 data cache must be used together with MMU, while the instruction
-@    cache can be used independently.
-@
-@ Related Files:
-@      mmu_c.c          Create the MMU page table
 @
 @ ============================================================================
 */
@@ -27,47 +19,88 @@
 .globl MMU_InvalideDCACHEALL
 .globl MMU_InvalideICACHEALL    
 .globl Dcache_InvalRegion
+.globl Dcache_CleanRegion
+
 
 @============================================================================
 @ Dcache_InvalRegion
 @
 @ PROTOTYPE
-@   void Dcache_InvalRegion(void *addr, unsigned int length)@
+@ void Dcache_InvalRegion(void *addr, unsigned int length)
 @
 @ steve.zhan
 @ DESCRIPTION
-@   Invalidate a memory region in the cache.
+@ Invalid a memory region in the cache.
 @============================================================================
 Dcache_InvalRegion:
-    STMFD sp!, {a1-a2, lr}               @ save lr_USR and non-callee
-    ADD    r1, r0, r1                     @ End address
-    BIC    r0, r0, #0x1f                  @ Align start address
-loop_loop:
-    CMP    r0, r1
-    MCRLT  p15, 0x0, r0, c7, c6, 0x1      @ Invalidate cache line using MVA
-    ADDLT  r0, r0, #0x20                  @ Add a cache line
-    BLT    loop_loop
-    LDMFD sp!, {a1-a2, PC}               @ restore registers    
+    stmfd sp!, {r0-r3, lr}
+@    .word 0xf57ff04f @dsb
+    add r1,r1,r0
+
+    mrc p15, 1, r3, c0, c0, 0
+    and r3, r3, #7
+    mov r2, #16
+    mov r2, r2, lsl r3
     
-MMU_InvalideDCACHEALL:
-    STMFD sp!, {a1, lr}               @ save lr_USR and non-callee
-tcv_a: 
-    MRC p15, 0, r15, c7, c14, 3          @ test clean and invalidate
-    BNE tcv_a
+    sub r3, r2, #1
+    tst r0, r3
+    bic r0, r0, r3
+    mcrne p15, 0, r0, c7, c14, 1
+
+    tst r1, r3
+    bic r1, r1, r3
+    mcrne p15, 0, r1, c7, c14, 1
+
+1:
+    mcr p15, 0, r0, c7, c6, 1
+    add r0, r0, r2
+    cmp r0, r1
+    blo 1b
+    .word 0xf57ff04f
+
+    ldmfd sp!, {r0-r3, lr}
     
-    MOV     r0, #0
-    MCR     p15, 0, r0, c8, c7, 0        @flush i+d-TLBs    
+@============================================================================
+@ Dcache_CleanRegion
+@
+@ PROTOTYPE
+@ void Dcache_CleanRegion(void *addr, unsigned int length)
+@
+@ steve.zhan
+@ DESCRIPTION
+@ clean a memory region in the cache.
+@============================================================================
+Dcache_CleanRegion:
+	stmfd sp!, {r0-r3, lr}
+@	.word 0xf57ff04f @dsb
 
-    LDMFD sp!, {a1, PC}               @ restore registers    
+	add r1,r1,r0
+	mrc p15, 1, r3, c0, c0, 0
+	and r3, r3, #7
+	mov r2, #16
+	mov r2, r2, lsl r3
 
+	sub r3, r2, #1
+	bic r0, r0, r3
 
+1:
+	mcr p15, 0, r0, c7, c10, 1 @p15, 0, r0, c7, c14, 1  is clean and invalid 
+	add r0, r0, r2
+	cmp r0, r1
+	blo 1b
+
+	.word 0xf57ff04f @dsb
+	.word 0xf57ff05f @dmb
+	ldmfd sp!, {r0-r3,pc}	
+
+ 
 MMU_InvalideICACHEALL:
     STMFD   sp!, {a1-a4, lr}            @ save lr_USR and non-callee
     
     MOV     r0, #0    
     MCR     p15, 0, r0, c7, c5, 0       @Invalidate(flush)the ICache
     MCR     p15, 0, r0, c8, c5, 0       @flush ITLB only
-    NOP                                 @next few instructions may be via cache.
+    NOP                                               @next few instructions may be via cache.
     NOP
     NOP
     NOP

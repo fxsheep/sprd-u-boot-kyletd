@@ -44,28 +44,21 @@ int main(void)
 	uint32 sigture_address;
 	unsigned int i, j;
 
-#if 0
-	/* while(1); */
-	volatile unsigned int cnt=0;
-	for(i=0;i<10  ;i++)
-	  for(j=0; j<1005528;j++)
-	   cnt++;
-#endif
-	MMU_Init();
-	sigture_address = (uint32)FDL2_signature;
+  	MMU_Init(0);
+ 	sigture_address = (uint32)FDL2_signature;
 
 #if defined(CHIP_ENDIAN_DEFAULT_LITTLE) && defined(CHIP_ENDIAN_BIG)    
-    usb_boot(1);  
+	usb_boot(1);  
 #endif
 
        FDL_PacketInit();
-#ifdef CONFIG_SC8810	   
-	   bss_start_start = _bss_start;
-	   bss_end_end = _bss_end;
 
-	   mem_malloc_init (&mempool[0], 1024*1024);
+#ifdef CONFIG_SC8810	
+	bss_start_start = _bss_start;
+	bss_end_end = _bss_end;
+	mem_malloc_init (&mempool[0], 1024*1024);
 #else
-       mem_malloc_init (_bss_end, CONFIG_SYS_MALLOC_LEN);	   
+	mem_malloc_init (_bss_end, CONFIG_SYS_MALLOC_LEN);	   
 #endif	   
 	   timer_init();
 
