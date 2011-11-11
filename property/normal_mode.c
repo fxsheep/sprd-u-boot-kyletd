@@ -288,7 +288,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	if (ret == (FIXNV_SIZE + 4)) {
 		cmd_yaffs_mread_file(backupfixnvfilename, (unsigned char *)FIXNV_ADR);
 		if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
-	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 			ret = cmd_yaffs_ls_chk(backupfixnvfilename2);
 			if (ret == (FIXNV_SIZE + 4)) {
 				cmd_yaffs_mread_file(backupfixnvfilename2, (unsigned char *)FIXNV_ADR);
@@ -308,7 +308,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 						cmd_yaffs_mread_file(fixnvfilename2, (unsigned char *)FIXNV_ADR);
 						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
 							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
-	}
+					}
 				}
 			} else {
 				/* read fixnv backup */
@@ -319,11 +319,11 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 				}
 				/* read fixnv backup */
-	}
+			}
 			cmd_yaffs_umount(fixnvpoint);
 					/*#########################*/
-	}
-			} else {
+			}
+		} else {
 				cmd_yaffs_umount(backupfixnvpoint);
 				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 	/* fixnv */
@@ -496,7 +496,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	//array_value((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE);
 	////////////////////////////////////////////////////////////////
 	/* DSP_PART */
-#if 1
 	printf("Reading dsp to 0x%08x\n", DSP_ADR);
 	ret = find_dev_and_part(DSP_PART, &dev, &pnum, &part);
 	if (ret) {
@@ -521,9 +520,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 		//return;
 	}
 #endif
-#endif
-	//array_value((unsigned char *)DSP_ADR, DSP_SIZE);
-#if 1
 	////////////////////////////////////////////////////////////////
 	/* KERNEL_PART */
 	printf("Reading kernel to 0x%08x\n", KERNEL_ADR);
@@ -531,10 +527,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	ret = find_dev_and_part(kernel_pname, &dev, &pnum, &part);
 	if(ret){
 		printf("No partition named %s\n", kernel_pname);
-		//return;
 	}else if(dev->id->type != MTD_DEV_TYPE_NAND){
 		printf("Partition %s not a NAND device\n", kernel_pname);
-		//return;
 	}
 
 	off=part->offset;
@@ -544,12 +538,9 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 	ret = nand_read_offset_ret(nand, off, &size, (void *)hdr, &off);
 	if(ret != 0){
 		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
-		//return;
 	}
-
 	if(memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)){
 		printf("bad boot image header, give up read!!!!\n");
-		//return;
 	}
 	else
 	{
@@ -576,7 +567,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline)
 			//return;
 		}
 	}
-#endif
 
 #if !(BOOT_NATIVE_LINUX)
 	////////////////////////////////////////////////////////////////

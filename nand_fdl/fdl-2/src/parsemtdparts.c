@@ -1,5 +1,5 @@
 #include <linux/ctype.h>
-#include <parsemtdparts.h>
+#include "parsemtdparts.h"
 #include <linux/string.h>
 #include <malloc.h>
 
@@ -27,8 +27,8 @@ struct cmdline_mtd_partition {
 	struct mtd_partition *parts;
 };
 
-static struct mtd_partition realpart[MTDPARTITION_MAX];
-static int current_part = MTDPARTITION_MAX;
+static struct real_mtd_partition realpart[MTDPARTITION_MAX];
+static int real_current_part = MTDPARTITION_MAX;
 
 /* the command line passed to mtdpart_setupd() */
 static char *cmdline;
@@ -222,10 +222,16 @@ static struct mtd_partition * newpart(char *s,
 	     parts[this_part].size,
 	     parts[this_part].mask_flags);*/
 	
-	     if (current_part >= 0) {
-		current_part --;
-		realpart[current_part].offset = parts[this_part].offset;
-		realpart[current_part].size = parts[this_part].size;
+	     if (real_current_part >= 0) {
+		real_current_part --;
+		memset(realpart[real_current_part].name, 0, PARTITION_NAME_LEN);
+		strcpy(realpart[real_current_part].name, parts[this_part].name);
+		realpart[real_current_part].offset = parts[this_part].offset;
+		realpart[real_current_part].size = parts[this_part].size;
+		if ((strcmp(realpart[real_current_part].name, "system") == 0) || ((strcmp(realpart[real_current_part].name, "userdata") == 0)))
+			realpart[real_current_part].yaffs = 1;
+		else
+			realpart[real_current_part].yaffs = 0;
 	    } else
 		printf("mtdparts partition is too much\n");
 
@@ -247,7 +253,7 @@ static struct mtd_partition * newpart(char *s,
 static int mtdpart_setup_real(char *s)
 {
 	cmdline_parsed = 1;
-
+	
 	for( ; s != '\0'; )
 	{
 		struct cmdline_mtd_partition *this_mtd;
@@ -319,7 +325,7 @@ int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long m
 	if (!cmdline_parsed) {
 		mtdpart_setup_real(cmdline);
 
-		for (i = current_part, offset = 0; i < MTDPARTITION_MAX; i ++) {
+		for (i = real_current_part, offset = 0; i < MTDPARTITION_MAX; i ++) {
 			if (realpart[i].offset == OFFSET_CONTINUOUS)
 			  		realpart[i].offset = offset;
 				else
@@ -336,14 +342,14 @@ int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long m
 
 
 				printf("realpart %02d: offset %08x, size %08x\n",
-	     			(i - current_part),
+	     			(i - real_current_part),
 	     			realpart[i].offset,
 	     			realpart[i].size);
 		}
 	}
 
 	
-	for (i = current_part; i < MTDPARTITION_MAX; i ++) {
+	for (i = real_current_part; i < MTDPARTITION_MAX; i ++) {
 		if (realpart[i].offset == current->offset) {
 			current->size = realpart[i].size;
 			if (current->offset == 0x01a60000) {
@@ -357,4 +363,62 @@ int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long m
 	return 1;
 }
 
+int real_parse_cmdline_partitions(struct real_mtd_partition *current, unsigned long long mastersize)
+{
+	unsigned long offset;
+	int i, j;
+	unsigned long index;
+	struct cmdline_mtd_partition *part;
+
+	cmdline = get_mtdparts();
+
+	/* parse command line */
+	if (!cmdline_parsed) {
+		mtdpart_setup_real(cmdline);
+
+		for (i = real_current_part, offset = 0; i < MTDPARTITION_MAX; i ++) {
+			if (realpart[i].offset == OFFSET_CONTINUOUS)
+			  		realpart[i].offset = offset;
+				else
+			  		offset = realpart[i].offset;
+			
+				if (realpart[i].size == SIZE_REMAINING)
+			  		realpart[i].size = mastersize - offset;
+
+				if (offset + realpart[i].size > mastersize) {
+					printf("partitioning exceeds flash size, truncating\n");
+					realpart[i].size = mastersize - offset;
+				}
+				offset += realpart[i].size;
+
+
+				printf("id : %02d, name : %20s, offset : 0x%08x, size : 0x%08x, yaffs : %d\n",
+	     			(i - real_current_part),
+				realpart[i].name,
+	     			realpart[i].offset,
+	     			realpart[i].size, realpart[i].yaffs);
+		}
+	}
+
+	//printf("current->offset = 0x%08x,  real_current_part = %d\n", current->offset, real_current_part);
+	index = (current->offset & 0x0000FFFF) + real_current_part;
+	if ((index >= real_current_part) && (index < MTDPARTITION_MAX)) {
+		current->offset = realpart[index].offset;
+		strcpy(current->name, realpart[index].name);
+		current->size = realpart[index].size;
+		current->yaffs = realpart[index].yaffs;
+		if (strcmp(current->name, "fixnv") == 0) {
+			/* erase fixnv and backupfixnv */
+			for (j = real_current_part; j < MTDPARTITION_MAX; j ++)
+				if (strcmp(realpart[j].name, "backupfixnv") == 0) {
+					current->size += realpart[j].size;
+					break;
+				}
+		}
+	} else {
+		current->offset = 0xffffffff;
+	}
+
+	return -1;
+}
 
