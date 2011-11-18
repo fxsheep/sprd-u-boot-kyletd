@@ -65,32 +65,42 @@ typedef struct _tagSP09_PHASE_CHECK
 	char    	szLastFailDescription[SP09_MAX_LAST_DESCRIPTION_LEN];
 	unsigned short  iTestSign;				// Bit0~Bit14 ---> station0~station 14 
 	                 		  			  //if tested. 0: tested, 1: not tested
-	unsigned short  iItem;    // part1: Bit0~ Bit_14 indicate test Station,1±íÊ\u0178Pass,    
+	unsigned short  iItem;    // part1: Bit0~ Bit_14 indicate test Station,1 : Pass,    
 
 }SP09_PHASE_CHECK_T, *LPSP09_PHASE_CHECK_T;
 const static int SP09_MAX_PHASE_BUFF_SIZE = sizeof(SP09_PHASE_CHECK_T);
 
 int eng_getphasecheck(SP09_PHASE_CHECK_T* phase_check)
 {
-	unsigned char *point;
 	int aaa;
+	unsigned long tested;
 
-	point = (unsigned char *)phase_check;
 	if (phase_check->Magic == SP09_SPPH_MAGIC_NUMBER) {
 		//printf("Magic = 0x%08x\n",phase_check->Magic);
 		printf("SN1 = %s   SN2 = %s\n",phase_check->SN1, phase_check->SN2);
-		//printf("StationNum = %d\n",phase_check->StationNum);
-	
-		for (aaa = 0; aaa < phase_check->StationNum/*SP09_MAX_STATION_NUM*/; aaa ++) {
-			printf("%s  ", phase_check->StationName[aaa]);
-		}
-		printf("\n");
-		/*printf("Reserved = %s\n",phase_check->Reserved);
+		/*printf("StationNum = %d\n",phase_check->StationNum);
+		printf("Reserved = %s\n",phase_check->Reserved);
 		printf("SignFlag = 0x%02x\n",phase_check->SignFlag);
-		printf("szLastFailDescription = %s\n",phase_check->szLastFailDescription);
-
 		printf("iTestSign = 0x%04x\n",phase_check->iTestSign);
 		printf("iItem = 0x%04x\n",phase_check->iItem);*/
+		if (phase_check->SignFlag == 1) {
+			for (aaa = 0; aaa < phase_check->StationNum/*SP09_MAX_STATION_NUM*/; aaa ++) {
+				printf("%s : ", phase_check->StationName[aaa]);
+				tested = 1 << aaa;
+				if ((tested & phase_check->iTestSign) == 0) {
+					if ((tested & phase_check->iItem) == 0)
+						printf("Pass; ");
+					else
+						printf("Fail; ");
+				} else
+					printf("UnTested; ");
+			}
+		} else {
+			printf("station status are all invalid!\n");
+			for (aaa = 0; aaa < phase_check->StationNum/*SP09_MAX_STATION_NUM*/; aaa ++)
+				printf("%s  ", phase_check->StationName[aaa]);
+		}
+		printf("\nLast error: %s\n",phase_check->szLastFailDescription);
 	} else
 		printf("no production information / phase check!\n");
 

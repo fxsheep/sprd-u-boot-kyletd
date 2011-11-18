@@ -643,12 +643,18 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
     addr = EndianConv_32 (addr);
     size = EndianConv_32 (size);
 
-	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
-	phy_partition.offset = custom2log(addr);
-	ret = log2phy_table(&phy_partition);
-	phy_partition_info(phy_partition);
-	if (NAND_SUCCESS == ret)
-		ret = nand_erase_partition(phy_partition.offset, phy_partition.size);
+	if ((addr == 0) && (size = 0xffffffff)) {
+		printf("Scrub to erase all of flash\n");
+		nand_erase_allflash();
+		ret = NAND_SUCCESS;
+	} else {
+		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+		phy_partition.offset = custom2log(addr);
+		ret = log2phy_table(&phy_partition);
+		phy_partition_info(phy_partition);
+		if (NAND_SUCCESS == ret)
+			ret = nand_erase_partition(phy_partition.offset, phy_partition.size);
+	}
 
     FDL2_SendRep (ret);
     return (NAND_SUCCESS == ret);

@@ -243,13 +243,13 @@
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #elif defined CONFIG_OPENPHONE
 #ifdef MCP_F2R1
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),4m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),7m(boot),7m(recovery),100m(system),101m(userdata),2m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),2m(productinfo),512k(kpanic)"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),4m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),7m(boot),7m(recovery),100m(system),101m(userdata),14m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),2m(productinfo),512k(kpanic)"
 #else
 #error "no MCP defined"
 #endif
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
-/* used blocks are 1947 and remaining block are 2048 - 1947 */
+/* used blocks are 2043 and remaining block are 2048 - 2043 */
 
 #define CONFIG_BOOTCOMMAND "cboot normal"
 #define	CONFIG_EXTRA_ENV_SETTINGS				""	
