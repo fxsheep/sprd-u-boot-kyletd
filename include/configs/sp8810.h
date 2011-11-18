@@ -20,9 +20,9 @@
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
-
 //only used in fdl2 .in uart download, the debug infors  from  serial will break the download process.
-#define CONFIG_FDL2_PRINT	0
+#define CONFIG_FDL2_PRINT  0	
+#define BOOT_NATIVE_LINUX (0)
 
 #define CONFIG_SILENT_CONSOLE
 #define CONFIG_GPIOLIB 1
@@ -34,7 +34,6 @@
 #define SPRD_EVM_ADDR_START 0x40006000
 #define SPRD_EVM_TAG(_x) (*(((unsigned long *)SPRD_EVM_ADDR_START)+_x) = *(volatile unsigned long *)0x87003004)
 #endif
-
 #define CONFIG_L2_OFF			1
 
 #define BOOT_DEBUG 1
@@ -91,6 +90,7 @@
 #define CONFIG_SYS_NAND_U_BOOT_DST	0x00f00000
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_NAND_U_BOOT_DST
 
+#define CONFIG_MMU_TABLE_ADDR (0x4500000)//NOTICE.  We can put the table  in the kernel area.
 #define CONFIG_SYS_SDRAM_BASE 0x00000000
 #define CONFIG_SYS_INIT_SP_ADDR     \
 	(CONFIG_SYS_SDRAM_BASE + 0x4000)
@@ -250,8 +250,8 @@
 #elif defined CONFIG_SP8810
 /*#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),384k(2ndbl),128k(params),512k(vmjaluna),6016k(modem),7680k(kernel),5120k(dsp),1280k(fixnv),2560k(runtimenv),6400k(recovery),100m(system),198m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"*/
 //#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),10m(recovery),150m(system),300m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"
-
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),10m(recovery),150m(system),1m(boot_logo),1m(fastboot_logo),20m(cache),256k(misc),2m(productinfo),280m(userdata)"
+//#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot)"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),150m(system),280m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),2m(productinfo),512k(kpanic)"
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 
