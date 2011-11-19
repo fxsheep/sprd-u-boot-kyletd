@@ -1687,6 +1687,7 @@ void ddr_init()
 	//set cs map to 2G bit
 	REG32(0x20000000) &= ~(0x7);
 	REG32(0x20000000) |= (0x6);
+	REG32(0x20000028) &= ~(BIT_2 | BIT_3);
 	for(i =0 ; i < 1000; i++);	
 }
 void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv, uint32 dqs_drv)
@@ -1730,7 +1731,7 @@ void sc8810_emc_Init()
 {
 	
 	unsigned int i;
-	set_emc_pad(0x200, 0x100,0x200,0x300);
+	set_emc_pad(0x300, 0x200,0x100,0x200);
 		
 	REG32(0x20900238) |= (1 << 11);
 	REG32(0x20900238) &= ~(1 <<12);
@@ -1743,18 +1744,19 @@ void sc8810_emc_Init()
 	REG32(0x8b000024) = i;
 	
 	//set DPLL of EMC to 400MHz
+#if 1
 	i = REG32(0x8b000040);
 	i &= ~ 0x7ff;
 	i |= 0x64;
 	REG32(0x8b000040) = i;
 	REG32(0x8b000018) &= ~(1 << 9);
-
+#endif
 	REG32(0x20900224) = (3 << 23) | (3 << 12);
 	REG32(0x20900224) |= (3 << 4) | (0 << 8) | (7 << 14);
 	REG32(0x20900224) |= (1 << 23) | (3 << 4) | (0 << 8) | (7 << 14);
 	for(i = 0; i < 1000; i++);
 	
-	REG32(0x20900224) = (3 << 4) | (0 << 8) | (7 << 14);
+	REG32(0x20900224) = (3 << 4) | (0 << 8) | (7 << 14) | (1 << 12/*select dpll*/);
 	ddr_init();
 }
 
