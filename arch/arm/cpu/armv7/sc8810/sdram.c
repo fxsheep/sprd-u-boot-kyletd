@@ -1744,7 +1744,7 @@ void sc8810_emc_Init()
 	REG32(0x8b000024) = i;
 	
 	//set DPLL of EMC to 400MHz
-#if 1
+#if 0
 	i = REG32(0x8b000040);
 	i &= ~ 0x7ff;
 	i |= 0x64;
