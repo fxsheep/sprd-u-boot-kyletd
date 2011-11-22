@@ -71,8 +71,8 @@ static __attribute__((aligned(4))) unsigned char io_wr_port[NAND_MAX_PAGESIZE + 
 struct sc8810_nand_timing_param nand_timing =
 {
 	50,
-	50,
-	80,
+	30,
+	40,
 	40,
 	40,
 	50
@@ -314,31 +314,6 @@ static u32 sc8810_ecc_decode(struct sc8810_ecc_param *param)
 	}
 	return  ret;
 }
-#define ORIGINAL_NAND_TIMING 0xffffffff
-#define NFC_RWL_OFFSET (10UL)
-#define NFC_RWL_MASK (0x3f << NFC_RWL_OFFSET)
-#define NFC_RWH_OFFSET (5UL)
-#define NFC_RWH_MASK (0x1f << NFC_RWH_OFFSET)
-
-static void set_nfc_param(unsigned long nfc_clk)
-{
-	uint32 reg_val = 0;
-	uint32 n_cycles = 0;
-	uint32 mclk = 0; //clk MHz
-	reg_val = ORIGINAL_NAND_TIMING;
-	reg_val &= ~(NFC_RWH_MASK);
-	mclk = nfc_clk / 1000000;
-
-	n_cycles = nand_timing.rwh_time * mclk / 1000;
-	reg_val |= n_cycles << NFC_RWH_OFFSET;
-	
-	reg_val &= ~ (NFC_RWL_MASK);
-	n_cycles = nand_timing.rwl_time * mclk / 1000;
-	
-	reg_val |= n_cycles << NFC_RWL_OFFSET;
-	REG32(NFC_TIMING) = reg_val;	
-}
-#if 0
 static void set_nfc_param(unsigned long nfc_clk)
 {
 	u32 value = 0;
@@ -364,7 +339,6 @@ static void set_nfc_param(unsigned long nfc_clk)
 
 //	local_irq_restore(flags);	
 }
-#endif
 static void sc8810_nand_hw_init(void)
 {
 	int ik_cnt = 0;
@@ -377,7 +351,7 @@ static void sc8810_nand_hw_init(void)
 	sc8810_nand_wp_en(0);
 	nfc_reg_write(NFC_TIMING, 0xffffffff);
 	nfc_reg_write(NFC_TIMING+0X4, 0xffffffff);
-	set_nfc_param(153000000);//153MHz
+	//set_nfc_param(0);//53MHz
 }
 static void sc8810_nand_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)
 {
