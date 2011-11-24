@@ -74,12 +74,13 @@ int nand_format(void)
 int nand_erase_allflash(void)
 {
 	struct mtd_info *nand;
+	int blocks;
 
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  	return NAND_SYSTEM_ERROR;
 
 	nand = &nand_info[nand_curr_device];
-
+#if 0
 	nand_erase_options_t opts;
 	memset(&opts, 0, sizeof(opts));
 	opts.offset = 0;
@@ -90,6 +91,11 @@ int nand_erase_allflash(void)
 	printf("offset : 0x%016Lx size : 0x%016Lx\n", (unsigned long long)opts.offset, (unsigned long long)opts.length);
 
 	return nand_erase_opts(nand, &opts);
+#else
+	blocks = nand->size / nand->erasesize;
+	nand_scan_patition(blocks, nand->erasesize, nand->writesize);
+	return NAND_SUCCESS;
+#endif
 }
 
 int nand_erase_partition(unsigned int addr, unsigned int size)

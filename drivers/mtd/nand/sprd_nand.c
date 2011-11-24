@@ -242,7 +242,7 @@ static void nfc_reset(void)
         nfc_wait_command_finish();
 }
 
-static void nfc_read_status(void)
+static unsigned long nfc_read_status(void)
 {
 	unsigned long status = 0;
         unsigned long cmd = NF_READ_STATUS | (0x1 << 31);
@@ -251,7 +251,7 @@ static void nfc_read_status(void)
         nfc_wait_command_finish();
 
         status = REG_NFC_IDSTATUS;
-	//printk("%s  %d  teststatus = 0x%08x\n", __FUNCTION__, __LINE__, status);	
+	return status;	
 }
 
 static unsigned long nfc_read_id(void)
@@ -1241,3 +1241,124 @@ int board_nand_init(struct nand_chip *this)
 	this->priv = &g_info;
 	return 0;
 }
+
+int sprd_scan_one_block(int blk, int erasesize, int writesize)
+{
+	unsigned long phyblk, pageinblk, pageperblk;
+	unsigned long i;
+	//unsigned long addr_cycle = 5; /* advance 0 : can be set 3 or 4; advance 1: can be set 4 or 5 */
+	unsigned long advance = 1; /* can be set 0 or 1 */
+	unsigned long pagetype; /* 0: small page; 1: large page*/
+	//unsigned long buswidth = 1; /* 0: X8 bus width 1: X16 bus width */
+	unsigned long chipsel = 0;
+	unsigned long buswidth = g_buswidth;
+	unsigned long addr_cycle = g_addr_cycle;
+	int status = 1, ii;
+	unsigned long column = writesize >> 1;
+	unsigned long row = blk * (erasesize / writesize);
+	int aaa;
+
+	if (512 == writesize)
+		pagetype = 0;
+   	else
+   	    	pagetype = 1;
+
+	if (addr_cycle == 3)
+   		addr_cycle = 0;
+   	else if ((addr_cycle == 4) && (advance == 1))
+   	    	addr_cycle = 0;
+   	else
+   	    	addr_cycle = 3;
+
+	memset(io_wr_port, 0x0, NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE);
+	if (buswidth == 1) {
+		if (column == (writesize >> 1)) {
+			for (ii = 0; ii < 2; ii ++) {
+				row += ii;
+				pageperblk = (erasesize / writesize);
+
+				phyblk = row / pageperblk;
+        			pageinblk = row % pageperblk;
+				//printf("ii = %d phyblk = %d  pageinblk = %d\n", ii, phyblk, pageinblk);
+        			REG_NFC_STR0 = phyblk * pageperblk * writesize + 
+						pageinblk * writesize + 
+						column;
+        			REG_NFC_END0 = phyblk * pageperblk * writesize + 
+						pageinblk * writesize + 
+						column + (writesize >> 1) - 1;	
+
+				g_cmdsetting = (chipsel << 26) | (addr_cycle << 24) | (advance << 23) | (buswidth << 19) | (pagetype << 18) | (0 << 16) | (0x1 << 31);
+				REG_NFC_CMD = g_cmdsetting | NAND_CMD_READ0;
+				nfc_wait_command_finish();
+				nand_copy((unsigned long *)NFC_SBUF, (unsigned long *)io_wr_port, 64);
+				if ((io_wr_port[0] != 0xff) || (io_wr_port[1] != 0xff))
+					break;
+			}
+		}
+	}
+
+	if ((io_wr_port[0] == 0xff) && (io_wr_port[1] == 0xff))
+		status = 0; //good block
+	else
+		status = 1; //bad block
+
+	return status;
+}
+
+int nand_ctl_erase_block(unsigned long addr, int writesize)
+{
+	unsigned long phyblk, pageinblk, pageperblk;
+	unsigned long i;
+	//unsigned long addr_cycle = 5; /* advance 0 : can be set 3 or 4; advance 1: can be set 4 or 5 */
+	unsigned long advance = 1; /* can be set 0 or 1 */
+	unsigned long pagetype; /* 0: small page; 1: large page*/
+	//unsigned long buswidth = 1; /* 0: X8 bus width 1: X16 bus width */
+	unsigned long chipsel = 0;
+	unsigned long buswidth = g_buswidth;
+	unsigned long addr_cycle = g_addr_cycle;
+	int status = 0;
+
+	if (512 == writesize)
+		pagetype = 0;
+   	else
+   	    	pagetype = 1;
+
+	if (addr_cycle == 3)
+   		addr_cycle = 0;
+   	else if ((addr_cycle == 4) && (advance == 1))
+   	    	addr_cycle = 0;
+   	else
+   	    	addr_cycle = 3;
+
+	g_cmdsetting = (chipsel << 26) | (addr_cycle << 24) | (advance << 23) | (buswidth << 19) | (pagetype << 18) | (0 << 16) | (0x1 << 31);
+	if (buswidth == 1)
+        	REG_NFC_STR0 = addr;
+	else
+		REG_NFC_STR0 = addr * 2;
+
+	REG_NFC_CMD = g_cmdsetting | NAND_CMD_ERASE1;
+	nfc_wait_command_finish();
+
+	status = nfc_read_status();
+	return status;
+}
+
+void nand_scan_patition(int blocks, int erasesize, int writesize)
+{
+	int blk;
+	int ret;
+
+	//printf("blocks = %d  erasesize = 0x%08x\n", blocks, erasesize);
+	for (blk = 0; blk < blocks; blk ++) {
+		ret = sprd_scan_one_block(blk, erasesize, writesize);
+		if (ret != 0) {
+			printf("\n%d is bad, scrub to erase it, ", blk);
+			ret = nand_ctl_erase_block(blk * erasesize, writesize);
+			printf("0x%02x\n", ret);
+		} else {
+			ret = nand_ctl_erase_block(blk * erasesize, writesize);
+			printf("erasing block : %d    %d % \r", blk, (blk * 100 ) / blocks);
+		}
+	}
+}
+
