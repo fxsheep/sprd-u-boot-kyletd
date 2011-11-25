@@ -1655,8 +1655,8 @@ void sc8810_emc_Init()
 	//set MPLL to 900MHz
 	i = REG32(0x8b000024);
 	i &= ~ 0x7ff;
-	//i |= 0xFA;     //1000M
-	i |= 0xe1;     //900M
+	i |= 0xFA;     //1000M
+	//i |= 0xe1;     //900M
 	//i |= 0xC8;   //800M
 	REG32(0x8b000024) = i;
 	
@@ -1664,8 +1664,8 @@ void sc8810_emc_Init()
 #if 1
 	i = REG32(0x8b000040);
 	i &= ~ 0x7ff;
-	//i |= 0x80;     //512M
-	i |= 0x64;   //400M
+	i |= 0x70;     //448M
+	//i |= 0x64;   //400M
 	REG32(0x8b000040) = i;
 	REG32(0x8b000018) &= ~(1 << 9);
 #endif
