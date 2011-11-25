@@ -181,13 +181,13 @@ time:	subs	r1,r1,#0x1
 	mrc p15, 0, r1, c1, c0, 0
 	bic r1, #0x5
 	mcr p15, 0, r1, c1, c0, 0
-
+#if 0
 	ldr	r0, =0x8b00002c
 	ldr	r1, =0xf
 	ldr	r2,  [r0]
 	orr	r1,  r1,r2
 	str	r1,  [r0]
-
+#endif
 #endif
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
 	bl	cpu_init_crit

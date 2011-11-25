@@ -1519,96 +1519,6 @@ LOCAL uint32 Chip_ConfigClk (void)
     return arm_ahb_clk;
 }
 
-
-/**---------------------------------------------------------------------------*
- ** FUNCTION                                                                  *
- **     void Chip_Init(void)                                                  *
- **                                                                           *
- ** DESCRIPTION                                                               *
- **     initialize chip setting                                               *
- **                                                                           *
- ** INPUT                                                                     *
- **     none                                                                  *
- **                                                                           *
- ** OUTPUT                                                                    *
- **     None                                                                  *
- **                                                                           *
- ** RETURN VALUE                                                              *
- **                                                                           *
- ** DEPENDENCIES                                                              *
- **                                                                           *
-**---------------------------------------------------------------------------*/
-void sc8810_ram_init(void)
-{
-	uint32 isSDRAM = RAM_TYPPE_IS_SDRAM;
-	volatile uint32 i = 0;
-	*(volatile uint32 *)(0x20000024) |= BIT_6;
-	*(volatile uint32 *)(0x2000002C) |= BIT_6;
-
-	if (isSDRAM ) {
-		*(volatile uint32 *)(0x20000190) = 0x40010000;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000190) = 0x40020000;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000190) = 0x40020000;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000190) = 0x40040031;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000180) |= BIT_14;
-		for (i = 0; i < 1000; ++i);
-
-	} else {
-	//ddr init
-		*(volatile uint32 *)(0x20000004) = 0x00000049;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000194) = 0x00622728;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x2000019c) = 0x00f0000e;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x200001a0) = 0x00f0000e;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000190) = 0x40010000;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000190) = 0x40020000;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000190) = 0x40020000;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000190) = 0x40040031;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000190) = 0x40048000;
-		for (i = 0; i < 1000; ++i);
-
-
-		*(volatile uint32 *)(0x20000180) |= BIT_14;
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000180) &= ~(0x70);
-		*(volatile uint32 *)(0x20000180) |= (0x20);
-		for (i = 0; i < 1000; ++i);
-
-		*(volatile uint32 *)(0x20000180) &= ~0x3;
-		*(volatile uint32 *)(0x20000180) |= 0x3;
-		for (i = 0; i < 1000; ++i);		
-
-		
-		*(volatile uint32 *)(0x20000000) &= ~0x7;
-		*(volatile uint32 *)(0x20000000) |= 0x6;
-		for (i = 0; i < 1000; ++i);		
-	}
-
-}
 void ddr_init()
 {
 	unsigned int i;
@@ -1616,9 +1526,6 @@ void ddr_init()
 	for(i = 0; i < 1000; i++);
 
 	REG32(0x20000024) |= BIT_6;
-	for(i = 0; i < 1000; i++);
-
-	REG32(0x2000002C) |= BIT_6;
 	for(i = 0; i < 1000; i++);
 
 	REG32(0x20000194) = 0x0062272A;
@@ -1687,7 +1594,11 @@ void ddr_init()
 	//set cs map to 2G bit
 	REG32(0x20000000) &= ~(0x7);
 	REG32(0x20000000) |= (0x6);
-	REG32(0x20000028) &= ~(BIT_2 | BIT_3);
+	//REG32(0x20000010) = 0x223;
+	//REG32(0x20000014) = 0x223;
+
+	REG32(0x20000184) = 0x033a3566;
+	REG32(0x20000188) = 0x121c0172;
 	for(i =0 ; i < 1000; i++);	
 }
 void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv, uint32 dqs_drv)
@@ -1731,8 +1642,12 @@ void sc8810_emc_Init()
 {
 	
 	unsigned int i;
-	set_emc_pad(0x300, 0x200,0x100,0x200);
-		
+	set_emc_pad(0x200, 0x100,0x100,0x200);
+	
+	// GPU AXI 256M
+	REG32(0x8b00002c) &= ~(0x3);
+	
+	// A5 AXI DIV		
 	REG32(0x20900238) |= (1 << 11);
 	REG32(0x20900238) &= ~(1 <<12);
 
@@ -1740,23 +1655,37 @@ void sc8810_emc_Init()
 	//set MPLL to 900MHz
 	i = REG32(0x8b000024);
 	i &= ~ 0x7ff;
-	i |= 0xe1;
+	//i |= 0xFA;     //1000M
+	i |= 0xe1;     //900M
+	//i |= 0xC8;   //800M
 	REG32(0x8b000024) = i;
 	
 	//set DPLL of EMC to 400MHz
-#if 0
+#if 1
 	i = REG32(0x8b000040);
 	i &= ~ 0x7ff;
-	i |= 0x64;
+	//i |= 0x80;     //512M
+	i |= 0x64;   //400M
 	REG32(0x8b000040) = i;
 	REG32(0x8b000018) &= ~(1 << 9);
 #endif
+	
+	// AHB_ARM_CLK SET
+#if 1	// emc from DPLL
 	REG32(0x20900224) = (3 << 23) | (3 << 12);
 	REG32(0x20900224) |= (3 << 4) | (0 << 8) | (7 << 14);
 	REG32(0x20900224) |= (1 << 23) | (3 << 4) | (0 << 8) | (7 << 14);
 	for(i = 0; i < 1000; i++);
 	
 	REG32(0x20900224) = (3 << 4) | (0 << 8) | (7 << 14) | (1 << 12/*select dpll*/);
+#else   // EMC from MPLL
+	REG32(0x20900224) = (3 << 23) | (3 << 12);
+	REG32(0x20900224) |= (3 << 4) | (1 << 8) | (7 << 14);
+	REG32(0x20900224) |= (1 << 23) | (3 << 4) | (1 << 8) | (7 << 14);
+	for(i = 0; i < 1000; i++);
+	
+	REG32(0x20900224) = (3 << 4) | (1 << 8) | (7 << 14) | (0 << 12/*select mpll*/);
+#endif
 	ddr_init();
 }
 
