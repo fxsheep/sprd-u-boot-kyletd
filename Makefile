@@ -156,6 +156,7 @@ sinclude $(src)include/idh_config.mk
 include $(obj)include/config.mk
 export	ARCH CPU BOARD VENDOR SOC
 
+CROSS_COMPILE = arm-eabi-
 # set default to nothing for native builds
 ifeq ($(HOSTARCH),$(ARCH))
 CROSS_COMPILE ?=
@@ -1228,6 +1229,15 @@ sp6810a-f2r1_config	: unconfig
 sp8805ga_config	: unconfig
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs sp8805ga spreadtrum sc8800g
+
+sc8810_openphone_config	: unconfig
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sc8810_openphone spreadtrum sc8810
+	
+sp8810_config	: unconfig
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sp8810 spreadtrum sc8810
+	
 #########################################################################
 #########################################################################
 
@@ -1268,7 +1278,7 @@ clean:
 	@find $(OBJTREE) -type f \
 		\( -name 'core' -o -name '*.bak' -o -name '*~' \
 		-o -name '*.o'	-o -name '*.a' -o -name '*.exe'	\) -print \
-		| grep -v property | grep -v sc8800g | grep -v sc8800x \
+		| grep -v property | grep -v sc8800g | grep -v sc8800x | grep -v sc8810\
 		| grep -v nand_fdl | grep -v nand_spl |  xargs rm -f
 else
 clean:
@@ -1312,7 +1322,7 @@ endif
 
 ifdef CONFIG_IDH_BUILD
 clobber:	clean
-	@find $(OBJTREE) \( -path ".*/property" -o -path ".*/sc8800g" \
+	@find $(OBJTREE) \( -path ".*/property" -o -path ".*/sc8800g" -o -path ".*/sc8810" \
 			   -o -path ".*/sc8800x" -o -path ".*/nand_fdl" -o -path "nand_spl" \) \
 			   -prune -o -type f \( -name '*.depend' \
 		-o -name '*.srec' -o -name '*.bin' -o -name u-boot.img \) \

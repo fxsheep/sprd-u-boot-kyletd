@@ -47,6 +47,8 @@ void boot_linux(unsigned kaddr, unsigned taddr)
 {
 	void (*entry)(unsigned,unsigned,unsigned) = (void*) kaddr;
 
+#ifndef CONFIG_SC8810
     MMU_InvalideICACHEALL();
+#endif
 	entry(0, machine_arch_type, taddr);
 }

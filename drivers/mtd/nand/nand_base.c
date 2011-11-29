@@ -384,8 +384,9 @@ static int nand_default_block_markbad(struct mtd_info *mtd, loff_t ofs)
 	struct nand_chip *chip = mtd->priv;
 	uint8_t buf[2] = { 0, 0 };
 	int block, ret;
+#ifndef	CONFIG_MTD_NAND_SC8810
 	mtd_oob_mode_t sprd_mode;
-
+#endif
 	/* Get block number */
 	block = (int)(ofs >> chip->bbt_erase_shift);
 	if (chip->bbt)
@@ -405,14 +406,14 @@ static int nand_default_block_markbad(struct mtd_info *mtd, loff_t ofs)
 		chip->ops.oobbuf = buf;
 		chip->ops.ooboffs = chip->badblockpos & ~0x01;
 
-#if 1
+#ifndef	CONFIG_MTD_NAND_SC8810
 		sprd_mode = chip->ops.mode;
 		if (chip->ops.mode == MTD_OOB_AUTO)
 			chip->ops.mode = MTD_OOB_RAW;
-#endif
-			
+#endif			
 		ret = nand_do_write_oob(mtd, ofs, &chip->ops);
-#if 1
+
+#ifndef	CONFIG_MTD_NAND_SC8810
 		chip->ops.mode = sprd_mode;
 #endif
 		nand_release_device(mtd);
@@ -2810,9 +2811,9 @@ int nand_scan_tail(struct mtd_info *mtd)
 
 	if (!(chip->options & NAND_OWN_BUFFERS))
 		chip->buffers = kmalloc(sizeof(*chip->buffers), GFP_KERNEL);
-	if (!chip->buffers)
+	if (!chip->buffers) {
 		return -ENOMEM;
-
+	}
 	/* Set the internal oob buffer location, just after the page data */
 	chip->oob_poi = chip->buffers->databuf + mtd->writesize;
 

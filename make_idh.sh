@@ -1,7 +1,7 @@
 #!/bin/sh
 
-DIR_PROTECT="arch/arm/cpu/arm926ejs/sc8800g arch/arm/cpu/arm926ejs/sc8800x property nand_fdl nand_spl"
-PRODUCTS="sp8805ga sp6810a openphone"
+DIR_PROTECT="arch/arm/cpu/armv7/sc8810 arch/arm/cpu/arm926ejs/sc8800g arch/arm/cpu/arm926ejs/sc8800x property nand_fdl nand_spl"
+PRODUCTS="sc8810_openphone sp8810 sp8805ga sp6810a openphone"
 
 argu=$1
 if [ -z $argu ]; then

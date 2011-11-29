@@ -32,6 +32,7 @@ int is_bat_low(void)
     unsigned int comp_vbat = 0;
     int i;
 
+#ifndef CONFIG_SC8810
     comp_vbat = get_bat_low_level();
     ADC_Init();
 
@@ -53,4 +54,7 @@ retry_adc:
       return 1;
     else
       return 0;
+#else
+    return 0;
+#endif
 }

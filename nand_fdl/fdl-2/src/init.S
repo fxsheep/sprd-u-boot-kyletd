@@ -45,6 +45,10 @@
 #define BIGEND_PROT_REG 0x20900290
 #define AHB_CTRL5_REG  0x20900230
 #endif
+#ifdef CONFIG_SC8810
+#define BIGEND_PROT_REG 0x20900290
+#define AHB_CTRL5_REG  0x20900230
+#endif
 
 /*
  *************************************************************************
@@ -94,6 +98,12 @@ reset:
 	/*
 	 * set the cpu to SVC32 mode
 	 */
+#if 0
+	ldr	r0, =0xffffff
+time:	subs	r0,r0,#0x1
+	bne	time
+#endif
+
 	mrs	r0,cpsr
 	bic	r0,r0,#0x1f
 	orr	r0,r0,#0xd3
@@ -115,7 +125,7 @@ reset:
 	MCR p15,0,r0,c1,c0,0
 
 	/*set endian regs of sc8800g*/
-#if defined(CHIP_ENDIAN_BIG) && defined(PLATFORM_SC8800G)
+#if defined(CHIP_ENDIAN_BIG) && (defined(PLATFORM_SC8800G) || defined(CONFIG_SC8810))
 	LDR     R0, =BIGEND_PROT_REG
 	MOV     R2, #0xD4
 	ORR     R2, R2, #0xC300
@@ -132,9 +142,11 @@ reset:
 
 	/*set stack limit to 0*/
 	MOV R10, #0
-
+#ifndef CONFIG_NAND_SC8810
 	ldr sp, =0x31000000
-
+#else
+	ldr sp, =0x1000000
+#endif	
 clear_bss:
 	ldr	r0, _bss_start		/* find start of bss segment        */
 	ldr	r1, _bss_end		/* stop here                        */

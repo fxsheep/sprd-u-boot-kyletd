@@ -27,7 +27,7 @@ unsigned char raw_header[2048];
 #define DSP_PART "dsp"
 
 #define DSP_SIZE		(3968 * 1024)
-#define VMJALUNA_SIZE		(256 * 1024)
+#define VMJALUNA_SIZE		(300 * 1024)
 #define FIXNV_SIZE		(64 * 1024)
 #define PRODUCTINFO_SIZE	(3 * 1024)
 #define RUNTIMENV_SIZE		(256 * 1024)
@@ -43,8 +43,19 @@ unsigned char raw_header[2048];
 #define PRODUCTINFO_ADR		0x00490000
 #define RUNTIMENV_ADR		0x004a0000
 #define MODEM_ADR		0x00500000
-#define KERNEL_ADR		0x04508000
 #define RAMDISK_ADR 		0x04c00000
+
+#if BOOT_NATIVE_LINUX
+//pls make sure uboot running area
+#define VLX_TAG_ADDR            (0x100)
+#define KERNEL_ADR		(0x8000)
+
+#else
+
+#define KERNEL_ADR		0x04508000
+#define VLX_TAG_ADDR            0x5100000 //after initrd
+
+#endif
 
 #define MAX_SN_LEN 			(24)
 #define SP09_MAX_SN_LEN			MAX_SN_LEN
@@ -197,6 +208,26 @@ void array_diff(unsigned char * array1, unsigned char * array2, int len)
 	}
 	printf("arrar diff is finished\n");
 }
+static int start_linux()
+{
+	void (*theKernel)(int zero, int arch, u32 params);
+	u32 exec_at = (u32)-1;
+	u32 parm_at = (u32)-1;
+	u32 machine_type;
+
+	machine_type = 0x7dd;         /* get machine type */
+
+	theKernel = (void (*)(int, int, u32))KERNEL_ADR; /* set the kernel address */
+	*(volatile u32*)0x84001000 = 'j';
+	*(volatile u32*)0x84001000 = 'm';
+	*(volatile u32*)0x84001000 = 'p';
+
+	*(volatile u32*)(0x20900000 + 0x218) |= (0x1);//internal ram using 0xffff0000
+	theKernel(0, machine_type, VLX_TAG_ADDR);    /* jump to kernel with register set */
+	while(1);
+	return 0;
+}
+
 
 void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 {
@@ -227,6 +258,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		printf("mtdparts init error %d\n", ret);
 		return;
 	}
+
 #ifdef CONFIG_SPLASH_SCREEN 
 #define SPLASH_PART "boot_logo"
 
@@ -264,6 +296,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 #endif
     set_vibrator(0);
 
+#if !(BOOT_NATIVE_LINUX)
 	/*int good_blknum, bad_blknum;
 	nand_block_info(nand, &good_blknum, &bad_blknum);
 	printf("good is %d  bad is %d\n", good_blknum, bad_blknum);*/
@@ -272,7 +305,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	printf("Reading fixnv to 0x%08x\n", FIXNV_ADR);
 	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 	/* fixnv */
-    	cmd_yaffs_mount(backupfixnvpoint);
+    cmd_yaffs_mount(backupfixnvpoint);
 	ret = cmd_yaffs_ls_chk(backupfixnvfilename);
 	if (ret == (FIXNV_SIZE + 4)) {
 		cmd_yaffs_mread_file(backupfixnvfilename, (unsigned char *)FIXNV_ADR);
@@ -467,7 +500,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	/* RUNTIMEVN_PART */
 	printf("Reading runtimenv to 0x%08x\n", RUNTIMENV_ADR);
 	/* runtimenv */
-    	cmd_yaffs_mount(runtimenvpoint);
+    cmd_yaffs_mount(runtimenvpoint);
 	ret = cmd_yaffs_ls_chk(runtimenvfilename);
 	if (ret == (RUNTIMENV_SIZE + 4)) {
 		/* file exist */
@@ -526,9 +559,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		printf("dsp nand read error %d\n", ret);
 		return;
 	}
-
-	//array_value((unsigned char *)DSP_ADR, DSP_SIZE);
-
+#endif
 	////////////////////////////////////////////////////////////////
 	/* KERNEL_PART */
 	printf("Reading kernel to 0x%08x\n", KERNEL_ADR);
@@ -536,10 +567,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	ret = find_dev_and_part(kernel_pname, &dev, &pnum, &part);
 	if(ret){
 		printf("No partition named %s\n", kernel_pname);
-		return;
+        return;
 	}else if(dev->id->type != MTD_DEV_TYPE_NAND){
 		printf("Partition %s not a NAND device\n", kernel_pname);
-		return;
+        return;
 	}
 
 	off=part->offset;
@@ -549,38 +580,39 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	ret = nand_read_offset_ret(nand, off, &size, (void *)hdr, &off);
 	if(ret != 0){
 		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
-		return;
+        return;
 	}
-
 	if(memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)){
-		printf("bad boot image header\n");
-		return;
+		printf("bad boot image header, give up read!!!!\n");
+        return;
+	}
+	else
+	{
+		//read kernel image
+		size = (hdr->kernel_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+		if(size <=0){
+			printf("kernel image should not be zero\n");
+			return;
+		}
+		ret = nand_read_offset_ret(nand, off, &size, (void *)KERNEL_ADR, &off);
+		if(ret != 0){
+			printf("kernel nand read error %d\n", ret);
+			return;
+		}
+		//read ramdisk image
+		size = (hdr->ramdisk_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+		if(size<0){
+			printf("ramdisk size error\n");
+			return;
+		}
+		ret = nand_read_offset_ret(nand, off, &size, (void *)RAMDISK_ADR, &off);
+		if(ret != 0){
+			printf("ramdisk nand read error %d\n", ret);
+			return;
+		}
 	}
 
-	//read kernel image
-	size = (hdr->kernel_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-	if(size <=0){
-		printf("kernel image should not be zero\n");
-		return;
-	}
-	ret = nand_read_offset_ret(nand, off, &size, (void *)KERNEL_ADR, &off);
-	if(ret != 0){
-		printf("kernel nand read error %d\n", ret);
-		return;
-	}
-	//read ramdisk image
-	size = (hdr->ramdisk_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
-	if(size<0){
-		printf("ramdisk size error\n");
-		return;
-	}
-	ret = nand_read_offset_ret(nand, off, &size, (void *)RAMDISK_ADR, &off);
-	if(ret != 0){
-		printf("ramdisk nand read error %d\n", ret);
-		return;
-	}
-	//array_value((unsigned char *)KERNEL_ADR, KERNEL_SIZE);
-
+#if !(BOOT_NATIVE_LINUX)
 	////////////////////////////////////////////////////////////////
 	/* MODEM_PART */
 	printf("Reading modem to 0x%08x\n", MODEM_ADR);
@@ -634,23 +666,23 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		printf("modem nand read error %d\n", ret);
 		return;
 	}
+#endif
 
 	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
     //check caliberation mode
     int str_len;
     char * buf;
     buf = malloc(384);
-#define VLX_TAG_ADDR 0x5100000 //after initrd
+
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     str_len = strlen(buf);
     mtdpart_def = get_mtdparts();
     sprintf(&buf[str_len], " %s", mtdpart_def);
-
     if(cmdline && cmdline[0]){
             str_len = strlen(buf);
             sprintf(&buf[str_len], " %s", cmdline);
     }
-
+#ifndef CONFIG_SC8810
 	{
 		extern uint32_t load_lcd_id_to_kernel();
 		uint32_t lcd_id;
@@ -667,6 +699,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			buf[str_len+2] = 0;
 		}
 	}
+#endif
 	{
 		char *factorymodepoint = "/productinfo";
 		char *factorymodefilename = "/productinfo/factorymode.file";
@@ -680,13 +713,18 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		}
 		cmd_yaffs_umount(factorymodepoint);
 	}
-
     printf("pass cmdline: %s\n", buf);
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
+#ifndef CONFIG_SC8810
     MMU_InvalideICACHEALL();
+#endif
+#if BOOT_NATIVE_LINUX
+	start_linux();
+#else
 	entry();
+#endif
 }
 void normal_mode(void)
 {

@@ -27,6 +27,7 @@ unsigned long sprd_rtc_get_sec(void);
 void sprd_rtc_init(void);
 int alarm_flag_check(void)
 {
+#ifndef CONFIG_SC8810
     char *file_partition = "/cache";
     char *file_name = "/cache/alarm_flag";
     int ret = 0;
@@ -57,4 +58,7 @@ int alarm_flag_check(void)
     }
     cmd_yaffs_umount(file_partition);
     return ret;
+#else
+    return 1;
+#endif
 }

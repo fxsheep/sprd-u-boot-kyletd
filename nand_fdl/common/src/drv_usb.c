@@ -17,7 +17,9 @@
 
 #define FDL2_MODULE	1
 
-PUBLIC void Dcache_InvalRegion(void *addr, unsigned int length);
+PUBLIC void Dcache_InvalRegion(unsigned int addr, unsigned int length);
+PUBLIC void Dcache_CleanRegion(unsigned int addr, unsigned int length);
+
 static __inline void usb_handler (void);
 /**---------------------------------------------------------------------------*
  **                         Compiler Flag                                     *
@@ -28,7 +30,9 @@ static __inline void usb_handler (void);
 /**---------------------------------------------------------------------------*
  **                         Data Structures                                   *
  **---------------------------------------------------------------------------*/
-LOCAL uint32    s_setup_packet[8] = {0};
+ 
+static int currentDmaBufferIndex = 0;
+LOCAL __align(32) uint32    s_setup_packet[8] = {0};
 LOCAL uint32    enum_speed = 0;
 LOCAL uint32    recv_length = 0;
 LOCAL uint32 nIndex = 0;
@@ -74,7 +78,10 @@ void EPI0_config (uint32 transfer_size, uint32 packet_count, BOOLEAN is_dma, uin
 
     if (is_dma)
     {
-        * (volatile uint32 *) USB_DIEPDMA (0) = (uint32) buffer;//lint !e718
+#ifdef CONFIG_SC8810
+	Dcache_CleanRegion((unsigned int)(buffer), transfer_size);
+#endif
+	* (volatile uint32 *) USB_DIEPDMA (0) = (uint32) buffer;//lint !e718
     }
 
     * (volatile uint32 *) USB_DIEP0CTL &= (unsigned int) (~ (BIT_22|BIT_23|BIT_24|BIT_25)); // set EP0 in tx fifo nummber
@@ -144,8 +151,9 @@ LOCAL void usb_start_transfer (USB_EP_NUM_E ep_num, BOOLEAN dir, uint32 transfer
         volatile USB_DOEPTSIZ_U *doeptsiz_ptr = (USB_DOEPTSIZ_U *) USB_DOEPTSIZ (ep_num);
 
         if (is_dma)
-        {
-            * (volatile uint32 *) USB_DOEPDMA (ep_num) = (uint32) buffer;
+        {                
+	//	Dcache_InvalRegion((unsigned int)buffer,  MAX_RECV_LENGTH);
+		* (volatile uint32 *) USB_DOEPDMA (ep_num) = (uint32) buffer;
         }
 
         doeptsiz_ptr->mBits.transfer_size = MAX_RECV_LENGTH;    // transfer size
@@ -158,9 +166,13 @@ LOCAL void usb_start_transfer (USB_EP_NUM_E ep_num, BOOLEAN dir, uint32 transfer
         volatile USB_DIEPTSIZ_U *dieptsiz_ptr = (USB_DIEPTSIZ_U *) USB_DIEPTSIZ (ep_num);
         volatile USB_DIEPCTL_U   *diepctl_ptr = (USB_DIEPCTL_U *) USB_DIEPCTL (ep_num);
 
+
         if (is_dma)
-        {
-            * (volatile uint32 *) USB_DIEPDMA (ep_num) = (uint32) buffer;
+        {                
+#ifdef CONFIG_SC8810
+		Dcache_CleanRegion((unsigned int)buffer,  transfer_size);
+#endif
+		* (volatile uint32 *) USB_DIEPDMA (ep_num) = (uint32) buffer;
         } 
 
         dieptsiz_ptr->mBits.transfer_size = transfer_size;                  // transfer size
@@ -347,7 +359,8 @@ LOCAL void usb_reset_handler (void)
         }
     }
 
-    EPO0_config (TRUE, s_setup_packet);
+    Dcache_InvalRegion((unsigned int)s_setup_packet, sizeof(s_setup_packet));
+     EPO0_config (TRUE, s_setup_packet);
 
     * (volatile uint32 *) USB_GINTMSK |= (unsigned int) BIT_12;                             // enable reset interrupt
 
@@ -374,6 +387,7 @@ void usb_enumeration_done (void)
     EPn_config (USB_EP5, USB_EP_TYPE_BULK, USB_EP_DIR_IN, USB_PACKET_64);
     EPn_config (USB_EP6, USB_EP_TYPE_BULK, USB_EP_DIR_OUT, USB_PACKET_64);
 
+    Dcache_InvalRegion((unsigned int)s_setup_packet, sizeof(s_setup_packet));
     EPO0_config (TRUE, s_setup_packet);
 
     * (volatile uint32 *) USB_DCTL |= (unsigned int) BIT_8;
@@ -387,7 +401,6 @@ void usb_enumeration_done (void)
 //  Author:        jiayong.yang
 //  Note:
 /*****************************************************************************/
-static int currentDmaBufferIndex = 0;
 LOCAL void usb_EP6_handle (void)
 {
     volatile USB_DOEPINT_U *doepint_ptr = (USB_DOEPINT_U *) USB_DOEPINT (USB_EP6);
@@ -404,17 +417,14 @@ LOCAL void usb_EP6_handle (void)
     {
         doepint_ptr->mBits.transfer_com = 1;
         recv_length = MAX_RECV_LENGTH - doeptsiz_ptr->mBits.transfer_size;
+        Dcache_InvalRegion((unsigned int)(&usb_out_endpoint_buf[currentDmaBufferIndex][0]),  MAX_RECV_LENGTH);
 
         * (volatile uint32 *) USB_DOEPMSK |= (unsigned int) BIT_13;
         * (volatile uint32 *) USB_DOEPMSK |= (unsigned int) BIT_4;
-        * (volatile uint32 *) USB_DOEPMSK &= (unsigned int) (~BIT_0);
-#ifdef FDL2_MODULE
-        Dcache_InvalRegion(usb_out_endpoint_buf[currentDmaBufferIndex],  MAX_RECV_LENGTH);
-#endif
-		
+        * (volatile uint32 *) USB_DOEPMSK &= (unsigned int) (~BIT_0);		
     }
     else if (doepint.mBits.nak)
-    {
+    {    
         usb_start_transfer (USB_EP6, USB_EP_DIR_OUT, 1, TRUE, (uint32 *) usb_out_endpoint_buf[currentDmaBufferIndex]);
         * (volatile uint32 *) USB_DOEPMSK &= (unsigned int) (~BIT_13);
         * (volatile uint32 *) USB_DOEPMSK |= (unsigned int) BIT_0;
@@ -455,6 +465,7 @@ LOCAL void usb_EP0_out_handle (void)
 
     doepint_ptr->dwValue = 0xffffffff;// clear all interrupt
 
+    Dcache_InvalRegion((unsigned int)s_setup_packet, sizeof(s_setup_packet));
     EPO0_config (TRUE, s_setup_packet); //renable ep0 nd set packet count
 }
 
@@ -560,7 +571,7 @@ static __inline void usb_handler (void)
 //  Note:
 /*****************************************************************************/
 
-PUBLIC int USB_EPxSendData (char ep_id ,unsigned int *pBuf,int len)
+PUBLIC int USB_EPxSendData (char ep_id ,unsigned int *pBuf,    int len)
 {
     usb_start_transfer ( (USB_EP_NUM_E) ep_id, USB_EP_DIR_IN, len, TRUE, (uint32 *) pBuf);
     return 0;
@@ -593,6 +604,8 @@ REGET:
         if (recv_length > 0)
         {
             nIndex = currentDmaBufferIndex;
+  	  //Dcache_InvalRegion((unsigned int)(&usb_out_endpoint_buf[nIndex][0]),  MAX_RECV_LENGTH);
+			
             currentDmaBufferIndex ^= 0x1;
         }
         else
@@ -639,12 +652,12 @@ int VCOM_GetSingleChar (void)
 
         if (recv_length > 0)
         {
-            nIndex = currentDmaBufferIndex;
-	     currentDmaBufferIndex ^= 0x1;
+		nIndex = currentDmaBufferIndex;
+		currentDmaBufferIndex ^= 0x1;
         }
         else
         {
-            return -1;
+		return -1;
         }
 
 

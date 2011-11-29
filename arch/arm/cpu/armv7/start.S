@@ -31,10 +31,58 @@
 
 #include <asm-offsets.h>
 #include <config.h>
+#include <common.h>
 #include <version.h>
+#define SVC_STACK_TEMP 0x40008000
 
 .globl _start
 _start: b	reset
+#ifdef CONFIG_PRELOADER
+/* No exception handlers in preloader */
+	ldr	pc, _hang
+	ldr	pc, _hang
+	ldr	pc, _hang
+	ldr	pc, _hang
+	ldr	pc, _hang
+	ldr	pc, _hang
+	ldr	pc, _hang
+
+               /*22 begin*/	
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	/*22 end*/
+
+_hang:
+	.word	do_hang
+/* pad to 64 byte boundary */
+	.word	0x12345678
+	.word	0x12345678
+	.word	0x12345678
+	.word	0x12345678
+	.word	0x12345678
+	.word	0x12345678
+	.word	0x12345678
+#else
 	ldr	pc, _undefined_instruction
 	ldr	pc, _software_interrupt
 	ldr	pc, _prefetch_abort
@@ -54,6 +102,8 @@ _pad:			.word 0x12345678 /* now 16*4=64 */
 .global _end_vect
 _end_vect:
 
+#endif	/* CONFIG_PRELOADER */
+	
 	.balignl 16,0xdeadbeef
 /*************************************************************************
  *
@@ -106,45 +156,68 @@ reset:
 	/*
 	 * set the cpu to SVC32 mode
 	 */
+#ifndef CONFIG_SKIP_LOWLEVEL_INIT
+#ifdef SPRD_EVM_TAG_ON
+	ldr r0,=SPRD_EVM_ADDR_START
+	ldr r1,=0x87003004
+	ldr r2,[r1]
+	str r2,[r0]
+#endif
 	mrs	r0, cpsr
 	bic	r0, r0, #0x1f
 	orr	r0, r0, #0xd3
 	msr	cpsr,r0
-
-#if (CONFIG_OMAP34XX)
-	/* Copy vectors to mask ROM indirect addr */
-	adr	r0, _start		@ r0 <- current position of code
-	add	r0, r0, #4		@ skip reset vector
-	mov	r2, #64			@ r2 <- size to copy
-	add	r2, r0, r2		@ r2 <- source end address
-	mov	r1, #SRAM_OFFSET0	@ build vect addr
-	mov	r3, #SRAM_OFFSET1
-	add	r1, r1, r3
-	mov	r3, #SRAM_OFFSET2
-	add	r1, r1, r3
-next:
-	ldmia	r0!, {r3 - r10}		@ copy from source address [r0]
-	stmia	r1!, {r3 - r10}		@ copy to   target address [r1]
-	cmp	r0, r2			@ until source end address [r2]
-	bne	next			@ loop until equal */
-#if !defined(CONFIG_SYS_NAND_BOOT) && !defined(CONFIG_SYS_ONENAND_BOOT)
-	/* No need to copy/exec the clock code - DPLL adjust already done
-	 * in NAND/oneNAND Boot.
-	 */
-	bl	cpy_clk_code		@ put dpll adjust code behind vectors
-#endif /* NAND Boot */
 #endif
+
 	/* the mask ROM code should have PLL and others stable */
+#ifdef  CONFIG_SC8810
+#ifndef CONFIG_NAND_SPL
+#if 0
+	ldr	r1, =0xeffff
+time:	subs	r1,r1,#0x1
+	bne	time
+#endif
+#endif
+	mrc p15, 0, r1, c1, c0, 0
+	bic r1, #0x5
+	mcr p15, 0, r1, c1, c0, 0
+#if 0
+	ldr	r0, =0x8b00002c
+	ldr	r1, =0xf
+	ldr	r2,  [r0]
+	orr	r1,  r1,r2
+	str	r1,  [r0]
+#endif
+#endif
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
 	bl	cpu_init_crit
+	mov    r10, #0
+	/*set up temp stack*/
+	LDR    sp, =SVC_STACK_TEMP
+
+	STMDB sp!,{lr} 
+	bl lowlevel_init
+	@bl MMU_Init
+	/*Re-set up stack
+	  The sp here must be in the reserved region
+	  */
+	LDMIA sp!, {lr}
+	LDR     sp, =0x008f0000 
 #endif
 
 /* Set stackpointer in internal RAM to call board_init_f */
 call_board_init_f:
 	ldr	sp, =(CONFIG_SYS_INIT_SP_ADDR)
 	bic	sp, sp, #7 /* 8-byte alignment for ABI compliance */
+#ifndef CONFIG_NAND_SPL
 	ldr	r0,=0x00000000
 	bl	board_init_f
+#else
+	ldr r0, =(CONFIG_SYS_INIT_SP_ADDR)
+	ldr r1, =0x00000000
+	ldr r2, =(CONFIG_SYS_TEXT_BASE)
+	bl relocate_code
+#endif
 
 /*------------------------------------------------------------------------------*/
 
@@ -166,11 +239,11 @@ stack_setup:
 	mov	sp, r4
 
 	adr	r0, _start
-#ifndef CONFIG_PRELOADER
+	ldr r6, =(CONFIG_SYS_TEXT_BASE)
 	cmp	r0, r6
+	mov r9, #0x0
 	beq	clear_bss		/* skip relocation */
-#endif
-	mov	r1, r6			/* r1 <- scratch for copy_loop */
+	mov	r1, r6			/* r1 <- scratch for copy loop */
 	ldr	r2, _TEXT_BASE
 	ldr	r3, _bss_start_ofs
 	add	r2, r0, r3		/* r2 <- source end address	    */
@@ -220,8 +293,10 @@ fixnext:
 	add	r2, r2, #8		/* each rel.dyn entry is 8 bytes */
 	cmp	r2, r3
 	blo	fixloop
+#endif
 
 clear_bss:
+#ifndef CONFIG_PRELOADER
 	ldr	r0, _bss_start_ofs
 	ldr	r1, _bss_end_ofs
 	ldr	r3, _TEXT_BASE		/* Text base */
@@ -234,13 +309,23 @@ clbss_l:str	r2, [r0]		/* clear loop...		    */
 	add	r0, r0, #4
 	cmp	r0, r1
 	bne	clbss_l
-#endif	/* #ifndef CONFIG_PRELOADER */
+
+	bl coloured_LED_init
+	bl red_LED_on
+#endif
 
 /*
  * We are done. Do not return, instead branch to second part of board
  * initialization, now running from RAM.
  */
 jump_2_ram:
+#ifdef CONFIG_NAND_SPL
+	ldr     r0, _nand_boot_ofs
+	mov	pc, r0
+
+_nand_boot_ofs:
+	.word nand_boot
+#else
 	ldr	r0, _board_init_r_ofs
 	adr	r1, _start
 	add	lr, r0, r1
@@ -253,6 +338,7 @@ jump_2_ram:
 
 _board_init_r_ofs:
 	.word board_init_r - _start
+#endif
 
 _rel_dyn_start_ofs:
 	.word __rel_dyn_start - _start
@@ -294,9 +380,10 @@ cpu_init_crit:
 	 * wake up conditions.
 	 */
 	mov	ip, lr			@ persevere link reg across call
-	bl	lowlevel_init		@ go setup pll,mux,memory
+@	bl	lowlevel_init		@ go setup pll,mux,memory
 	mov	lr, ip			@ restore link
 	mov	pc, lr			@ back to my caller
+
 /*
  *************************************************************************
  *
@@ -423,7 +510,14 @@ cpu_init_crit:
 /*
  * exception handlers
  */
+#ifdef CONFIG_PRELOADER
 	.align	5
+do_hang:
+	ldr	sp, _TEXT_BASE			/* switch to abort stack */
+1:
+	bl	1b				/* hang and never return */
+#else	/* !CONFIG_PRELOADER */
+	.align  5
 undefined_instruction:
 	get_bad_stack
 	bad_save_user_regs
@@ -485,3 +579,4 @@ fiq:
 	bl	do_fiq
 
 #endif
+#endif	/* CONFIG_PRELOADER */

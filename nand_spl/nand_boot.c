@@ -100,8 +100,14 @@ static int nand_command(struct mtd_info *mtd, int block, int page, int offs, u8 
 	this->cmd_ctrl(mtd, offs, NAND_CTRL_ALE | NAND_CTRL_CHANGE);
 	//this->cmd_ctrl(mtd, offs>>1, NAND_CTRL_ALE | NAND_CTRL_CHANGE);
 #else
+	
+	/* Adjust columns for 16 bit buswidth */
+	if ( this->options & NAND_BUSWIDTH_16)
+		offs >>= 1;
+
 	this->cmd_ctrl(mtd, offs & 0xff,
 		       NAND_CTRL_ALE | NAND_CTRL_CHANGE); /* A[7:0] */
+
 	this->cmd_ctrl(mtd, (offs >> 8) & 0xff, NAND_CTRL_ALE); /* A[11:9] */
 #endif
 	/* Row address */

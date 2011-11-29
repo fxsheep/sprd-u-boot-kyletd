@@ -10,6 +10,17 @@
 #define NAND_INVALID_ADDR           5
 #define NAND_INVALID_SIZE           6
 
+
+#define ECC_NBL_SIZE 0x4000
+//bootloader header flag offset from the beginning
+#define BOOTLOADER_HEADER_OFFSET   32
+#define NAND_PAGE_LEN              512
+#define NAND_MAGIC_DATA            0xaa55a5a5
+//define nand data bus len
+#define NAND_BUS_SIZE_8              8
+#define NAND_BUS_SIZE_16              16
+#define NAND_BUS_SIZE_32              32
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

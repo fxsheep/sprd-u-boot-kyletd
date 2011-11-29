@@ -1,14 +1,23 @@
 #include "fdl_nand.h"
 #include "asm/arch/sci_types.h"
+#ifndef CONFIG_NAND_SC8810
 #include "asm/arch/nand_controller.h"
+#else
+#include <asm/arch/regs_nfc.h>
+#endif
 #include <linux/mtd/mtd.h>
 #include <nand.h>
 #include <linux/mtd/nand.h>
 #include <jffs2/jffs2.h>
 #include <parsemtdparts.h>
-
+#include <cmd_def.h>
+struct mtd_info *_local_mtd = 0;
 
 //#define FDL2_DEBUG 1
+#ifdef FDL2_DEBUG
+#else
+#define printf(arg...) do{}while(0)
+#endif
 typedef struct {
 		unsigned char colParity;
 		unsigned lineParity;
@@ -26,6 +35,7 @@ typedef struct {
 		yaffs_ECCOther ecc;
 } yaffs_PackedTags2;
 
+#define MAX_SPL_SIZE    0x4000
 static unsigned int nand_write_size ;
 static unsigned int nand_write_addr;
 static unsigned int cur_write_pos;
@@ -93,7 +103,9 @@ int nand_erase_allflash(void)
 	return nand_erase_opts(nand, &opts);
 #else
 	blocks = nand->size / nand->erasesize;
+#ifndef CONFIG_SC8810
 	nand_scan_patition(blocks, nand->erasesize, nand->writesize);
+#endif
 	return NAND_SUCCESS;
 #endif
 }
@@ -438,6 +450,169 @@ int nand_do_write_oob(struct mtd_info *mtd, loff_t to,
 			     struct mtd_oob_ops *ops);
 int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 			    struct mtd_oob_ops *ops);
+#ifdef CONFIG_NAND_SC8810
+struct bootloader_header
+{
+	u32 check_sum;
+	u32 page_type; //page type 0-512,1-1K,2-2k,3-4k,4-8K
+	u32 acycle; // 3, 4, 5
+	u32 bus_width; //0 ,1
+	u32 advance; // 0, 1
+	u32 magic_num; //0xaa55a5a5
+	u32 spare_size; //spare part sise for one sector
+	u32 ecc_mode; //0--1bit, 1--2bit,2--4bit,3--8bit,4--12bit, 5--16bit, 6--24bit
+	u32 ecc_pos; // ecc postion at spare part
+	u32 sct_size; //sector size;
+	u32 sct_per_page; //sector per page
+	u32 ecc_value[11];
+};
+u32 get_nand_page_type(u32 pg_sz)
+{
+	u32 pg_type = 0;
+	switch(pg_sz)
+	{
+	case 512:
+		pg_type = 0;
+		break;
+	case 1024:
+		pg_type = 1;
+		break;
+	case 2048:
+		pg_type = 2;
+		break;
+	case 4096:
+		pg_type = 3;
+		break;
+	case 892:
+		pg_type = 4;
+		break;		
+	default:
+		while(1);
+		break;								
+	}
+	return pg_type;
+}
+extern unsigned short CheckSum(const unsigned int *src, int len);
+void set_header_info(u8 *bl_data, struct mtd_info *nand, int ecc_pos)
+{
+	struct bootloader_header *header;
+	struct nand_chip *chip = nand->priv;
+	struct sc8810_ecc_param param;
+	u8 ecc[44];
+	header = (struct bootloader_header *)(bl_data + BOOTLOADER_HEADER_OFFSET);
+	memset(header, 0, sizeof(struct bootloader_header));
+	memset(ecc, 0, sizeof(ecc));
+#if 1
+	header->page_type = get_nand_page_type(nand->writesize);
+	if (chip->options & NAND_BUSWIDTH_16)	{
+		header->bus_width = 1;
+	}
+	if(nand->writesize > 512)	{
+		header->advance = 1;
+		/* One more address cycle for devices > 128MiB */
+		if (chip->chipsize > (128 << 20))		{
+			header->acycle = 5;
+		}
+		else	 {
+			header->acycle = 4;
+		}
+	}
+	else{
+		header->advance = 0;
+		/* One more address cycle for devices > 32MiB */
+		if (chip->chipsize > (32 << 20)) {
+			header->acycle = 3;
+		}
+		else	{
+			header->acycle = 3;
+		}
+	}
+	header->magic_num = 0xaa55a5a5;
+	header->spare_size = (nand->oobsize/chip->ecc.steps);
+	
+	header->ecc_mode = ecc_mode_convert(CONFIG_SYS_NAND_ECC_MODE);
+	header->ecc_pos = ecc_pos;
+	header->sct_size = (nand->writesize/chip->ecc.steps);
+	header->sct_per_page = chip->ecc.steps;
+	header->check_sum = CheckSum((unsigned int *)(bl_data + BOOTLOADER_HEADER_OFFSET + 4), (NAND_PAGE_LEN - BOOTLOADER_HEADER_OFFSET - 4));
+	
+	param.mode = 24;
+	param.ecc_num = 1;
+	param.sp_size = sizeof(ecc);
+	param.ecc_pos = 0;
+	param.m_size = chip->ecc.size;
+	param.p_mbuf = (u8 *)bl_data;
+	param.p_sbuf = ecc;
+	sc8810_ecc_encode(&param);
+	memcpy(header->ecc_value, ecc, sizeof(ecc));
+#endif	
+}
+int nand_write_spl_page(u8 *buf, struct mtd_info *mtd, u32 pg, u32 ecc_pos)
+{
+	int eccsteps;
+	u32 eccsize;
+	struct nand_chip *chip = mtd->priv;
+	int eccbytes = chip->ecc.bytes;
+	u32 i;
+	u32 page;
+	u32 spare_per_sct;
+	uint8_t *ecc_calc = chip->buffers->ecccalc;
+	eccsteps = chip->ecc.steps;
+	eccsize = chip->ecc.size;
+	spare_per_sct = mtd->oobsize / eccsteps;
+	memset(chip->buffers->ecccode, 0xff, mtd->oobsize);
+	
+	page = (int)(pg >> chip->page_shift);
+	
+	chip->cmdfunc(mtd, NAND_CMD_SEQIN, 0x00, page);
+	
+	for (i = 0; i < eccsteps; i ++, buf += eccsize) {
+		chip->ecc.hwctl(mtd, NAND_ECC_WRITE);
+		chip->write_buf(mtd, buf, eccsize);
+		chip->ecc.calculate(mtd, buf, &ecc_calc[0]);
+		memcpy(chip->buffers->ecccode + i * spare_per_sct + ecc_pos, &ecc_calc[0], eccbytes);
+	}
+	chip->write_buf(mtd, chip->buffers->ecccode, mtd->oobsize);
+	chip->cmdfunc(mtd, NAND_CMD_PAGEPROG, -1, -1);
+	chip->waitfunc(mtd, chip);	
+	return 0;
+}
+int nand_write_spl(u8 *buf, struct mtd_info *mtd)
+{
+	u32 i;
+	u32 pg_start;
+	u32 pg_end;
+	u32 pg;
+	u8 * data;
+	int ret;
+	//struct nand_chip *chip = mtd->priv;
+	set_header_info(buf, mtd, CONFIG_SYS_SPL_ECC_POS);
+	/*small page nand*/
+	if(mtd->erasesize == MAX_SPL_SIZE)	{
+		for(i = 0; i < 3; i++) {
+			ret = nand_erase_fdl(0, MAX_SPL_SIZE);
+		}
+	}
+	else{
+		ret = nand_erase_fdl(0, mtd->erasesize);
+	}
+	if(ret != 0) {
+		return ret;
+	}
+	/* write spl to flash*/
+	for(i = 0; i < 3; i++) 	{
+		pg_start = i * MAX_SPL_SIZE;
+		pg_end = (i + 1) * MAX_SPL_SIZE;
+		data = buf;
+		for(pg  = pg_start; pg < pg_end; pg += mtd->writesize)
+		{
+			nand_write_spl_page(data, mtd, pg, CONFIG_SYS_SPL_ECC_POS);
+			data += mtd->writesize;
+		}
+	}
+	return 0;	
+}
+#endif
 int nand_write_fdl(unsigned int size, unsigned char *buf)
 {
 #ifdef FDL2_DEBUG
@@ -445,12 +620,16 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 #endif
 	struct mtd_info *nand;
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
-	  return NAND_SYSTEM_ERROR;
+		return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
 	int ret=0;
 	int pos;
 	unsigned char buffer[4096];
-	
+#ifdef CONFIG_NAND_SC8810//only for sc8810 to write spl
+	if(cur_write_pos < 0xc000)	{
+		return nand_write_spl(buf, nand);
+	}
+#endif
 	//find a good block to write 
 	while(!(cur_write_pos & (nand->erasesize-1))) {
 #ifdef FDL2_DEBUG

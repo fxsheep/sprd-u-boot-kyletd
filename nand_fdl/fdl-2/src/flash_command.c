@@ -283,6 +283,27 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	memset(g_BigBUF, 0xff, YAFFS_BUFFER_SIZE);
 #endif
 
+#ifdef TRANS_CODE_SIZE
+	if (phy_partition.yaffs == 0) {
+		code_yaffs_buflen = DATA_BUFFER_SIZE;
+		code_yaffs_onewrite = PAGE_SIZE;
+	} else if (phy_partition.yaffs == 1) {
+		code_yaffs_buflen = YAFFS_BUFFER_SIZE;
+		code_yaffs_onewrite = PAGE_SIZE + PAGE_OOB;
+	}
+
+	g_BigSize = 0;
+	if (g_BigBUF == NULL)
+		g_BigBUF = (unsigned char *)malloc(YAFFS_BUFFER_SIZE);
+
+	if (g_BigBUF == NULL) {
+		printf("malloc is wrong : %d\n", YAFFS_BUFFER_SIZE);
+		ret = NAND_SYSTEM_ERROR;		
+		break;
+	}
+	memset(g_BigBUF, 0xff, YAFFS_BUFFER_SIZE);
+#endif
+
         g_status.total_size  = size;
         g_status.recv_size   = 0;
         g_prevstatus = NAND_SUCCESS;
@@ -394,8 +415,9 @@ int NandWriteAndCheck(unsigned int size, unsigned char *buf)
     {
         return NAND_SUCCESS;
     }
+#ifndef CONFIG_NAND_SC8810	
     NandChangeBootloaderHeader((unsigned int *) g_FixNBLBuf);
-
+#endif	
     return NAND_SUCCESS;
 }
 
@@ -487,7 +509,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 {
 	unsigned long pos, size, ret;
     	unsigned long i, fix_nv_size, fix_nv_checksum, ii, realii;
-		
+
     	if (CHECKSUM_OTHER_DATA != g_checksum) {
 		/* It's fixnv data */
         	fix_nv_size = g_sram_addr - (unsigned long) g_fixnv_buf;
@@ -523,6 +545,9 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		g_prevstatus = NAND_SUCCESS;
 		//////////////////////////////
     	} else if (is_nbl_write == 1) {
+#ifdef CONFIG_NAND_SC8810	//only for sc8810 to write spl
+		nand_write_fdl(0x0, g_FixNBLBuf);
+#else
 	   	/* write the spl loader image to the nand*/
 		for (i = 0; i < 3; i++) {
 			pos = 0;
@@ -540,6 +565,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			}
 
         	}//for (i = 0; i < 3; i++)
+#endif
 		is_nbl_write = 0;
    	} else if (is_phasecheck_write == 1) {
 		/* write phasecheck to yaffs2 format */

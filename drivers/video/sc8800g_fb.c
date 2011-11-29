@@ -22,14 +22,26 @@
  */
 #include <common.h>
 #include <lcd.h>
+#ifdef PLATFORM_SC8800G
 #include <asm/arch/sc8800g_reg_base.h>
 #include <asm/arch/sc8800g_lcd.h>
+#endif
+#ifdef CONFIG_SC8810
+#include <asm/arch/sc8810_reg_base.h>
+#include <asm/arch/sc8810_lcd.h>
+#endif
 #include <asm/arch/mfp.h>
 #include <asm/arch/adi_hal_internal.h>
 #include <asm/arch/regs_ana.h>
 #include <asm/arch/analog_reg_v3.h>
+#ifdef PLATFORM_SC8800G
 #include <asm/arch/sc8800g_reg_ahb.h>
 #include <asm/arch/sc8800g_reg_global.h>
+#endif
+#ifdef CONFIG_SC8810
+#include <asm/arch/sc8810_reg_ahb.h>
+#include <asm/arch/sc8810_reg_global.h>
+#endif
 #include <asm/io.h>
 #include <asm/errno.h>
 #include <lcd.h>
