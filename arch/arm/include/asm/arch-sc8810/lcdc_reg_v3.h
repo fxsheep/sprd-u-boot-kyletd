@@ -1,112 +1,104 @@
 /******************************************************************************
- ** File Name:    lcdc_v3_reg.h                                          *
- ** Author:       Shan.He                                                     *
- ** DATE:         01/22/2009                                                  *
- ** Copyright:    2009 Spreatrum, Incoporated. All Rights Reserved.           *
- ** Description:                                                              *
+ ** File Name:    lcdc_v3_reg.h                                     *
+ ** Author:       Shan.He                                           *
+ ** DATE:         01/22/2009                                        *
+ ** Copyright:    2009 Spreatrum, Incoporated. All Rights Reserved. *
+ ** Description:                                                    *
  ******************************************************************************/
 /******************************************************************************
- **                   Edit    History                                         *
+ **                   Edit    History                               *
  **---------------------------------------------------------------------------*
- ** DATE          NAME            DESCRIPTION                                 *
- ** 01/21/2006    Shan.He         Create.                                     *
+ ** DATE          NAME            DESCRIPTION                       *
+
  ******************************************************************************/
 #ifndef _LCDC_V3_REG_H_
 #define _LCDC_V3_REG_H_
 /*----------------------------------------------------------------------------*
- **                          Dependencies                                     *
+ **                          Dependencies                           *
  **---------------------------------------------------------------------------*/
 #include "lcm_reg_v3.h"
 /**---------------------------------------------------------------------------*
- **                          Compiler Flag                                    *
+ **                          Compiler Flag                          *
  **---------------------------------------------------------------------------*/
 #ifdef   __cplusplus
 extern   "C"
 {
 #endif
 /**---------------------------------------------------------------------------*
-**                               Micro Define                                **
+**                               Micro Define                      **
 **----------------------------------------------------------------------------*/
 
+#define REG_LCDC_BASE       LCDC_CTL_BEGIN
+
+#define LCDC_CTRL                 (REG_LCDC_BASE + 0x0000)
+#define LCDC_DISP_SIZE            (REG_LCDC_BASE + 0x0004)
+#define LCDC_LCM_START            (REG_LCDC_BASE + 0x0008)
+#define LCDC_LCM_SIZE             (REG_LCDC_BASE + 0x000c)
+#define LCDC_BG_COLOR             (REG_LCDC_BASE + 0x0010)
+#define LCDC_FIFO_STATUS          (REG_LCDC_BASE + 0x0014)
+
+
+#define LCDC_IMG_CTRL             (REG_LCDC_BASE + 0x0020)
+#define LCDC_IMG_Y_BASE_ADDR      (REG_LCDC_BASE + 0x0024)
+#define LCDC_IMG_UV_BASE_ADDR     (REG_LCDC_BASE + 0x0028)
+#define LCDC_IMG_SIZE_XY          (REG_LCDC_BASE + 0x002c)
+#define LCDC_IMG_PITCH            (REG_LCDC_BASE + 0x0030)
+#define LCDC_IMG_DISP_XY          (REG_LCDC_BASE + 0x0034)
+
+
+#define LCDC_OSD1_CTRL            (REG_LCDC_BASE + 0x0050)  
+#define LCDC_OSD1_BASE_ADDR       (REG_LCDC_BASE + 0x0054) 
+#define LCDC_OSD1_ALPHA_BASE_ADDR (REG_LCDC_BASE + 0x0058) 
+#define LCDC_OSD1_SIZE_XY         (REG_LCDC_BASE + 0x005c) 
+#define LCDC_OSD1_PITCH           (REG_LCDC_BASE + 0x0060) 
+#define LCDC_OSD1_DISP_XY         (REG_LCDC_BASE + 0x0064)  
+#define LCDC_OSD1_ALPHA           (REG_LCDC_BASE + 0x0068) 
+#define LCDC_OSD1_GREY_RGB        (REG_LCDC_BASE + 0x006c) 
+#define LCDC_OSD1_CK              (REG_LCDC_BASE + 0x0070) 
+
+#define LCDC_OSD2_CTRL            (REG_LCDC_BASE + 0x0080)  
+#define LCDC_OSD2_BASE_ADDR       (REG_LCDC_BASE + 0x0084) 
+#define LCDC_OSD2_SIZE_XY         (REG_LCDC_BASE + 0x008c) 
+#define LCDC_OSD2_PITCH           (REG_LCDC_BASE + 0x0090) 
+#define LCDC_OSD2_DISP_XY         (REG_LCDC_BASE + 0x0094)  
+#define LCDC_OSD2_ALPHA           (REG_LCDC_BASE + 0x0098) 
+#define LCDC_OSD2_GREY_RGB        (REG_LCDC_BASE + 0x009c) 
+#define LCDC_OSD2_CK              (REG_LCDC_BASE + 0x00a0) 
+
+#define LCDC_OSD3_CTRL            (REG_LCDC_BASE + 0x00b0)  
+#define LCDC_OSD3_BASE_ADDR       (REG_LCDC_BASE + 0x00b4) 
+#define LCDC_OSD3_SIZE_XY         (REG_LCDC_BASE + 0x00bc) 
+#define LCDC_OSD3_PITCH           (REG_LCDC_BASE + 0x00c0) 
+#define LCDC_OSD3_DISP_XY         (REG_LCDC_BASE + 0x00c4)  
+#define LCDC_OSD3_ALPHA           (REG_LCDC_BASE + 0x00c8) 
+#define LCDC_OSD3_GREY_RGB        (REG_LCDC_BASE + 0x00cc) 
+#define LCDC_OSD3_CK              (REG_LCDC_BASE + 0x00d0) 
+
+#define LCDC_OSD4_CTRL            (REG_LCDC_BASE + 0x00e0)  
+#define LCDC_OSD4_BASE_ADDR       (REG_LCDC_BASE + 0x00e4) 
+#define LCDC_OSD4_SIZE_XY         (REG_LCDC_BASE + 0x00ec) 
+#define LCDC_OSD4_PITCH           (REG_LCDC_BASE + 0x00f0) 
+#define LCDC_OSD4_DISP_XY         (REG_LCDC_BASE + 0x00f4)  
+#define LCDC_OSD4_ALPHA           (REG_LCDC_BASE + 0x00f8) 
+#define LCDC_OSD4_GREY_RGB        (REG_LCDC_BASE + 0x00fc) 
+#define LCDC_OSD4_CK              (REG_LCDC_BASE + 0x0100) 
+
+#define LCDC_OSD5_CTRL            (REG_LCDC_BASE + 0x0110)  
+#define LCDC_OSD5_BASE_ADDR       (REG_LCDC_BASE + 0x0114) 
+#define LCDC_OSD5_SIZE_XY         (REG_LCDC_BASE + 0x011c) 
+#define LCDC_OSD5_PITCH           (REG_LCDC_BASE + 0x0120) 
+#define LCDC_OSD5_DISP_XY         (REG_LCDC_BASE + 0x0124)  
+#define LCDC_OSD5_ALPHA           (REG_LCDC_BASE + 0x0128) 
+#define LCDC_OSD5_GREY_RGB        (REG_LCDC_BASE + 0x012c) 
+#define LCDC_OSD5_CK              (REG_LCDC_BASE + 0x0130) 
 
 
 
-#define REG_LCDC_CTRL                   (REG_LCDC_REG_BASE + 0x0000)
-#define REG_LCDC_DISP_SIZE              (REG_LCDC_REG_BASE + 0x0004)
-#define REG_LCDC_LCM_START              (REG_LCDC_REG_BASE + 0x0008)
-#define REG_LCDC_LCM_SIZE               (REG_LCDC_REG_BASE + 0x000c)
-#define REG_LCDC_BG_COLOR               (REG_LCDC_REG_BASE + 0x0010)
-#define REG_LCDC_FIFO_STATUS            (REG_LCDC_REG_BASE + 0x0014)
 
-#define REG_IMG_CTRL                    (REG_LCDC_REG_BASE + 0x0020)
-#define REG_IMG_Y_BASE_ADDR         (REG_LCDC_REG_BASE + 0x0024)
-#define REG_IMG_UV_BASE_ADDR            (REG_LCDC_REG_BASE + 0x0028)
-#define REG_IMG_SIZE_XY             (REG_LCDC_REG_BASE + 0x002c)
-#define REG_IMG_PITCH                   (REG_LCDC_REG_BASE + 0x0030)
-#define REG_IMG_DISP_XY             (REG_LCDC_REG_BASE + 0x0034)
-
-#define REG_OSD1_CTRL                   (REG_LCDC_REG_BASE + 0x0040)
-#define REG_OSD1_BASE_ADDR          (REG_LCDC_REG_BASE + 0x0044)
-#define REG_OSD1_ALPHA_BASE_ADDR        (REG_LCDC_REG_BASE + 0x0048)
-#define REG_OSD1_SIZE_XY                (REG_LCDC_REG_BASE + 0x004c)
-#define REG_OSD1_PITCH                  (REG_LCDC_REG_BASE + 0x0050)
-#define REG_OSD1_DISP_XY                (REG_LCDC_REG_BASE + 0x0054)
-#define REG_OSD1_ALPHA                  (REG_LCDC_REG_BASE + 0x0058)
-#define REG_OSD1_GREY_RGB               (REG_LCDC_REG_BASE + 0x005c)
-#define REG_OSD1_CK                     (REG_LCDC_REG_BASE + 0x0060)
-
-#define REG_OSD2_CTRL                   (REG_LCDC_REG_BASE + 0x0070)
-#define REG_OSD2_BASE_ADDR          (REG_LCDC_REG_BASE + 0x0074)
-#define REG_OSD2_SIZE_XY                (REG_LCDC_REG_BASE + 0x0078)
-#define REG_OSD2_PITCH                  (REG_LCDC_REG_BASE + 0x007c)
-#define REG_OSD2_DISP_XY                (REG_LCDC_REG_BASE + 0x0080)
-#define REG_OSD2_ALPHA                  (REG_LCDC_REG_BASE + 0x0084)
-#define REG_OSD2_GREY_RGB               (REG_LCDC_REG_BASE + 0x0088)
-#define REG_OSD2_CK                     (REG_LCDC_REG_BASE + 0x008c)
-
-#define REG_OSD3_CTRL                   (REG_LCDC_REG_BASE + 0x0090)
-#define REG_OSD3_BASE_ADDR          (REG_LCDC_REG_BASE + 0x0094)
-#define REG_OSD3_SIZE_XY                (REG_LCDC_REG_BASE + 0x0098)
-#define REG_OSD3_PITCH                  (REG_LCDC_REG_BASE + 0x009c)
-#define REG_OSD3_DISP_XY                (REG_LCDC_REG_BASE + 0x00a0)
-#define REG_OSD3_ALPHA                  (REG_LCDC_REG_BASE + 0x00a4)
-#define REG_OSD3_GREY_RGB               (REG_LCDC_REG_BASE + 0x00a8)
-#define REG_OSD3_CK                     (REG_LCDC_REG_BASE + 0x00ac)
-
-#define REG_OSD4_CTRL                   (REG_LCDC_REG_BASE + 0x00b0)
-#define REG_OSD4_BASE_ADDR          (REG_LCDC_REG_BASE + 0x00b4)
-#define REG_OSD4_SIZE_XY                (REG_LCDC_REG_BASE + 0x00b8)
-#define REG_OSD4_PITCH                  (REG_LCDC_REG_BASE + 0x00bc)
-#define REG_OSD4_DISP_XY                (REG_LCDC_REG_BASE + 0x00c0)
-#define REG_OSD4_ALPHA                  (REG_LCDC_REG_BASE + 0x00c4)
-#define REG_OSD4_GREY_RGB               (REG_LCDC_REG_BASE + 0x00c8)
-#define REG_OSD4_CK                     (REG_LCDC_REG_BASE + 0x00cc)
-
-#define REG_OSD5_CTRL                   (REG_LCDC_REG_BASE + 0x00d0)
-#define REG_OSD5_BASE_ADDR          (REG_LCDC_REG_BASE + 0x00d4)
-#define REG_OSD5_SIZE_XY                (REG_LCDC_REG_BASE + 0x00d8)
-#define REG_OSD5_PITCH                  (REG_LCDC_REG_BASE + 0x00dc)
-#define REG_OSD5_DISP_XY                (REG_LCDC_REG_BASE + 0x00e0)
-#define REG_OSD5_ALPHA                  (REG_LCDC_REG_BASE + 0x00e4)
-#define REG_OSD5_GREY_RGB               (REG_LCDC_REG_BASE + 0x00e8)
-#define REG_OSD5_CK                     (REG_LCDC_REG_BASE + 0x00ec)
-
-#define REG_CAP_CTRL                    (REG_LCDC_REG_BASE + 0x00f0)
-#define REG_CAP_BASE_ADDR               (REG_LCDC_REG_BASE + 0x00f4)
-#define REG_CAP_START_XY                (REG_LCDC_REG_BASE + 0x00f8)
-#define REG_CAP_SIZE_XY             (REG_LCDC_REG_BASE + 0x00fc)
-#define REG_CAP_PITCH                   (REG_LCDC_REG_BASE + 0x0100)
-
-#define REG_Y2R_CTRL                    (REG_LCDC_REG_BASE + 0x0110)
-#define REG_Y2R_CONTRAST                (REG_LCDC_REG_BASE + 0x0114)
-#define REG_Y2R_SATURATION          (REG_LCDC_REG_BASE + 0x0118)
-#define REG_Y2R_BRIGHTNESS              (REG_LCDC_REG_BASE + 0x011c)
-
-#define REG_LCDC_IRQ_EN             (REG_LCDC_REG_BASE + 0x0120)
-#define REG_LCDC_IRQ_CLR                (REG_LCDC_REG_BASE + 0x0124)
-#define REG_LCDC_IRQ_STATUS         (REG_LCDC_REG_BASE + 0x0128)
-#define REG_LCDC_IRQ_RAW                (REG_LCDC_REG_BASE + 0x012c)
-
+#define LCDC_IRQ_EN               (REG_LCDC_BASE + 0x0170)  
+#define LCDC_IRQ_CLR              (REG_LCDC_BASE + 0x0174)  
+#define LCDC_IRQ_STATUS           (REG_LCDC_BASE + 0x0178)  
+#define LCDC_IRQ_RAW              (REG_LCDC_BASE + 0x017c)  
 
 /**---------------------------------------------------------------------------*
 **                               Data Prototype                              **

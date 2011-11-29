@@ -261,7 +261,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 
 #ifdef CONFIG_SPLASH_SCREEN 
 #define SPLASH_PART "boot_logo"
-
 	ret = find_dev_and_part(SPLASH_PART, &dev, &pnum, &part);
 	if(ret){
 		printf("No partition named %s\n", SPLASH_PART);
@@ -682,24 +681,22 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
             str_len = strlen(buf);
             sprintf(&buf[str_len], " %s", cmdline);
     }
-#ifndef CONFIG_SC8810
 	{
 		extern uint32_t load_lcd_id_to_kernel();
 		uint32_t lcd_id;
 
 		lcd_id = load_lcd_id_to_kernel();
-	    //add lcd id
-		if(lcd_id)
-		{
+		//add lcd id
+		if(lcd_id) {
 			str_len = strlen(buf);
 			sprintf(&buf[str_len], " lcd_id=ID");
 			str_len = strlen(buf);
-			buf[str_len] = (char)((lcd_id>>8)&0xff);
-			buf[str_len+1] = (char)(lcd_id&0xff);
-			buf[str_len+2] = 0;
+			sprintf(&buf[str_len], "%x",lcd_id);
+			str_len = strlen(buf);
+			buf[str_len] = '\0';
 		}
+
 	}
-#endif
 	{
 		char *factorymodepoint = "/productinfo";
 		char *factorymodefilename = "/productinfo/factorymode.file";
@@ -714,6 +711,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		cmd_yaffs_umount(factorymodepoint);
 	}
     printf("pass cmdline: %s\n", buf);
+    //lcd_printf(" pass cmdline : %s\n",buf);
+    //lcd_display();
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
 
 	void (*entry)(void) = (void*) VMJALUNA_ADR;
