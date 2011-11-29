@@ -73,10 +73,10 @@ extern   "C"
 #define NAND_LCM_CTL_END                0x60001D44
 
 #define LCDC_CTL_BEGIN                  0x20700000    //LCDC Control Registers                      
-#define LCDC_CTL_END                    0x2070012C    //length unit:word.
+#define LCDC_CTL_END                    0x2070017C    //length unit:word.
 
-#define LCDC_LCM_CTL_BEGIN              0x20700140    //LCDC/LCM Control Registers              
-#define LCDC_LCM_CTL_END                0x20700194    //length unit:word.
+#define LCDC_LCM_CTL_BEGIN              0x20700180    //LCDC/LCM Control Registers              
+#define LCDC_LCM_CTL_END                0x207001a4    //length unit:word.
 
 #define INT_CTL_BEGIN                   0x80003000    //Interrupt Control Registers                 
 #define INT_CTL_END                     0x80000040    //the begin address of the last word
@@ -180,8 +180,6 @@ extern   "C"
 
 #define SDIO0_BASE_ADDR                 0x20500000
 #define SDIO1_BASE_ADDR                 0x20500100
-#define REG_LCDC_REG_BASE               0x20700000
-#define LCM_REG_BASE                    0x20700140
 #define ROT_REG_BASE                    0x20800200
 #define NAND_CTL_BASE                   0x60001c00
 #define NF_LCM_CTL_BEGIN                0x60000000      //NAND Flash and LCM Control Registers

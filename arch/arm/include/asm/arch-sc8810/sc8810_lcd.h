@@ -94,6 +94,11 @@ struct timing_mcu {
 	uint16_t whpw;
 };
 
+typedef int32_t (*Send_cmd)(uint32_t data);
+typedef int32_t (*Send_data)(uint32_t data);
+typedef int32_t (*Send_cmd_data)(uint32_t cmd, uint32_t data);
+typedef uint32_t (*Read_data)(void);
+
 struct ops_mcu {
 	int32_t (*send_cmd)(uint32_t cmd);
 	int32_t (*send_cmd_data)(uint32_t cmd, uint32_t data);
@@ -121,9 +126,5 @@ struct lcd_spec {
 	struct lcd_operations *ops;
 };
 
-extern struct lcd_spec lcd_panel_hx8357;
-extern struct lcd_spec lcd_panel_ili9328;
-extern struct lcd_spec lcd_panel_r61581;
-extern struct lcd_spec lcd_panel_rm68040;
 #endif
 
