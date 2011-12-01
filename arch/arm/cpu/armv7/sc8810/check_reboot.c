@@ -58,12 +58,21 @@ static unsigned long pwr_gpio_cfg =
     MFP_ANA_CFG_X(PBINT, AF0, DS1, F_PULL_UP,S_PULL_UP, IO_IE);
 int power_button_pressed(void)
 {
+#if 0
     struct gpio_chip power_button_chip;
     sprd_gpio_init();
     sprd_mfp_config(&pwr_gpio_cfg, 1);
     sprd_gpio_request(&power_button_chip, POWER_BUTTON_GPIO_NUM);
     sprd_gpio_direction_input(&power_button_chip,POWER_BUTTON_GPIO_NUM); 
     return sprd_gpio_get(&power_button_chip, POWER_BUTTON_GPIO_NUM);
+#else
+	ANA_REG_OR(ANA_APB_CLK_EN, BIT_3|BIT_11);
+	ANA_REG_SET(ADI_EIC_MASK, 0xff);
+	udelay(3000);
+	int status = ANA_REG_GET(ADI_EIC_DATA);
+	printf("eica status %x\n", status);
+	return !!(status & (1 << 3)/*PBINT*/);//low level if pb hold
+#endif
 }
 
 #define CHG_GPIO_NUM 162

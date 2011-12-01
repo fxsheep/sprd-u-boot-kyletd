@@ -46,6 +46,10 @@ extern   "C"
 #define  ADI_STS                (ADI_BASE + 0x30)
 #define  ADI_REQ_STS            (ADI_BASE + 0x34)
 
+//ADI_EIC
+#define ADI_EIC_DATA	(ADI_BASE + 0x700)
+#define ADI_EIC_MASK	(ADI_BASE + 0x704)
+
 //ADI_CTL_REG
 #define ANA_INT_STEAL_EN        BIT_0
 #define ARM_SERCLK_EN           BIT_1

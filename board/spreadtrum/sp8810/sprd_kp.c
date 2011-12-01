@@ -80,6 +80,9 @@ void board_keypad_init(void)
         }
     }
 #endif
+	//open eic module
+	REG_GR_GEN0 |= (BIT_9 | BIT_24);//EIC_EN,RTC_EIC_EN
+	printf("GEN0 %x\n", REG_GR_GEN0);
     return;
 }
 
@@ -115,7 +118,9 @@ unsigned char board_key_scan(void)
     uint32_t s_key_status = REG_KPD_KEY_STATUS;
     uint32_t scan_code = 0;
     uint32_t key_code =0;
-
+#ifdef KEYPAD_DEBUG
+	printf("key operation flags is %08x, key %08x\n", REG_KPD_INT_RAW_STATUS, REG_KPD_KEY_STATUS);
+#endif
     if((s_int_status & KPD_PRESS_INT0) || (s_int_status & KPD_LONG_KEY_INT0)){
         scan_code = s_key_status & (KPD1_ROW_CNT | KPD1_COL_CNT);
         key_code = handle_scan_code(scan_code);

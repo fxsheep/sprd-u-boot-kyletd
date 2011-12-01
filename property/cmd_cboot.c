@@ -78,7 +78,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		sleep_mode();
 	}
 #ifdef CONFIG_SC8810
-    normal_mode();
+//    normal_mode();
 #endif
     DBG("func: %s line: %d\n", __func__, __LINE__);
 
@@ -101,6 +101,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
             if(key_code != KEY_RESERVED)
               break;
         }
+		DBG("key_code %d\n", key_code);
         key_mode = check_key_boot(key_code);
 
         switch(key_mode){
@@ -120,7 +121,8 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
             default:
                 break;
         }
-    }else if(charger_connected()){
+    }
+	else if(charger_connected()){
         DBG("%s: charger connected\n", __FUNCTION__);
         charge_mode();
     }else if(alarm_triggered() && alarm_flag_check()){
@@ -136,6 +138,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     }
 
     if(argc == 1){
+	DBG("func: %s line: %d\n", __func__, __LINE__);
         normal_mode();
         return 1;
     }
