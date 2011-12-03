@@ -70,7 +70,7 @@ int power_button_pressed(void)
 	ANA_REG_SET(ADI_EIC_MASK, 0xff);
 	udelay(3000);
 	int status = ANA_REG_GET(ADI_EIC_DATA);
-	printf("eica status %x\n", status);
+	//printf("eica status %x\n", status);
 	return !!(status & (1 << 3)/*PBINT*/);//low level if pb hold
 #endif
 }
