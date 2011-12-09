@@ -68,7 +68,7 @@ void MMU_Init (unsigned pageBaseAddr)
 
 #ifdef CONFIG_SC8810
 
-    if (pageBaseAddr != 0 && (pageBaseAddr & (~0xFFFFC000) == 0) )
+    if (pageBaseAddr != 0 && ((pageBaseAddr & (~0xFFFFC000)) == 0) )
     {
 	g_mmu_page_table = pageBaseAddr;
     }

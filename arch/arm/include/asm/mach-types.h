@@ -39437,9 +39437,9 @@ extern unsigned int __machine_arch_type;
 # else
 #  define machine_arch_type	MACH_TYPE_SP8810
 # endif
-# define machine_is_sc8810openphone()	(machine_arch_type == MACH_TYPE_8810_OPENPHONE)
+# define machine_is_sp8810()	(machine_arch_type == MACH_TYPE_SP8810)
 #else
-# define machine_is_sc8810openphone()	(0)
+# define machine_is_sp8810()	(0)
 #endif
 
 /*

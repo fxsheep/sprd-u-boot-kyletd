@@ -714,11 +714,14 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
     //lcd_printf(" pass cmdline : %s\n",buf);
     //lcd_display();
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
-
-	void (*entry)(void) = (void*) VMJALUNA_ADR;
+    void (*entry)(void) = (void*) VMJALUNA_ADR;
 #ifndef CONFIG_SC8810
     MMU_InvalideICACHEALL();
 #endif
+#ifdef CONFIG_SC8810	
+    MMU_DisableIDCM();
+#endif
+
 #if BOOT_NATIVE_LINUX
 	start_linux();
 #else
@@ -727,6 +730,14 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 }
 void normal_mode(void)
 {
+#ifdef CONFIG_SC8810	
+     MMU_Init(CONFIG_MMU_TABLE_ADDR);
+#endif
     set_vibrator(1);
+#if BOOT_NATIVE_LINUX
+    vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS, BACKLIGHT_ON);
+#else
     vlx_nand_boot(BOOT_PART, NULL, BACKLIGHT_ON);
+#endif	
+
 }
