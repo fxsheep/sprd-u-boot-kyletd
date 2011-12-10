@@ -218,6 +218,7 @@ static int start_linux()
 	machine_type = 0x7dd;         /* get machine type */
 
 	theKernel = (void (*)(int, int, u32))KERNEL_ADR; /* set the kernel address */
+
 	*(volatile u32*)0x84001000 = 'j';
 	*(volatile u32*)0x84001000 = 'm';
 	*(volatile u32*)0x84001000 = 'p';
@@ -274,23 +275,27 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	nand = &nand_info[dev->id->num];
 	//read boot image header
 	size = 1<<19;
-    char * bmp_img = malloc(size);
-    if(!bmp_img){
-        printf("not enough memory for splash image\n");
-        return;
-    }
+	char * bmp_img = malloc(size);
+	if(!bmp_img){
+	    printf("not enough memory for splash image\n");
+	    return;
+	}
 	ret = nand_read_offset_ret(nand, off, &size, (void *)bmp_img, &off);
 	if(ret != 0){
 		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
 		return;
-	}
+	} 
     extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
     extern void lcd_display(void);
     extern void set_backlight(uint32_t value);
     if(backlight_set == BACKLIGHT_ON){
-        lcd_display_bitmap((ulong)bmp_img, 0, 0);
-        lcd_display();
-        set_backlight(50);
+	    extern void *lcd_base;
+	    extern void Dcache_CleanRegion(unsigned int addr, unsigned int length);
+	    
+	    lcd_display_bitmap((ulong)bmp_img, 0, 0);
+	    Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
+	    lcd_display();
+	    set_backlight(50);
     }
 #endif
     set_vibrator(0);
