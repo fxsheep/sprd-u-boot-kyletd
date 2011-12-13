@@ -40,7 +40,7 @@
 #define NULL 0x0
 #endif
 
-#define SCI_ASSERT(condition) BUG_ON(!(condition))  
+#define SCI_ASSERT(condition) BUG_ON(!(condition))
 #define SCI_PASSERT(condition, format...)  \
 	do {		\
 		if(!(condition)) { \
@@ -48,14 +48,14 @@
 			BUG();	\
 		} \
 	}while(0)
-	
-typedef enum 
+
+typedef enum
 {
 	SLP_BIT_CLR = 0,
 	SLP_BIT_SET
 }SLP_BIT_DEF_E;
 
-typedef struct  
+typedef struct
 {
 	LDO_ID_E id;
 	unsigned int bp_reg;
@@ -72,7 +72,7 @@ typedef struct
 	int ref;
 }LDO_CTL_T, * LDO_CTL_PTR;
 
-typedef struct  
+typedef struct
 {
 	SLP_LDO_E id;
 	unsigned int ldo_reg;
@@ -190,11 +190,11 @@ LDO_CTL_PTR g_ldo_ctl_tab = NULL;
 /*****************************************************************************/
 //  Description:  Slp_Ldo_Get_Cfg
 //	Global resource dependence: NONE
-//  Author: 
+//  Author:
 //	Note:    Slp_Ldo_Get_Cfg
 /*****************************************************************************/
 static SLP_LDO_CTL_PTR Slp_Ldo_Get_Cfg(void)
-{	
+{
 	return  slp_ldo_ctl_data;
 }
 
@@ -203,18 +203,18 @@ static SLP_LDO_CTL_PTR Slp_Ldo_Get_Cfg(void)
  **---------------------------------------------------------------------------*/
 
 /*****************************************************************************/
-//  Description:  Turn on the LDO specified by input parameter ldo_id  
+//  Description:  Turn on the LDO specified by input parameter ldo_id
 //	Global resource dependence: NONE
 //  Author:  Tao.Feng && Yi.Qiu
-//	Note:    return value = LDO_ERR_OK if operation is executed successfully           
+//	Note:    return value = LDO_ERR_OK if operation is executed successfully
 /*****************************************************************************/
 static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
 {
 	int i = 0;
 	LDO_CTL_PTR ctl = NULL;
-	
+
 	SCI_ASSERT(NULL != g_ldo_ctl_tab);
-	
+
 	for(i=0; g_ldo_ctl_tab[i].id != LDO_LDO_MAX; i++)
     	{
     		if( g_ldo_ctl_tab[i].id == ldo_id)
@@ -223,24 +223,24 @@ static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
     			break;
     		}
     	}
-		
+
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
 
 	return ctl;
 }
 
 /*****************************************************************************/
-//  Description:  Turn on the LDO specified by input parameter ldo_id  
+//  Description:  Turn on the LDO specified by input parameter ldo_id
 //	Global resource dependence: NONE
 //  Author:  Tao.Feng && Yi.Qiu
-//	Note:    return value = LDO_ERR_OK if operation is executed successfully           
+//	Note:    return value = LDO_ERR_OK if operation is executed successfully
 /*****************************************************************************/
  LDO_ERR_E LDO_TurnOnLDO(LDO_ID_E ldo_id)
 {
-	unsigned int reg_val;	
+	unsigned int reg_val;
 	LDO_CTL_PTR ctl = NULL;
 	unsigned long flags;
-	
+
 	ctl = LDO_GetLdoCtl(ldo_id);
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
 
@@ -255,31 +255,31 @@ static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
 	}
 	//SCI_DisableIRQ();
 	local_irq_save(flags);
-	
+
 	SCI_PASSERT(ctl->ref >= 0, ("ctl->ref = %d", ctl->ref));
-	if(ctl->ref == 0) 
+	if(ctl->ref == 0)
 		REG_SETCLRBIT(ctl->bp_reg, ctl->bp_rst, ctl->bp);
 
 	ctl->ref++;
-	
+
 	//SCI_RestoreIRQ();
 	local_irq_restore(flags);
 
 	return LDO_ERR_OK;
-} 
+}
 
 /*****************************************************************************/
 //  Description:  Turo off the LDO specified by parameter ldo_id
 //	Global resource dependence: NONE
 //  Author: Tao.Feng && Yi.Qiu
-//	Note:           
+//	Note:
 /*****************************************************************************/
  LDO_ERR_E LDO_TurnOffLDO(LDO_ID_E ldo_id)
 {
 	unsigned int reg_val;
 	LDO_CTL_PTR ctl = NULL;
 	unsigned long flags;
-	
+
 	ctl = LDO_GetLdoCtl(ldo_id);
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
 
@@ -294,24 +294,24 @@ static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
 	}
 	//SCI_DisableIRQ();
 	local_irq_save(flags);
-	
+
         if(ctl->ref > 0)
             ctl->ref--;
-	
+
 	if(ctl->ref == 0)
 		REG_SETCLRBIT(ctl->bp_reg, ctl->bp, ctl->bp_rst);
-	
+
 	//SCI_RestoreIRQ();
 	local_irq_restore(flags);
-	
+
 	return LDO_ERR_OK;
 }
 
 /*****************************************************************************/
 //  Description: Find the LDO status -- ON or OFF
-//	Global resource dependence: 
+//	Global resource dependence:
 //  Author: Tao.Feng && Yi.Qiu
-//	Note: return SCI_TRUE means LDO is ON, SCI_FALSE is OFF        
+//	Note: return SCI_TRUE means LDO is ON, SCI_FALSE is OFF
 /*****************************************************************************/
  int LDO_IsLDOOn(LDO_ID_E ldo_id)
 {
@@ -328,9 +328,9 @@ static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
 
 /*****************************************************************************/
 //  Description:  change the LDO voltage level specified by parameter ldo_id
-//	Global resource dependence: 
-//  Author: Tao.Feng && Yi.Qiu   
-//	Note:           
+//	Global resource dependence:
+//  Author: Tao.Feng && Yi.Qiu
+//	Note:
 /*****************************************************************************/
  LDO_ERR_E LDO_SetVoltLevel(LDO_ID_E ldo_id, LDO_VOLT_LEVEL_E volt_level)
 
@@ -358,15 +358,15 @@ static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
 		SET_LEVELBIT(ctl->level_reg_b0, b0_mask, ctl->b0, ctl->b0_rst);
 		SET_LEVELBIT(ctl->level_reg_b1, b1_mask, ctl->b1, ctl->b1_rst);
 	}
-	
+
 	return LDO_ERR_OK;
 }
 
 /*****************************************************************************/
 //  Description: Get LDO voltage level
-//	Global resource dependence: 
-//  Author: Tao.Feng && Yi.Qiu   
-//	Note:           
+//	Global resource dependence:
+//  Author: Tao.Feng && Yi.Qiu
+//	Note:
 /*****************************************************************************/
  LDO_VOLT_LEVEL_E LDO_GetVoltLevel(LDO_ID_E ldo_id)
 {
@@ -393,14 +393,14 @@ static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
 /*****************************************************************************/
 //  Description:  Shut down any LDO that do not used when system enters deepsleep
 //	Global resource dependence: s_ldo_reopen[]
-//  Author: Tao.Feng && Yi.Qiu   
-//	Note:           
+//  Author: Tao.Feng && Yi.Qiu
+//	Note:
 /*****************************************************************************/
 void LDO_DeepSleepInit(void)
 {
 	int i;
 	SLP_LDO_CTL_PTR  slp_ldo_ctl_tab;
-	
+
 	slp_ldo_ctl_tab = Slp_Ldo_Get_Cfg();
 
 	SCI_ASSERT(NULL != slp_ldo_ctl_tab);
@@ -419,14 +419,14 @@ void LDO_DeepSleepInit(void)
 
 /*****************************************************************************/
 //  Description:    this function is used to initialize LDO voltage level.
-//	Global resource dependence: 
+//	Global resource dependence:
 //  Author: Tao.Feng && Yi.Qiu
-//	Note:           
+//	Note:
 /*****************************************************************************/
 int LDO_Init(void)
 {
 	int i;
-	
+
 	g_ldo_ctl_tab = Ldo_Get_Cfg();
 
 	SCI_ASSERT(NULL != g_ldo_ctl_tab);
@@ -441,7 +441,7 @@ int LDO_Init(void)
 
 	//deepsleep init set for ldo
 	LDO_DeepSleepInit();
-	
+
 	return LDO_ERR_OK;
 }
 
@@ -453,7 +453,7 @@ int LDO_Init(void)
 /*****************************************************************************/
 static void LDO_TurnOffCoreLDO (void)
 {
-    ANA_REG_SET (ANA_LDO_PD_SET, ANA_LDO_PD_SET_MSK);   /// turn off system core ldo
+    	ANA_REG_SET (ANA_LDO_PD_SET, ANA_LDO_PD_SET_MSK);/// turn off system core ldo
 }
 
 /*****************************************************************************/
@@ -465,9 +465,10 @@ static void LDO_TurnOffCoreLDO (void)
 
 static void LDO_TurnOffAllModuleLDO (void)
 {
-    ANA_REG_SET (ANA_LDO_PD_CTL0, ANA_LDO_PD_CTL0_MSK);               
-    ANA_REG_SET (ANA_LDO_PD_CTL1, ANA_LDO_PD_CTL1_MSK);               
-    ANA_REG_MSK_OR (ANA_AUDIO_PA_CTL1, PA_EN, (PA_EN|PA_EN_RST)); ///PA poweroff
+    	ANA_REG_OR(ANA_AUDIO_PA_CTL1, PA_LDO_EN_RST);///PA poweroff
+	ANA_REG_SET (ANA_LDO_PD_CTL1, ANA_LDO_PD_CTL_MSK);
+	ANA_REG_SET (ANA_LDO_PD_CTL0, ANA_LDO_PD_CTL_MSK);
+	ANA_REG_SET (ANA_LDO_PD_RST, ANA_LDO_PD_RST_MSK);
 }
 /*****************************************************************************/
 //  Description:  Shut down all LDO when system poweroff
