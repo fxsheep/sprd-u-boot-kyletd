@@ -256,7 +256,7 @@ extern   "C"
 #define PTEST_PD_SET	BIT_15
 #define VIBR_PWR_ERR_CLR	BIT_7
 #define CLKBT_EN	BIT_6
-//#define CLK26M_REGS0	
+//#define CLK26M_REGS0
 #define UVH0_EN_RST	BIT_3
 #define UVH0_EN		BIT_2
 #define OTP_EN_RST	BIT_1
@@ -285,8 +285,13 @@ extern   "C"
 #define HWRST_STATUS_FASTBOOT (0X30)
 #define HWRST_STATUS_NORMAL (0X40)
 
-
-
+//ryan:add for poweroff debug.
+///ANA_LDO_PD_SET
+#define ANA_LDO_PD_SET_MSK  0x3FF
+///ANA_LDO_PD_CTL
+#define ANA_LDO_PD_CTL_MSK  0x5555
+///ANA_LDO_PD_RST
+#define ANA_LDO_PD_RST_MSK 0x0000
 /**----------------------------------------------------------------------------*
 **                             Data Prototype                                 **
 **----------------------------------------------------------------------------*/
