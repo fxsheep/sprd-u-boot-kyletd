@@ -678,7 +678,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
     //check caliberation mode
     int str_len;
     char * buf;
-    buf = malloc(384);
+    buf = malloc(1024);
 
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     str_len = strlen(buf);

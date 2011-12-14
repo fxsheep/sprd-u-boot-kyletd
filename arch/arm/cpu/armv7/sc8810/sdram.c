@@ -1597,9 +1597,11 @@ void ddr_init()
 	//REG32(0x20000010) = 0x223;
 	//REG32(0x20000014) = 0x223;
 
-	//REG32(0x20000184) = 0x033a3566;
-	REG32(0x20000184) = 0x02371422;
-	REG32(0x20000188) = 0x121c0322;
+	REG32(0x20000184) = 0x033a3566;
+	REG32(0x20000188) = 0x121c0172;
+	//REG32(0x20000184) = 0x02371422;
+	//REG32(0x20000188) = 0x121c0322;
+	
 	for(i =0 ; i < 1000; i++);	
 }
 void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv, uint32 dqs_drv)
@@ -1646,7 +1648,7 @@ void sc8810_emc_Init()
 #ifdef CONFIG_SP8810 
 	set_emc_pad(0x200, 0x000,0x200,0x200);
 #else
-	set_emc_pad(0x200, 0x100,0x100,0x200);
+	set_emc_pad(0x200, 0x000,0x200,0x200);
 #endif
 	// GPU AXI 256M
 	REG32(0x8b00002c) &= ~(0x3);
