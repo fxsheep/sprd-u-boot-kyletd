@@ -81,13 +81,20 @@ static unsigned long chg_gpio_cfg =
     //MFP_ANA_CFG_X(CHIP_RSTN, AF0, DS1, F_PULL_DOWN,S_PULL_UP, IO_IE);
 int charger_connected(void)
 {
-//#define CHG_CTL (ANA_GPIN_PG0_BASE + 0x0)
- //   return ANA_REG_GET(CHG_CTL) & BIT_2;
+ #if  0	//mingwei
     struct gpio_chip chg_chip;
     sprd_mfp_config(&chg_gpio_cfg, 1);
     sprd_gpio_request(&chg_chip, CHG_GPIO_NUM);
     sprd_gpio_direction_input(&chg_chip,CHG_GPIO_NUM); 
     return sprd_gpio_get(&chg_chip, CHG_GPIO_NUM);
+#else
+	ANA_REG_OR(ANA_APB_CLK_EN, BIT_3|BIT_11);
+	ANA_REG_SET(ADI_EIC_MASK, 0xff);
+	udelay(3000);
+	int status = ANA_REG_GET(ADI_EIC_DATA);
+	//printf("charger_connected eica status %x\n", status);
+	return !!(status & (1 << 2));
+#endif
     
 }
 
