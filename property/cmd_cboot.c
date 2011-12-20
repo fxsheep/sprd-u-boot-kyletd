@@ -48,7 +48,9 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     if(charger_connected()){
         mdelay(10);
         CHG_TurnOn();
-    }else{
+    }
+#ifndef CONFIG_SC8810	
+	else{
         if(is_bat_low()){
             printf("shut down again for low battery\n");
             power_down_devices();
@@ -56,6 +58,14 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
               ;
         }
     }
+#else
+	if(is_bat_low()){
+				printf("shut down again for low battery\n");
+				power_down_devices();
+				while(1)
+				  ;
+	}
+#endif	
     
     boot_pwr_check();
     board_keypad_init();

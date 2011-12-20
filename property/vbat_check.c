@@ -31,8 +31,6 @@ int is_bat_low(void)
     int adc_value = 0;
     unsigned int comp_vbat = 0;
     int i;
-
-#ifndef CONFIG_SC8810
     comp_vbat = get_bat_low_level();
     ADC_Init();
 
@@ -49,12 +47,12 @@ retry_adc:
     }
 
     adc_value = get_vbat_value();
-
+	
+	printf("is_bat_low adc_value:%d,comp_vbat:%d\n",adc_value,comp_vbat);
+	
     if(adc_value < comp_vbat)
       return 1;
     else
       return 0;
-#else
-    return 0;
-#endif
+	
 }
