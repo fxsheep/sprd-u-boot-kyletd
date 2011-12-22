@@ -315,7 +315,7 @@
 #endif // CONFIG_LCD
 
 #define CALIBERATE_DETECT_MS 20000
-#define LOW_BAT_ADC_LEVEL 770 /*phone battery adc value low than this value will not boot up*/
+#define LOW_BAT_ADC_LEVEL 782 /*phone battery adc value low than this value will not boot up*/
 #define PWR_KEY_DETECT_CNT 12 /*this should match the count of boot_pwr_check() function */
 #define ALARM_LEAD_SET_MS 120 /* time set for alarm boot in advancd */
 

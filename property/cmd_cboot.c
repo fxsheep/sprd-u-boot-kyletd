@@ -22,6 +22,7 @@ extern int charger_connected(void);
 extern int alarm_triggered(void);
 extern void CHG_TurnOn (void);
 extern void CHG_ShutDown (void);
+extern void CHG_Init (void);
 
 int boot_pwr_check(void)
 {
@@ -44,13 +45,13 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
       goto usage;
 
     boot_pwr_check();
+	
+#ifndef CONFIG_SC8810	
     CHG_ShutDown();
     if(charger_connected()){
         mdelay(10);
         CHG_TurnOn();
-    }
-#ifndef CONFIG_SC8810	
-	else{
+    }else{
         if(is_bat_low()){
             printf("shut down again for low battery\n");
             power_down_devices();
@@ -59,6 +60,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         }
     }
 #else
+	CHG_Init();
 	if(is_bat_low()){
 				printf("shut down again for low battery\n");
 				power_down_devices();

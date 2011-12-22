@@ -212,6 +212,30 @@ extern   "C"
 #define DCDC_DEDTDELAY		BIT_10
 #define DCDC_DEDTDEN_RST	BIT_9
 #define DCDC_DEDTDEN	BIT_8
+
+///ANA_CHGR_CTL0
+#define CHGR_ADAPTER_EN		BIT_0
+#define CHGR_ADAPTER_EN_RST	BIT_1
+#define CHGR_USB_500MA_EN		BIT_2
+#define CHGR_USB_500MA_EN_RST	BIT_3
+
+#define CHGR_USB_CHG_SHIFT              4
+#define CHGR_USB_CHG_MSK                (3 << CHGR_USB_CHG_SHIFT)
+#define CHGR_ADAPTER_CHG_SHIFT          6
+#define CHGR_ADAPTER_CHG_MSK            (3 << CHGR_ADAPTER_CHG_SHIFT)
+#define CHGR_PD_BIT                     			BIT_8
+#define PA_LDO_EN_RST					BIT_9
+#define CHGR_RECHG_BIT                  		BIT_12
+#define CHGR_ADATPER_EN_BIT             	BIT_0
+#define CHGR_ADATPER_EN_RST_BIT       	BIT_1
+#define CHGR_USB_500MA_EN_BIT           	BIT_2
+#define CHGR_USB_500MA_EN_RST_BIT       BIT_3
+#define CHAR_ADAPTER_MODE_MSK           	(BIT_0|BIT_1|BIT_2|BIT_3)
+
+///ANA_CHGR_CTL1
+#define CHAR_SW_POINT_SHIFT     	0
+#define CHAR_SW_POINT_MSK       		(0x1F << CHAR_SW_POINT_SHIFT)
+
 /*
   the VIBRATOR_CTL0 register bit
 */
