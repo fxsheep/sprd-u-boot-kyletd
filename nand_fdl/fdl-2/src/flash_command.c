@@ -1,4 +1,5 @@
 #include "sci_types.h"
+#include "dload_op.h"
 #include "flash_command.h"
 #include "fdl_nand.h"
 #include "packet.h"
@@ -56,6 +57,10 @@ static unsigned int g_NBLFixBufDataSize = 0;
 static unsigned char g_FixNBLBuf[0x8000];
 static unsigned int g_PhasecheckBUFDataSize = 0;
 static unsigned char g_PhasecheckBUF[0x2000];
+static DL_OP_RECORD_S g_dl_op_table[DL_OP_MTD_COUNT];
+static unsigned long g_dl_op_index = 0;
+static unsigned long is_factorydownload_tools = 0;
+
 #ifdef  TRANS_CODE_SIZE
 #define min(A,B)		(((A) < (B)) ? (A) : (B))
 #define PAGE_SIZE		(2048)
@@ -88,6 +93,113 @@ static CUSTOM2LOG custom2log_table[] = {
 #define NAND_BUS_SIZE_8              8
 #define NAND_BUS_SIZE_16              16
 #define NAND_BUS_SIZE_32              32
+
+void set_dl_op_val(unsigned long addr, unsigned long size, DL_OP_TYPE_E type, DL_OP_STATUS_E status, unsigned long cnt)
+{
+	if (g_dl_op_index >= DL_OP_MTD_COUNT) {
+		printf("\nmtd count is beyoned %d\n", DL_OP_MTD_COUNT);
+		return;
+	}
+    
+	switch (type) {
+		case STARTDATA:
+			if (status == FAIL) {
+				memset(&(g_dl_op_table[g_dl_op_index]), 0, sizeof(DL_OP_RECORD_S));
+				g_dl_op_table[g_dl_op_index].base = addr;
+    				g_dl_op_table[g_dl_op_index].size = size;
+    				g_dl_op_table[g_dl_op_index].type = type;
+    				g_dl_op_table[g_dl_op_index].status = status;
+    				g_dl_op_table[g_dl_op_index].status_cnt = cnt;
+			} else {
+    				g_dl_op_table[g_dl_op_index].status = status;
+    				g_dl_op_table[g_dl_op_index].status_cnt = cnt;
+				g_dl_op_index++;
+				memset(&(g_dl_op_table[g_dl_op_index]), 0, sizeof(DL_OP_RECORD_S));
+				g_dl_op_table[g_dl_op_index].base = addr;
+    				g_dl_op_table[g_dl_op_index].size = size;
+			}
+		break;
+		case MIDSTDATA:
+			g_dl_op_table[g_dl_op_index].type = type;
+			g_dl_op_table[g_dl_op_index].status = status;
+			if (status == FAIL)
+    				g_dl_op_table[g_dl_op_index].status_cnt = cnt;
+			else
+				g_dl_op_table[g_dl_op_index].status_cnt++;
+		break;
+		case ENDDATA:
+			if ((status == FAIL) && (cnt == 1)) {
+				g_dl_op_index++;
+				memset(&(g_dl_op_table[g_dl_op_index]), 0, sizeof(DL_OP_RECORD_S));
+				g_dl_op_table[g_dl_op_index].base = g_dl_op_table[g_dl_op_index - 1].base;
+				g_dl_op_table[g_dl_op_index].size = g_dl_op_table[g_dl_op_index - 1].size;
+				g_dl_op_table[g_dl_op_index].type = type;
+				g_dl_op_table[g_dl_op_index].status = status;
+				g_dl_op_table[g_dl_op_index].status_cnt = cnt;
+			} else {
+				g_dl_op_table[g_dl_op_index].status = status;
+				g_dl_op_table[g_dl_op_index].status_cnt = cnt;
+				if (status == SUCCESS) {
+					g_dl_op_index++;
+					memset(&(g_dl_op_table[g_dl_op_index]), 0, sizeof(DL_OP_RECORD_S));
+				}
+			}
+		break;
+		case ERASEFLASH:
+			if (status == FAIL) {
+				memset(&(g_dl_op_table[g_dl_op_index]), 0, sizeof(DL_OP_RECORD_S));
+				g_dl_op_table[g_dl_op_index].base = addr;
+				g_dl_op_table[g_dl_op_index].size = size;
+				g_dl_op_table[g_dl_op_index].type = type;
+				g_dl_op_table[g_dl_op_index].status = status;
+				g_dl_op_table[g_dl_op_index].status_cnt = cnt;
+			} else {
+				g_dl_op_table[g_dl_op_index].status = status;
+				g_dl_op_table[g_dl_op_index].status_cnt = cnt;
+				g_dl_op_index++;
+				memset(&(g_dl_op_table[g_dl_op_index]), 0, sizeof(DL_OP_RECORD_S));
+			}
+		break;
+		case READFLASH:
+		break;
+	}	
+}
+
+DL_OP_STATUS_E check_dl_data_status(unsigned long addr)
+{
+	int cnt;
+	DL_OP_STATUS_E status;
+	
+	status = FAIL;
+	for (cnt = 0; cnt < g_dl_op_index; cnt ++)
+		if ((g_dl_op_table[cnt].base == addr) && (g_dl_op_table[cnt].type == STARTDATA) && (g_dl_op_table[cnt].status == SUCCESS) && (g_dl_op_table[cnt].status_cnt == 1)) {
+			if ((cnt + 2) < g_dl_op_index) {
+				if ((g_dl_op_table[cnt + 1].base == addr) && (g_dl_op_table[cnt + 1].type == MIDSTDATA) && (g_dl_op_table[cnt + 1].status == SUCCESS) && (g_dl_op_table[cnt + 1].status_cnt >= 1)) {
+					if ((g_dl_op_table[cnt + 2].base == addr) && (g_dl_op_table[cnt + 2].type == ENDDATA) && (g_dl_op_table[cnt + 2].status == SUCCESS) && (g_dl_op_table[cnt + 2].status_cnt == 1)) {
+						status = SUCCESS;
+						break;
+					}
+				}
+			}
+		}
+
+	return status;
+}
+
+DL_OP_STATUS_E check_dl_erase_status(unsigned long addr)
+{
+	int cnt;
+	DL_OP_STATUS_E status;
+	
+	status = FAIL;
+	for (cnt = 0; cnt < g_dl_op_index; cnt ++)
+		if ((g_dl_op_table[cnt].base == addr) && (g_dl_op_table[cnt].type == ERASEFLASH) && (g_dl_op_table[cnt].status == SUCCESS) && (g_dl_op_table[cnt].status_cnt == 1)) {
+			status = SUCCESS;
+			break;
+		}
+
+	return status;
+}
 
 unsigned long custom2log(unsigned long custom)
 {
@@ -141,27 +253,36 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 	int pos;
 	unsigned long addr = phypart->offset;
 
-	/* for fixnv, read total 64KB */
-	char *fixnvpoint = "/fixnv";
-	char *fixnvfilename = "/fixnv/fixnv.bin";
-	char *fixnvfilename2 = "/fixnv/fixnvchange.bin";
+	if (strcmp(phypart->name, "fixnv") == 0) {
+		/* for fixnv, read total 64KB */
+		char *fixnvpoint = "/fixnv";
+		char *fixnvfilename = "/fixnv/fixnv.bin";
+		char *fixnvfilename2 = "/fixnv/fixnvchange.bin";
 
-	//printf("name : %20s, offset : 0x%08x, size : 0x%08x, yaffs : %d\n", phypart->name, phypart->offset, phypart->size, phypart->yaffs);
-
-	if (strcmp(phypart->name, "fixnv") != 0)
-		return NAND_INVALID_ADDR;
-	if (size != 0x800)	
-		return NAND_INVALID_SIZE;
-
-	if (read_yaffs_flag == 0) {
-		memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
-		/* read fixnv */
-    		cmd_yaffs_mount(fixnvpoint);
-		ret = cmd_yaffs_ls_chk(fixnvfilename);
-		if (ret == (FIXNV_SIZE + 4)) {
-			cmd_yaffs_mread_file(fixnvfilename, g_fixnv_buf_yaffs);
-			if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
-				memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
+		if (read_yaffs_flag == 0) {
+			memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
+			/* read fixnv */
+    			cmd_yaffs_mount(fixnvpoint);
+			ret = cmd_yaffs_ls_chk(fixnvfilename);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(fixnvfilename, g_fixnv_buf_yaffs);
+				if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
+					memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv backup */
+					ret = cmd_yaffs_ls_chk(fixnvfilename2);
+					if (ret == (FIXNV_SIZE + 4)) {
+						cmd_yaffs_mread_file(fixnvfilename2, g_fixnv_buf_yaffs);
+						if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
+							memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
+							read_yaffs_flag = 2;
+						} else
+							read_yaffs_flag = 1;
+					} else
+						read_yaffs_flag = 2;//error
+					/* read fixnv backup */
+				} else
+					read_yaffs_flag = 1;//success
+			} else {
 				/* read fixnv backup */
 				ret = cmd_yaffs_ls_chk(fixnvfilename2);
 				if (ret == (FIXNV_SIZE + 4)) {
@@ -174,31 +295,40 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				} else
 					read_yaffs_flag = 2;//error
 				/* read fixnv backup */
-			} else
-				read_yaffs_flag = 1;//success
-		} else {
-			/* read fixnv backup */
-			ret = cmd_yaffs_ls_chk(fixnvfilename2);
-			if (ret == (FIXNV_SIZE + 4)) {
-				cmd_yaffs_mread_file(fixnvfilename2, g_fixnv_buf_yaffs);
-				if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
-					memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
-					read_yaffs_flag = 2;
-				} else
-					read_yaffs_flag = 1;
-			} else
-				read_yaffs_flag = 2;//error
-			/* read fixnv backup */
+			}
+			cmd_yaffs_umount(fixnvpoint);
 		}
-		cmd_yaffs_umount(fixnvpoint);
-	}
 
-	memcpy(buf, (unsigned char *)(g_fixnv_buf_yaffs + off), size);
+		memcpy(buf, (unsigned char *)(g_fixnv_buf_yaffs + off), size);
 
-	if (read_yaffs_flag == 1)
-		return NAND_SUCCESS;
+		if (read_yaffs_flag == 1)
+			return NAND_SUCCESS;
+		return NAND_SYSTEM_ERROR;
+	}//if (strcmp(phypart->name, "fixnv") == 0)
 
-	return NAND_SYSTEM_ERROR;
+	if (strcmp(phypart->name, "productinfo") == 0) {
+		/* for dlstatus, read real length */
+		char *productinfopoint = "/productinfo";
+		char *productinfofilename = "/productinfo/dlstatus.txt";
+
+		if (read_yaffs_flag == 0) {
+			memset(g_PhasecheckBUF, 0, 0x2000);
+			/* read dlstatus */
+    			cmd_yaffs_mount(productinfopoint);
+			ret = cmd_yaffs_ls_chk(productinfofilename);
+			if (ret >= DL_OP_RECORD_LEN) {
+				cmd_yaffs_mread_file(productinfofilename, g_PhasecheckBUF);
+				read_yaffs_flag = 1;//success
+			}
+			cmd_yaffs_umount(productinfopoint);
+		}
+
+		memcpy(buf, (unsigned char *)(g_PhasecheckBUF + off), size);
+
+		if (read_yaffs_flag == 1)
+			return NAND_SUCCESS;
+		return NAND_SYSTEM_ERROR;
+	}//if (strcmp(phypart->name, "dlstatus") == 0)
 }
 
 
@@ -212,6 +342,8 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
     start_addr = EndianConv_32 (start_addr);
     size = EndianConv_32 (size);
 #endif
+
+    set_dl_op_val(start_addr, size, STARTDATA, FAIL, 1);
 
     if (packet->packet_body.size == 12)
     {
@@ -287,8 +419,8 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
         g_status.recv_size   = 0;
         g_prevstatus = NAND_SUCCESS;
 
-        FDL_SendAckPacket (BSL_REP_ACK);
-
+	set_dl_op_val(start_addr, size, STARTDATA, SUCCESS, 1);
+        FDL_SendAckPacket (BSL_REP_ACK);	
         return 1;
     }
     while (0);
@@ -407,6 +539,7 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
     /* The previous download step failed. */
     if (NAND_SUCCESS != g_prevstatus)
     {
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 1);
         FDL2_SendRep (g_prevstatus);
         return 0;
     }
@@ -416,6 +549,7 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
     if ( (g_status.recv_size + size) > g_status.total_size)
     {
         g_prevstatus = NAND_INVALID_SIZE;
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 2);
         FDL2_SendRep (g_prevstatus);
         return 0;
     }
@@ -465,11 +599,13 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
             if (!packet->ack_flag)
             {
                 packet->ack_flag = 1;
-                FDL_SendAckPacket (BSL_REP_ACK);
+		set_dl_op_val(0, 0, MIDSTDATA, SUCCESS, 8);
+		FDL_SendAckPacket (BSL_REP_ACK);
                 return NAND_SUCCESS == g_prevstatus;
             }
         }
 
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 4);
         FDL2_SendRep (g_prevstatus);
         return NAND_SUCCESS == g_prevstatus;
     }
@@ -478,6 +614,7 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
         memcpy ( (unsigned char *) g_sram_addr, (char *) (packet->packet_body.content), size);
         g_sram_addr += size;
 	g_status.recv_size += size;
+	set_dl_op_val(0, 0, MIDSTDATA, SUCCESS, 8);
         FDL_SendAckPacket (BSL_REP_ACK);
         return 1;
     }
@@ -487,7 +624,8 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 {
 	unsigned long pos, size, ret;
     	unsigned long i, fix_nv_size, fix_nv_checksum, ii, realii;
-		
+
+	set_dl_op_val(0, 0, ENDDATA, FAIL, 1);
     	if (CHECKSUM_OTHER_DATA != g_checksum) {
 		/* It's fixnv data */
         	fix_nv_size = g_sram_addr - (unsigned long) g_fixnv_buf;
@@ -534,8 +672,12 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 				//printf("pos = %d  size = %d\n", pos, size);
 				if (size == 0)
 					break;
+#if 1
+				g_prevstatus = nand_write_fdl (size, g_FixNBLBuf + pos);
+#else
 				if (nand_write_fdl (size, g_FixNBLBuf + pos) == NAND_SUCCESS)
                 			g_prevstatus = NAND_SUCCESS;
+#endif
 				pos += size;
 			}
 
@@ -554,6 +696,8 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		ret = cmd_yaffs_ls_chk(productinfofilename);
 		cmd_yaffs_umount(productinfopoint);
 		g_prevstatus = NAND_SUCCESS;
+		/* factorydownload tools */
+		is_factorydownload_tools = 1;
     	}
 #ifdef	TRANS_CODE_SIZE
 	else {
@@ -576,61 +720,59 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 #endif
 
     	if (NAND_SUCCESS != g_prevstatus) {
+		set_dl_op_val(0, 0, ENDDATA, FAIL, 2);
         	FDL2_SendRep (g_prevstatus);
         	return 0;
     	}
 
     	g_prevstatus = nand_end_write();
+	set_dl_op_val(0, 0, ENDDATA, SUCCESS, 1);
     	FDL2_SendRep (g_prevstatus);
     	return (NAND_SUCCESS == g_prevstatus);
 }
 
 int FDL2_ReadFlash (PACKET_T *packet, void *arg)
 {
-    unsigned long *data = (unsigned long *) (packet->packet_body.content);
-    unsigned long addr = *data;
-    unsigned long size = * (data + 1);
-    unsigned long off = 0;
-    int           ret;
+    	unsigned long *data = (unsigned long *) (packet->packet_body.content);
+    	unsigned long addr = *data;
+    	unsigned long size = * (data + 1);
+    	unsigned long off = 0;
+    	int           ret;
 
 #if defined(CHIP_ENDIAN_LITTLE)
-    addr = EndianConv_32 (addr);
-    size = EndianConv_32 (size);
+    	addr = EndianConv_32 (addr);
+    	size = EndianConv_32 (size);
 #endif
-
 	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 	phy_partition.offset = custom2log(addr);
 	ret = log2phy_table(&phy_partition);
 	phy_partition_info(phy_partition);
-    if (size > MAX_PKT_SIZE)
-    {
-        FDL_SendAckPacket (BSL_REP_DOWN_SIZE_ERROR);
-        return 0;
-    }
+    
+	if (size > MAX_PKT_SIZE) {
+        	FDL_SendAckPacket (BSL_REP_DOWN_SIZE_ERROR);
+        	return 0;
+    	}
 
-    if (packet->packet_body.size > 8)
-    {
-        off = EndianConv_32 (* (data + 2));
-    }
+    	if (packet->packet_body.size > 8)
+        	off = EndianConv_32 (* (data + 2));
+	//printf("addr = 0x%08x  size = 0x%08x  off = 0x%08x  name = %s\n", addr, size, off, phy_partition.name);
 
-#if 0
-    ret = nand_read_fdl (&phy_partition, off, size, (unsigned char *) (packet->packet_body.content));
-#else
-    ret = nand_read_fdl_yaffs (&phy_partition, off, size, (unsigned char *) (packet->packet_body.content));
-#endif
-    if (NAND_SUCCESS == ret)
-    {
+	if ((strcmp(phy_partition.name, "fixnv") == 0) || (strcmp(phy_partition.name, "productinfo") == 0))
+		ret = nand_read_fdl_yaffs(&phy_partition, off, size, (unsigned char *)(packet->packet_body.content));
+    	else if ((strcmp(phy_partition.name, "spl") == 0) || (strcmp(phy_partition.name, "2ndbl") == 0))
+    		ret = nand_read_fdl(&phy_partition, off, size, (unsigned char *)(packet->packet_body.content));
+    	else
+		ret = NAND_INVALID_ADDR;
 
-        packet->packet_body.type = BSL_REP_READ_FLASH;
-        packet->packet_body.size = size;
-        FDL_SendPacket (packet);
-        return 1;
-    }
-    else
-    {
-        FDL2_SendRep (ret);
-        return 0;
-    }
+    	if (NAND_SUCCESS == ret) {
+        	packet->packet_body.type = BSL_REP_READ_FLASH;
+        	packet->packet_body.size = size;
+        	FDL_SendPacket (packet);
+        	return 1;
+    	} else {
+        	FDL2_SendRep (ret);
+        	return 0;
+    	}
 }
 
 int FDL2_EraseFlash (PACKET_T *packet, void *arg)
@@ -639,14 +781,20 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
     unsigned long addr = *data;
     unsigned long size = * (data + 1);
     int           ret;
+    int           cnt;
+    int           dl_op_buf_len = 0;
+    int 	  dl_item_cnt;
+    DL_OP_STATUS_E	dl_data_status, dl_erase_status;
 	
     addr = EndianConv_32 (addr);
     size = EndianConv_32 (size);
-
+	
+	set_dl_op_val(addr, size, ERASEFLASH, FAIL, 1);
 	if ((addr == 0) && (size = 0xffffffff)) {
 		printf("Scrub to erase all of flash\n");
 		nand_erase_allflash();
 		ret = NAND_SUCCESS;
+		set_dl_op_val(addr, size, ERASEFLASH, SUCCESS, 1);
 	} else {
 		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 		phy_partition.offset = custom2log(addr);
@@ -654,6 +802,72 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 		phy_partition_info(phy_partition);
 		if (NAND_SUCCESS == ret)
 			ret = nand_erase_partition(phy_partition.offset, phy_partition.size);
+
+		if (NAND_SUCCESS == ret)
+			set_dl_op_val(addr, size, ERASEFLASH, SUCCESS, 1);	
+	}
+	
+	if ((is_factorydownload_tools == 1) && (addr == FactoryDownloadTool_EndPartition_Address)) {
+		printf("\nSave dload status into dlstatus.txt\n");
+		dl_op_buf_len = DL_OP_RECORD_LEN * (g_dl_op_index + 1);
+		if (dl_op_buf_len > 0x2000) {
+			printf("dload status is too long and does not save it.\n");
+		} else {
+			memset(g_PhasecheckBUF, 0, 0x2000);
+			for (cnt = 0; cnt <= g_dl_op_index; cnt++)
+				sprintf((g_PhasecheckBUF + cnt * DL_OP_RECORD_LEN), 
+				"{%02d Base:0x%08x Size:0x%08x Op:%s Status:%s Scnt:0x%08x}", 
+				cnt, 
+				g_dl_op_table[cnt].base, 
+				g_dl_op_table[cnt].size, 
+				Dl_Op_Type_Name[g_dl_op_table[cnt].type], 
+				Dl_Op_Status_Name[g_dl_op_table[cnt].status], 
+				g_dl_op_table[cnt].status_cnt);
+			/* printf("%s\n", g_PhasecheckBUF); the line will result in dead here, so mask it */
+			/* write dload_status to yaffs2 format */
+			char *productinfopoint = "/productinfo";
+			char *productinfofilename = "/productinfo/dlstatus.txt";
+			cmd_yaffs_mount(productinfopoint);
+ 			cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, dl_op_buf_len);
+			cmd_yaffs_ls_chk(productinfofilename);
+			cmd_yaffs_umount(productinfopoint);
+		}
+
+		/* check factorydownload status */
+		printf("\nCheck dload status\n");
+		for (cnt = 0; cnt <= g_dl_op_index; cnt++)
+				printf("%02d Base:0x%08x Size:0x%08x Op:%d Status:%d Scnt:0x%08x\n", 
+				cnt, 
+				g_dl_op_table[cnt].base, 
+				g_dl_op_table[cnt].size, 
+				g_dl_op_table[cnt].type, 
+				g_dl_op_table[cnt].status, 
+				g_dl_op_table[cnt].status_cnt);
+		
+		dl_data_status = FAIL; 
+		dl_erase_status = FAIL;
+		dl_item_cnt = sizeof(Dl_Data_Address) / sizeof(unsigned long);
+		for (cnt = 0; cnt < dl_item_cnt; cnt++) {
+			dl_data_status = check_dl_data_status(Dl_Data_Address[cnt]);
+			if (dl_data_status == FAIL) {
+				printf("check address:0x%08x download status error\n", Dl_Data_Address[cnt]);
+				break;
+			}
+		}
+
+		dl_item_cnt = sizeof(Dl_Erase_Address) / sizeof(unsigned long);
+		for (cnt = 0; cnt < dl_item_cnt; cnt++) {
+			dl_erase_status = check_dl_erase_status(Dl_Erase_Address[cnt]);
+			if (dl_erase_status == FAIL) {
+			   	printf("check address:0x%08x erase status error\n", Dl_Erase_Address[cnt]);
+				break;
+			}
+		}
+		
+		if ((dl_data_status == SUCCESS) && (dl_erase_status == SUCCESS))
+			ret = NAND_SUCCESS;
+		else
+			ret = NAND_SYSTEM_ERROR;
 	}
 
     FDL2_SendRep (ret);
