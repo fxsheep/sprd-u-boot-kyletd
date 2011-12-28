@@ -128,20 +128,25 @@ static struct usb_gadget_strings *gser_strings[] = {
 	NULL,
 };
 
+int usb_port_open = false;
+
 /*-------------------------------------------------------------------------*/
 static int gser_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 {
 	struct usb_composite_dev *cdev = f->config->cdev;
-    u16			w_length = le16_to_cpu(ctrl->wLength);
+	u16			w_length = le16_to_cpu(ctrl->wLength);
+	u16         w_value = le16_to_cpu(ctrl->wValue);
 	int			value = -EOPNOTSUPP;
 
 	DBG(cdev, "%s\n", __func__);
 	/* Handle Bulk-only class-specific requests */
 	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_CLASS) {
 		switch (ctrl->bRequest) {
-		case 0x22:
-            value = 0;
-            break;
+			case 0x22:
+				value = 0;
+				if ((w_value & 0xff) == 1)
+					usb_port_open = true;
+				break;
 		}
 	}
 
@@ -192,6 +197,7 @@ static void gser_disable(struct usb_function *f)
 	struct usb_composite_dev *cdev = f->config->cdev;
 
 	DBG(cdev, "generic ttyGS%d deactivated\n", gser->port_num);
+	usb_port_open = false;
 	gserial_disconnect(&gser->port);
 }
 

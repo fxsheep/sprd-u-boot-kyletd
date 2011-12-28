@@ -30,6 +30,7 @@ extern int gs_write(const unsigned char *buf, int count);
 extern void usb_wait_trans_done(int direct);
 extern int usb_is_trans_done(int direct);
 extern int usb_is_configured(void);
+extern int usb_is_port_open(void);
 extern void udc_power_on(void);
 extern void udc_power_off(void);
 #define mdelay(_ms) udelay(_ms*1000)
@@ -53,7 +54,8 @@ extern void udc_power_off(void);
 #define CALIBERATE_HEAD 0x7e
 #define CALIBERATE_COMMOND_T 0xfe
 
-extern int get_cal_det_ms(void);
+extern int get_cal_enum_ms(void);
+extern int get_cal_io_ms(void);
 unsigned int check_caliberate(uint8_t * buf, int len)
 {
 	unsigned int command = 0;
@@ -122,7 +124,7 @@ void calibration_detect(int key)
 	loff_t off = 0;
     printf("%s\n", "calibrate detecting");
 
-    count_ms = get_cal_det_ms();
+    count_ms = get_cal_enum_ms();
    // extern lcd_display(void);
    // extern void set_backlight(uint32_t value);
    // lcd_printf("   caliberation mode");
@@ -179,6 +181,21 @@ void calibration_detect(int key)
         }
     }	
 	printf("USB SERIAL CONFIGED\n");
+
+    start_time = get_timer_masked();
+    count_ms = get_cal_io_ms();
+    while(!usb_is_port_open()){
+        ret = is_timeout(key);
+        if(ret == 0)
+          continue;
+        else if(ret == 2) // POWER KEY pressed
+          power_down_devices();
+        else{
+            printf("usb calibrate port open timeout\n");
+            return;
+        }
+    }	
+	printf("USB SERIAL PORT OPENED\n");
 	gs_open();
 //code for caliberate detect
 	int got = 0;

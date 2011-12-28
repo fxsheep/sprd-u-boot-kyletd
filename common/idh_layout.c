@@ -4,9 +4,13 @@ char * get_mtdparts(void)
         return MTDPARTS_DEFAULT;
 }
 
-int get_cal_det_ms(void)
+int get_cal_enum_ms(void)
 {
-    return CALIBERATE_DETECT_MS;
+    return CALIBRATE_ENUM_MS;
+}
+int get_cal_io_ms(void)
+{
+    return CALIBRATE_IO_MS;
 }
 unsigned int get_bat_low_level(void)
 {

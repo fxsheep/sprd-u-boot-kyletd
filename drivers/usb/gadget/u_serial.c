@@ -887,10 +887,19 @@ int usb_is_trans_done(int direct)
 extern int usb_serial_configed;
 int usb_is_configured(void)
 {
-   if(!usb_serial_configed)
-     usb_gadget_handle_interrupts();
+	if(!usb_serial_configed)
+		usb_gadget_handle_interrupts();
 
-   return usb_serial_configed;
+	return usb_serial_configed;
+}
+
+extern int usb_port_open;
+int usb_is_port_open(void)
+{
+	if(!usb_port_open)
+		usb_gadget_handle_interrupts();
+
+	return usb_port_open;
 }
 #endif
 
