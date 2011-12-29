@@ -346,9 +346,9 @@ static struct lcd_operations lcd_hx8369_operations = {
 };
 
 static struct timing_mcu lcd_hx8369_timing = {
-	.rcss = 80,
-	.rlpw = 200,
-	.rhpw = 200,
+	.rcss = 120,
+	.rlpw = 400,
+	.rhpw = 400,
 	.wcss = 40,
 	.wlpw = 160,
 	.whpw = 160,
