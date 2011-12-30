@@ -338,12 +338,12 @@ static struct lcd_operations lcd_hx8357_operations = {
 };
 
 static struct timing_mcu lcd_hx8357_timing = {
-	.rcss = 60,
-	.rlpw = 240,
-	.rhpw = 240,
-	.wcss = 40,
-	.wlpw = 160,
-	.whpw = 160,
+	.rcss = 15,  // 15ns
+	.rlpw = 60,
+	.rhpw = 60,
+	.wcss = 10,
+	.wlpw = 35,
+	.whpw = 35,
 };
 
 static struct info_mcu lcd_hx8357_info = {

@@ -60,6 +60,8 @@ short console_row;
 #define GR_PLL_SRC           (SPRD_GREG_BASE + 0x70)
 #define BITS_PER_PIXEL 16
 
+#define LCDC_CYCLES(t, ahb, div)  ((t) * (ahb) + (div) - 1) / (div) 
+#define MAX_LCDC_TIMING_VALUE 15
 
 struct sc8810fb_info {
 	uint32_t cap;
@@ -320,33 +322,54 @@ static void lcdc_update_lcm_timing(struct sc8810fb_info *fb)
 {
 	uint32_t  reg_value;
 	uint32_t  ahb_div,ahb_clk;   
-	uint32_t  ahb_clk_cycle;
 	uint32_t rcss, rlpw, rhpw, wcss, wlpw, whpw;
 	struct timing_mcu *timing;
 
-	// for sc8810 fpga
-	ahb_clk = 32*1000*1000;
-
+	// for sc8810 
+	ahb_clk = 200; // 200 MHz
 	
 	FB_PRINT("@fool2[%s] ahb_clk: 0x%x\n", __FUNCTION__, ahb_clk);
 
 	/* LCD_UpdateTiming() */
-	ahb_clk_cycle = (100000000 >> 17)/(ahb_clk >> 20 );
 
 	timing = fb->panel->info.mcu->timing;
 
-	rcss = ((timing->rcss/ahb_clk_cycle+1)<14)?
-	       (timing->rcss/ahb_clk_cycle+1):14;
-	rlpw = ((timing->rlpw/ahb_clk_cycle+1)<14)?
-	       (timing->rlpw/ahb_clk_cycle+1):14;
-	rhpw = ((timing->rhpw/ahb_clk_cycle+1)<14)?
-	       (timing->rhpw/ahb_clk_cycle+1):14;
-	wcss = ((timing->wcss/ahb_clk_cycle+1)<14)?
-	       (timing->wcss/ahb_clk_cycle+1):14;
-	wlpw = ((timing->wlpw/ahb_clk_cycle+1)<14)?
-	       (timing->wlpw/ahb_clk_cycle+1):14;
-	whpw = ((timing->whpw/ahb_clk_cycle+1)<14)?
-	       (timing->whpw/ahb_clk_cycle+1):14;
+        /************************************************
+	* we assume : t = ? ns, AHB = ? MHz   so
+        *      1ns  cycle  :  AHB /1000 
+	*      tns  cycles :  t * AHB / 1000
+	*
+	*****************************************/   
+	rcss = LCDC_CYCLES(timing->rcss, ahb_clk, 1000);//ceiling
+
+        if (rcss > MAX_LCDC_TIMING_VALUE) {
+		rcss = MAX_LCDC_TIMING_VALUE ; // max 15 cycles
+	}
+
+	rlpw = LCDC_CYCLES(timing->rlpw, ahb_clk , 1000);
+	if (rlpw > MAX_LCDC_TIMING_VALUE) {
+		rlpw = MAX_LCDC_TIMING_VALUE ; 
+	}
+
+	rhpw = LCDC_CYCLES(timing->rhpw, ahb_clk , 1000); 
+	if (rhpw > MAX_LCDC_TIMING_VALUE) {
+		rhpw = MAX_LCDC_TIMING_VALUE ; 
+	}
+
+	wcss = LCDC_CYCLES(timing->wcss, ahb_clk, 1000); 
+	if (wcss > MAX_LCDC_TIMING_VALUE) {
+		wcss = MAX_LCDC_TIMING_VALUE ; 
+	}
+
+	wlpw = LCDC_CYCLES(timing->wlpw, ahb_clk, 1000); 
+	if (wlpw > MAX_LCDC_TIMING_VALUE) {
+		wlpw = MAX_LCDC_TIMING_VALUE ; 
+	}
+
+	whpw = LCDC_CYCLES(timing->whpw, ahb_clk, 1000); 
+	if (whpw > MAX_LCDC_TIMING_VALUE) {
+		whpw = MAX_LCDC_TIMING_VALUE ; 
+	}
 	
 	//wait  until AHB FIFO if empty
 	//while(!(__raw_readl(LCM_STATUS) & (1<<2)));
