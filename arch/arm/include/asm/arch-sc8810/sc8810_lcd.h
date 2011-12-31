@@ -37,6 +37,22 @@
 #define LCD_DIRECT_MIR_V   5
 #define LCD_DIRECT_MIR_HV  6
 
+#define PIN_PWM0_MOD_VALUE 0x20
+
+#define SPRD_PWM_BASE 			0x88000000
+#define SPRD_PWM_REG(off) 		(SPRD_PWM_BASE + (off))
+#define SPRD_PWM0_PRESCALE   	SPRD_PWM_REG(0x0000)
+#define SPRD_PWM0_CNT 			SPRD_PWM_REG(0x0004)
+#define SPRD_PWM0_TONE_DIV 	SPRD_PWM_REG(0x0008)
+#define SPRD_PWM0_PAT_LOW 	SPRD_PWM_REG(0x000C)
+#define SPRD_PWM0_PAT_HIG 	SPRD_PWM_REG(0x0010)
+
+#define LCD_PWM_PRESCALE_VALUE 	0x01
+#define LCD_PWM_MOD_VALUE 		0xFF
+#define PWM_REG_MSK_VALUE			0xFFFF
+
+#define LCD_PWM0_EN BIT_8
+
 struct lcd_spec;
 
 /* LCD operations */
@@ -126,5 +142,6 @@ struct lcd_spec {
 	struct lcd_operations *ops;
 };
 
+extern void LCD_SetBackLightBrightness( unsigned long  value);
 #endif
 

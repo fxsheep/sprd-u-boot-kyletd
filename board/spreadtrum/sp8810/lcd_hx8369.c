@@ -17,6 +17,9 @@
 #include <common.h>
 
 #include <asm/arch/sc8810_lcd.h>
+#include <asm/arch/regs_global.h>
+#include <asm/arch/regs_cpc.h>
+#include <asm/io.h>
 #define mdelay(a) udelay(a * 1000)
 #define printk printf
 
@@ -27,6 +30,37 @@
 #define LCD_PRINT(...)
 #endif
 
+static void __raw_bits_or(unsigned int v, unsigned int a)
+{
+        __raw_writel((__raw_readl(a) | v), a);
+}
+
+static void LCD_SetPwmRatio(unsigned short value)
+{
+	__raw_bits_or(CLK_PWM0_EN, GR_CLK_EN);
+	__raw_bits_or(CLK_PWM0_SEL, GR_CLK_EN);
+	__raw_bits_or(PIN_PWM0_MOD_VALUE, CPC_LCD_PWM_REG);
+	__raw_writel(LCD_PWM_PRESCALE_VALUE, SPRD_PWM0_PRESCALE);
+	__raw_writel(value, SPRD_PWM0_CNT);
+	__raw_writel(PWM_REG_MSK_VALUE, SPRD_PWM0_PAT_LOW);
+	__raw_writel(PWM_REG_MSK_VALUE, SPRD_PWM0_PAT_HIG);
+
+	__raw_bits_or(LCD_PWM0_EN, SPRD_PWM0_PRESCALE);
+}
+
+void LCD_SetBackLightBrightness( unsigned long  value)
+{
+	unsigned long duty_mod= 0;
+	if(value > LCD_PWM_MOD_VALUE)
+		value = LCD_PWM_MOD_VALUE;
+
+	if(value < 0)
+		value = 0;
+
+	duty_mod = (value << 8) | LCD_PWM_MOD_VALUE;
+	LCD_SetPwmRatio(duty_mod);
+}
+
 static int32_t hx8369_init(struct lcd_spec *self)
 {
 	Send_data send_cmd = self->info.mcu->ops->send_cmd;
@@ -34,24 +68,24 @@ static int32_t hx8369_init(struct lcd_spec *self)
 
 	LCD_PRINT("hx8369_init\n");
 
-	send_cmd(0xB9); // SET password 
-	send_data(0xFF); 
-	send_data(0x83); 
-	send_data(0x69); 
+	send_cmd(0xB9); // SET password
+	send_data(0xFF);
+	send_data(0x83);
+	send_data(0x69);
 
-	send_cmd(0xB1);  //Set Power 
-	send_data(0x9D);  //9D 
+	send_cmd(0xB1);  //Set Power
+	send_data(0x9D);  //9D
 	send_data(0x00); //00
 	send_data(0x34); //34
 	send_data(0x07); //07
-	send_data(0x00); //00 
+	send_data(0x00); //00
 	send_data(0x0B); //0B
-	send_data(0x0B); //0B 
+	send_data(0x0B); //0B
 	send_data(0x1A); //1A
 	send_data(0x22); //22
-	send_data(0x3F); //3F 
 	send_data(0x3F); //3F
-	send_data(0x01); //01 
+	send_data(0x3F); //3F
+	send_data(0x01); //01
 	send_data(0x23); //23
 	send_data(0x01); //01
 	send_data(0xE6); //E6
@@ -60,136 +94,136 @@ static int32_t hx8369_init(struct lcd_spec *self)
 	send_data(0xE6); //E6
 	send_data(0xE6); //E6
 
-	send_cmd(0xB2);  // SET Display  480x800 
-	send_data(0x00); //00 
-	send_data(0x20);    
-	send_data(0x03); //03 
-	send_data(0x03); //03   
-	send_data(0x70);   
-	send_data(0x00); 
-	send_data(0xFF); 
-	send_data(0x00);   
-	send_data(0x00);   
-	send_data(0x00); 
-	send_data(0x00);   
-	send_data(0x03);   
-	send_data(0x03); 
-	send_data(0x00); 
-	send_data(0x01); 
+	send_cmd(0xB2);  // SET Display  480x800
+	send_data(0x00); //00
+	send_data(0x20);
+	send_data(0x03); //03
+	send_data(0x03); //03
+	send_data(0x70);
+	send_data(0x00);
+	send_data(0xFF);
+	send_data(0x00);
+	send_data(0x00);
+	send_data(0x00);
+	send_data(0x00);
+	send_data(0x03);
+	send_data(0x03);
+	send_data(0x00);
+	send_data(0x01);
 
-	send_cmd(0xB4);  // SET Display 480x800 
-	send_data(0x01); 
-	send_data(0x18); 
-	send_data(0x80); 
-	send_data(0x06); 
-	send_data(0x02); 
+	send_cmd(0xB4);  // SET Display 480x800
+	send_data(0x01);
+	send_data(0x18);
+	send_data(0x80);
+	send_data(0x06);
+	send_data(0x02);
 
-	//send_cmd(0xB0);//OSC  
-	//send_data(0x00);   
+	//send_cmd(0xB0);//OSC
+	//send_data(0x00);
 	//send_data(0x0B);//05   42HZ  07 50HZ  0B 100% 67HZ
 
 
-	send_cmd(0xB6);  // SET VCOM 
-	send_data(0x4A); 
-	send_data(0x4A); 
+	send_cmd(0xB6);  // SET VCOM
+	send_data(0x4A);
+	send_data(0x4A);
 
-	send_cmd(0xD5);  // SET GIP 
-	send_data(0x00); 
-	send_data(0x03); 
-	send_data(0x03); 
-	send_data(0x00); 
-	send_data(0x01); 
+	send_cmd(0xD5);  // SET GIP
+	send_data(0x00);
+	send_data(0x03);
+	send_data(0x03);
+	send_data(0x00);
+	send_data(0x01);
 	send_data(0x02); //04
 
-	send_data(0x28); 
-	send_data(0x70); 
-	send_data(0x11); 
-	send_data(0x13); 
-	send_data(0x00); 
-	send_data(0x00); 
-	send_data(0x40); 
-	send_data(0x06); 
-	send_data(0x51); 
-	send_data(0x07); 
-	send_data(0x00); 
-	send_data(0x00); 
-	send_data(0x41); 
-	send_data(0x06); 
-	send_data(0x50); 
-	send_data(0x07); 
-	send_data(0x07); 
-	send_data(0x0F); 
-	send_data(0x04); 
-	send_data(0x00); 
+	send_data(0x28);
+	send_data(0x70);
+	send_data(0x11);
+	send_data(0x13);
+	send_data(0x00);
+	send_data(0x00);
+	send_data(0x40);
+	send_data(0x06);
+	send_data(0x51);
+	send_data(0x07);
+	send_data(0x00);
+	send_data(0x00);
+	send_data(0x41);
+	send_data(0x06);
+	send_data(0x50);
+	send_data(0x07);
+	send_data(0x07);
+	send_data(0x0F);
+	send_data(0x04);
+	send_data(0x00);
 
-	send_cmd(0xE0);  // Set Gamma 
-	send_data(0x00); 
-	send_data(0x01); 
-	send_data(0x04); 
-	send_data(0x23); 
-	send_data(0x22); 
-	send_data(0x3F); 
-	send_data(0x13); 
-	send_data(0x39); 
-	send_data(0x06); 
-	send_data(0x0B); 
-	send_data(0x0E); 
-	send_data(0x12); 
-	send_data(0x15); 
-	send_data(0x13); 
-	send_data(0x15); 
-	send_data(0x13); 
-	send_data(0x1B); 
-	send_data(0x00); 
-	send_data(0x01); 
-	send_data(0x04); 
-	send_data(0x23); 
-	send_data(0x22); 
-	send_data(0x3F); 
-	send_data(0x13); 
-	send_data(0x39); 
-	send_data(0x06); 
-	send_data(0x0B); 
-	send_data(0x0E); 
-	send_data(0x12); 
-	send_data(0x15); 
-	send_data(0x13); 
-	send_data(0x15); 
-	send_data(0x13); 
-	send_data(0x1B); 
+	send_cmd(0xE0);  // Set Gamma
+	send_data(0x00);
+	send_data(0x01);
+	send_data(0x04);
+	send_data(0x23);
+	send_data(0x22);
+	send_data(0x3F);
+	send_data(0x13);
+	send_data(0x39);
+	send_data(0x06);
+	send_data(0x0B);
+	send_data(0x0E);
+	send_data(0x12);
+	send_data(0x15);
+	send_data(0x13);
+	send_data(0x15);
+	send_data(0x13);
+	send_data(0x1B);
+	send_data(0x00);
+	send_data(0x01);
+	send_data(0x04);
+	send_data(0x23);
+	send_data(0x22);
+	send_data(0x3F);
+	send_data(0x13);
+	send_data(0x39);
+	send_data(0x06);
+	send_data(0x0B);
+	send_data(0x0E);
+	send_data(0x12);
+	send_data(0x15);
+	send_data(0x13);
+	send_data(0x15);
+	send_data(0x13);
+	send_data(0x1B);
 	send_cmd(0x35);   // TE on
-	send_data(0x00);                      
+	send_data(0x00);
 	//send_cmd(0x34); // TE off
 
-	send_cmd(0x3A);   // set CSEL 
-	send_data(0x07);  // CSEL=0x06, 16bit-color CSEL=0x06, 18bit-color CSEL=0x07, 24bit-color 
+	send_cmd(0x3A);   // set CSEL
+	send_data(0x07);  // CSEL=0x06, 16bit-color CSEL=0x06, 18bit-color CSEL=0x07, 24bit-color
 
 	/*
 	//16bit 65K
-		send_cmd(0x2D);        //Look up table//                   
-	for(i=0;i<64;i++) 
-			send_data(8*i);//RED                                               
-	for(i=0;i<64;i++) 
-			send_data(4*i);//Green                                         
-	for(i=0;i<64;i++) 
-			send_data(8*i);//Blue 
+		send_cmd(0x2D);        //Look up table//
+	for(i=0;i<64;i++)
+			send_data(8*i);//RED
+	for(i=0;i<64;i++)
+			send_data(4*i);//Green
+	for(i=0;i<64;i++)
+			send_data(8*i);//Blue
 	*/
-	
+
 	/*
 	//18bit 262K
-		send_cmd(0x2D);        //Look up table//                   
-	for(i=0;i<64;i++) 
-			send_data(4*i);//RED                                               
-	for(i=0;i<64;i++) 
-			send_data(4*i);//Green                                         
-	for(i=0;i<64;i++) 
-			send_data(4*i);//Blue 
+		send_cmd(0x2D);        //Look up table//
+	for(i=0;i<64;i++)
+			send_data(4*i);//RED
+	for(i=0;i<64;i++)
+			send_data(4*i);//Green
+	for(i=0;i<64;i++)
+			send_data(4*i);//Blue
 	*/
-	//24 bit don't need to set 2DH 
+	//24 bit don't need to set 2DH
 
-	send_cmd(0x11); //Sleep Out 
+	send_cmd(0x11); //Sleep Out
 	mdelay(120); //120ms
-	
+
 	if (0) { //  for test the lcd
 		int i;
 		send_cmd(0x2C); //Write data
@@ -200,7 +234,7 @@ static int32_t hx8369_init(struct lcd_spec *self)
        	for (i = 0; i < 480*800/3; i++)
 			send_data(0xff0000);
 	}
-	send_cmd(0x29); //Display On 
+	send_cmd(0x29); //Display On
 	mdelay(120); //120ms
 	send_cmd(0x2C); //Write data
 	//mdelay(120); //120ms
@@ -217,7 +251,7 @@ static int32_t hx8369_set_window(struct lcd_spec *self,
 	Send_data send_data = self->info.mcu->ops->send_data;
 
 	LCD_PRINT("hx8369_set_window\n");
-    
+
 	send_cmd(0x2A); // col
 	send_data((left >> 8));
 	send_data((left & 0xFF));
@@ -229,7 +263,7 @@ static int32_t hx8369_set_window(struct lcd_spec *self,
 	send_data((top & 0xFF));
 	send_data((bottom >> 8));
 	send_data((bottom & 0xFF));
-	
+
 	send_cmd(0x2C); //Write data
 
 	return 0;
@@ -240,9 +274,9 @@ static int32_t hx8369_invalidate(struct lcd_spec *self)
 {
 	LCD_PRINT("hx8369_invalidate\n");
 
-	return self->ops->lcd_set_window(self, 0, 0, 
+	return self->ops->lcd_set_window(self, 0, 0,
 			self->width-1, self->height-1);
-	
+
 }
 
 static int32_t hx8369_invalidate_rect(struct lcd_spec *self,
@@ -251,7 +285,7 @@ static int32_t hx8369_invalidate_rect(struct lcd_spec *self,
 {
 	LCD_PRINT("hx8369_invalidate_rect \n");
 
-	return self->ops->lcd_set_window(self, left, top, 
+	return self->ops->lcd_set_window(self, left, top,
 			right, bottom);
 }
 
@@ -293,7 +327,7 @@ static int32_t hx8369_set_direction(struct lcd_spec *self, uint16_t direction)
 	}
 
 	self->direction = direction;
-	
+
 	return 0;
 }
 
@@ -305,16 +339,16 @@ static int32_t hx8369_enter_sleep(struct lcd_spec *self, uint8_t is_sleep)
 	if(is_sleep) {
 		//Sleep In
 		send_cmd(0x28);
-		mdelay(120); 
+		mdelay(120);
 		send_cmd(0x10);
-		mdelay(120); 
+		mdelay(120);
 	}
 	else {
 		//Sleep Out
 		send_cmd(0x11);
-		mdelay(120); 
+		mdelay(120);
 		send_cmd(0x29);
-		mdelay(120); 
+		mdelay(120);
 	}
 	return 0;
 }
@@ -332,7 +366,7 @@ static int32_t hx8369_read_id(struct lcd_spec *self)
 
 	send_cmd(0xF4);
 	read_data();
-	return read_data(); 
+	return read_data();
 }
 
 static struct lcd_operations lcd_hx8369_operations = {

@@ -270,5 +270,7 @@
 #define CPC_SD1_D6_REG             	    (PIN_CTL_BASE + 0x0364)
 #define CPC_SD1_D7_REG            		(PIN_CTL_BASE + 0x0368)
 
+#define CPC_LCD_PWM_REG			(PIN_CTL_BASE + 0x03e0)
+
 #endif
 
