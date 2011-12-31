@@ -28,8 +28,8 @@ void sprd_rtc_init(void);
 int alarm_flag_check(void)
 {
 #ifndef CONFIG_SC8810
-    char *file_partition = "/cache";
-    char *file_name = "/cache/alarm_flag";
+    char *file_partition = "/productinfo";
+    char *file_name = "/productinfo/alarm_flag";
     int ret = 0;
     char time_buf[20]={0};
     long time = 0;
