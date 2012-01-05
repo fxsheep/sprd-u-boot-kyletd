@@ -133,6 +133,7 @@ extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 void set_vibrator(int on);
+void vibrator_hw_init(void);
 void MMU_InvalideICACHEALL(void);
 
 void nand_block_info(struct mtd_info *nand, int *good, int *bad)
@@ -739,6 +740,7 @@ void normal_mode(void)
 {
 #ifdef CONFIG_SC8810	
      MMU_Init(CONFIG_MMU_TABLE_ADDR);
+	vibrator_hw_init();
 #endif
     set_vibrator(1);
 #if BOOT_NATIVE_LINUX

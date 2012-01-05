@@ -239,10 +239,16 @@ extern   "C"
 /*
   the VIBRATOR_CTL0 register bit
 */
-#define VIBR_V_SHIFT            12
-#define VIBR_V_MSK              (0x07 << VIBR_V_SHIFT)
+#define VIBR_STABLE_V_SHIFT 12
+#define VIBR_STABLE_V_MSK   (0x0F << VIBR_STABLE_V_SHIFT)
+#define VIBR_INIT_V_SHIFT   8
+#define VIBR_INIT_V_MSK     (0x0F << VIBR_INIT_V_SHIFT)
+#define VIBR_V_BP_SHIFT         4
+#define VIBR_V_BP_MSK           (0x0F << VIBR_V_BP_SHIFT)
 #define VIBR_PD_RST				BIT_3
-#define VIBR_PD					BIT_2
+#define VIBR_PD_SET					BIT_2
+#define VIBR_BP_EN      BIT_1
+#define VIBR_RTC_EN     BIT_0
 /*
   the AUDIO_CTL register bit
 */
