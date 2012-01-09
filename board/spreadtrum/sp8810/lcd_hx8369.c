@@ -17,9 +17,6 @@
 #include <common.h>
 
 #include <asm/arch/sc8810_lcd.h>
-#include <asm/arch/regs_global.h>
-#include <asm/arch/regs_cpc.h>
-#include <asm/io.h>
 #define mdelay(a) udelay(a * 1000)
 #define printk printf
 
@@ -33,32 +30,6 @@
 static void __raw_bits_or(unsigned int v, unsigned int a)
 {
         __raw_writel((__raw_readl(a) | v), a);
-}
-
-static void LCD_SetPwmRatio(unsigned short value)
-{
-	__raw_bits_or(CLK_PWM0_EN, GR_CLK_EN);
-	__raw_bits_or(CLK_PWM0_SEL, GR_CLK_EN);
-	__raw_bits_or(PIN_PWM0_MOD_VALUE, CPC_LCD_PWM_REG);
-	__raw_writel(LCD_PWM_PRESCALE_VALUE, SPRD_PWM0_PRESCALE);
-	__raw_writel(value, SPRD_PWM0_CNT);
-	__raw_writel(PWM_REG_MSK_VALUE, SPRD_PWM0_PAT_LOW);
-	__raw_writel(PWM_REG_MSK_VALUE, SPRD_PWM0_PAT_HIG);
-
-	__raw_bits_or(LCD_PWM0_EN, SPRD_PWM0_PRESCALE);
-}
-
-void LCD_SetBackLightBrightness( unsigned long  value)
-{
-	unsigned long duty_mod= 0;
-	if(value > LCD_PWM_MOD_VALUE)
-		value = LCD_PWM_MOD_VALUE;
-
-	if(value < 0)
-		value = 0;
-
-	duty_mod = (value << 8) | LCD_PWM_MOD_VALUE;
-	LCD_SetPwmRatio(duty_mod);
 }
 
 static int32_t hx8369_init(struct lcd_spec *self)

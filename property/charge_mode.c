@@ -15,5 +15,10 @@
 void charge_mode(void)
 {
     printf("%s\n", __func__);
-    vlx_nand_boot(BOOT_PART, "androidboot.mode=charge", BACKLIGHT_ON);
+
+#if BOOT_NATIVE_LINUX
+    vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS "androidboot.mode=charge", BACKLIGHT_ON);
+#else
+    vlx_nand_boot(BOOT_PART,  "androidboot.mode=charge", BACKLIGHT_ON);
+#endif
 }

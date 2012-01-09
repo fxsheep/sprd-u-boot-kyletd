@@ -18,7 +18,7 @@ extern int usb_fastboot_initialize(void);
 void fastboot_mode(void)
 {
     printf("%s\n", __FUNCTION__);
-#ifdef CONFIG_SPLASH_SCREEN 
+#ifdef CONFIG_SPLASH_SCREEN
 	struct mtd_info *nand;
 	struct mtd_device *dev;
 	struct part_info *part;
@@ -64,13 +64,13 @@ void fastboot_mode(void)
     lcd_display_bitmap((ulong)bmp_img, 0, 0);
     lcd_printf("   fastboot mode");
     lcd_display();
-    set_backlight(50);
+    set_backlight(30);
     //char img_addr[9];
     //sprintf(img_addr, "%x\n", bmp_img);
     //setenv("splashimage", img_addr);
 
 #endif
-	
+
 #ifdef CONFIG_CMD_FASTBOOT
 	dwc_otg_driver_init();
 	usb_fastboot_initialize();

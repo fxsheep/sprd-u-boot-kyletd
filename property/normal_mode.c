@@ -71,12 +71,12 @@ typedef struct _tagSP09_PHASE_CHECK
 	char    	SN2[SP09_MAX_SN_LEN];    // add for Mobile
 	int     	StationNum;                 	// the test station number of the testing
 	char    	StationName[SP09_MAX_STATION_NUM][SP09_MAX_STATION_NAME_LEN];
-	unsigned char 	Reserved[13];               	// 
+	unsigned char 	Reserved[13];               	//
 	unsigned char 	SignFlag;
 	char    	szLastFailDescription[SP09_MAX_LAST_DESCRIPTION_LEN];
-	unsigned short  iTestSign;				// Bit0~Bit14 ---> station0~station 14 
+	unsigned short  iTestSign;				// Bit0~Bit14 ---> station0~station 14
 	                 		  			  //if tested. 0: tested, 1: not tested
-	unsigned short  iItem;    // part1: Bit0~ Bit_14 indicate test Station,1 : Pass,    
+	unsigned short  iItem;    // part1: Bit0~ Bit_14 indicate test Station,1 : Pass,
 
 }SP09_PHASE_CHECK_T, *LPSP09_PHASE_CHECK_T;
 const static int SP09_MAX_PHASE_BUFF_SIZE = sizeof(SP09_PHASE_CHECK_T);
@@ -124,7 +124,7 @@ int eng_phasechecktest(unsigned char *array, int len)
 
 	memset(&phase, 0, sizeof(SP09_PHASE_CHECK_T));
 	memcpy(&phase, array, len);
-	
+
 	return eng_getphasecheck(&phase);
 }
 
@@ -162,7 +162,7 @@ int nv_is_correct(unsigned char *array, unsigned long size)
 {
 	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a)) {
 		array[size] = 0xff; array[size + 1] = 0xff;
-		array[size + 2] = 0xff; array[size + 3] = 0xff;	
+		array[size + 2] = 0xff; array[size + 3] = 0xff;
 		return 1;
 	} else
 		return -1;
@@ -171,7 +171,7 @@ int nv_is_correct(unsigned char *array, unsigned long size)
 void array_value_range(unsigned char * array, int start, int end)
 {
 	int aaa;
-	
+
 	printf("\n\n");
 
 	for (aaa = start; aaa <= end; aaa ++) {
@@ -185,7 +185,7 @@ void array_value_range(unsigned char * array, int start, int end)
 void array_value(unsigned char * array, int len)
 {
 	int aaa;
-	
+
 	printf("\n\n");
 
 	for (aaa = 0; aaa < len; aaa ++) {
@@ -200,7 +200,7 @@ void array_value(unsigned char * array, int len)
 void array_diff(unsigned char * array1, unsigned char * array2, int len)
 {
 	int ii;
-	
+
 	printf("arrar diff is starting   array1 = 0x%08x  array2 = 0x%08x  len = %d\n", (unsigned int)array1, (unsigned int)array2, len);
 	for (ii = 0; ii < len; ii ++) {
 		if (array1[ii] != array2[ii]) {
@@ -254,7 +254,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	char *productinfofilename = "/productinfo/productinfo.bin";
 	char *productinfofilename2 = "/productinfo/productinfochange.bin";
     char * mtdpart_def = NULL;
-        #ifdef CONFIG_SC8810	
+        #ifdef CONFIG_SC8810
      	MMU_Init(CONFIG_MMU_TABLE_ADDR);
 	#endif
 	ret = mtdparts_init();
@@ -263,7 +263,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		return;
 	}
 
-#ifdef CONFIG_SPLASH_SCREEN 
+#ifdef CONFIG_SPLASH_SCREEN
 #define SPLASH_PART "boot_logo"
 	ret = find_dev_and_part(SPLASH_PART, &dev, &pnum, &part);
 	if(ret){
@@ -287,20 +287,20 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	if(ret != 0){
 		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
 		return;
-	} 
+	}
     extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
     extern void lcd_display(void);
     extern void set_backlight(uint32_t value);
     if(backlight_set == BACKLIGHT_ON){
 	    extern void *lcd_base;
 	    extern void Dcache_CleanRegion(unsigned int addr, unsigned int length);
-	    
+
 	    lcd_display_bitmap((ulong)bmp_img, 0, 0);
 #ifdef CONFIG_SC8810
 	    Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
 #endif
 	    lcd_display();
-	    set_backlight(50);
+	    set_backlight(30);
     }
 #endif
     set_vibrator(0);
@@ -326,7 +326,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
 					/*#########################*/
 					cmd_yaffs_umount(backupfixnvpoint);
-					/* file is wrong */			
+					/* file is wrong */
 					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 					/* read fixnv */
    			cmd_yaffs_mount(fixnvpoint);
@@ -360,7 +360,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			} else {
 				/*#########################*/
 				cmd_yaffs_umount(backupfixnvpoint);
-				/* file is wrong */			
+				/* file is wrong */
 				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 				/* read fixnv */
     			cmd_yaffs_mount(fixnvpoint);
@@ -404,7 +404,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
 				/*#########################*/
 				cmd_yaffs_umount(backupfixnvpoint);
-				/* file is wrong */			
+				/* file is wrong */
 				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 				/* read fixnv */
     				cmd_yaffs_mount(fixnvpoint);
@@ -438,7 +438,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		} else {
 			/*#########################*/
 			cmd_yaffs_umount(backupfixnvpoint);
-			/* file is wrong */			
+			/* file is wrong */
 			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
 			/* read fixnv */
     			cmd_yaffs_mount(fixnvpoint);
@@ -525,7 +525,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 					/* file isn't right */
 					memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
 				}
-			}	
+			}
 			////////////////
 		}
 	} else {
@@ -728,7 +728,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 #ifndef CONFIG_SC8810
     MMU_InvalideICACHEALL();
 #endif
-#ifdef CONFIG_SC8810	
+#ifdef CONFIG_SC8810
     MMU_DisableIDCM();
 #endif
 
@@ -740,7 +740,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 }
 void normal_mode(void)
 {
-#ifdef CONFIG_SC8810	
+#ifdef CONFIG_SC8810
     //MMU_Init(CONFIG_MMU_TABLE_ADDR);
 	vibrator_hw_init();
 #endif
@@ -749,6 +749,6 @@ void normal_mode(void)
     vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS, BACKLIGHT_ON);
 #else
     vlx_nand_boot(BOOT_PART, NULL, BACKLIGHT_ON);
-#endif	
+#endif
 
 }
