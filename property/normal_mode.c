@@ -254,7 +254,9 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	char *productinfofilename = "/productinfo/productinfo.bin";
 	char *productinfofilename2 = "/productinfo/productinfochange.bin";
     char * mtdpart_def = NULL;
-
+        #ifdef CONFIG_SC8810	
+     	MMU_Init(CONFIG_MMU_TABLE_ADDR);
+	#endif
 	ret = mtdparts_init();
 	if (ret != 0){
 		printf("mtdparts init error %d\n", ret);
@@ -739,7 +741,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 void normal_mode(void)
 {
 #ifdef CONFIG_SC8810	
-     MMU_Init(CONFIG_MMU_TABLE_ADDR);
+    //MMU_Init(CONFIG_MMU_TABLE_ADDR);
 	vibrator_hw_init();
 #endif
     set_vibrator(1);
