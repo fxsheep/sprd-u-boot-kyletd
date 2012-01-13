@@ -67,8 +67,13 @@ extern   "C"
 #define RTC_HOUR_ALM_ACK_BIT        BIT_14        //Hour alm ack int enable
 #define RTC_DAY_ALM_ACK_BIT         BIT_15        //Day alm ack int enable
 
+#define RTC_UPD_TIME_MASK (RTC_SEC_ACK_BIT | RTC_MIN_ACK_BIT | RTC_HOUR_ACK_BIT | RTC_DAY_ACK_BIT)
 #define RTC_INT_ALL_MSK (0xFFFF&(~(BIT_5|BIT_6|BIT_7)))
 
+#define RTC_SEC_MASK 0x3F
+#define RTC_MIN_MASK 0x3F
+#define RTC_HOUR_MASK 0x1F
+#define RTC_DAY_MASK 0xFFFF
 
 /**----------------------------------------------------------------------------*
 **                         Compiler Flag                                      **

@@ -92,6 +92,9 @@ extern   "C"
 #define RTC_RTC_EB			BIT_9
 #define RTC_ARCH_EB			BIT_8
 #define PINREG_EB			BIT_7
+#define AGEN_RTC_EN              	BIT_1
+#define AGEN_RTC_RTC_EN       	BIT_9
+
 #define GPIO_EB				BIT_6
 #define ADC_EB				BIT_5
 #define TPC_EB				BIT_4
