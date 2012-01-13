@@ -35,6 +35,7 @@ typedef struct _DL_FILE_STATUS
 static unsigned long g_checksum;
 static unsigned long g_sram_addr;
 static int read_yaffs_flag = 0;
+static int read_dlstatus_flag = 0;
 __align(4) unsigned char g_fixnv_buf[FIXNV_SIZE + 4];
 __align(4) unsigned char g_fixnv_buf_yaffs[FIXNV_SIZE + 4];
 
@@ -60,6 +61,9 @@ static unsigned char g_PhasecheckBUF[0x2000];
 static DL_OP_RECORD_S g_dl_op_table[DL_OP_MTD_COUNT];
 static unsigned long g_dl_op_index = 0;
 static unsigned long is_factorydownload_tools = 0;
+static unsigned long is_check_dlstatus = 0; /* 1 : check  0 : don't check */
+static DL_Address_CNT_S Dl_Data_Address = {NULL, 0};
+static DL_Address_CNT_S Dl_Erase_Address = {NULL, 0};
 
 #ifdef  TRANS_CODE_SIZE
 #define min(A,B)		(((A) < (B)) ? (A) : (B))
@@ -311,21 +315,21 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 		char *productinfopoint = "/productinfo";
 		char *productinfofilename = "/productinfo/dlstatus.txt";
 
-		if (read_yaffs_flag == 0) {
+		if (read_dlstatus_flag == 0) {
 			memset(g_PhasecheckBUF, 0, 0x2000);
 			/* read dlstatus */
     			cmd_yaffs_mount(productinfopoint);
 			ret = cmd_yaffs_ls_chk(productinfofilename);
 			if (ret >= DL_OP_RECORD_LEN) {
 				cmd_yaffs_mread_file(productinfofilename, g_PhasecheckBUF);
-				read_yaffs_flag = 1;//success
+				read_dlstatus_flag = 1;//success
 			}
 			cmd_yaffs_umount(productinfopoint);
 		}
 
 		memcpy(buf, (unsigned char *)(g_PhasecheckBUF + off), size);
 
-		if (read_yaffs_flag == 1)
+		if (read_dlstatus_flag == 1)
 			return NAND_SUCCESS;
 		return NAND_SYSTEM_ERROR;
 	}//if (strcmp(phypart->name, "dlstatus") == 0)
@@ -373,12 +377,10 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 		printf("\n\nimage file size : 0x%08x is bigger than partition size : 0x%08x\n", size, phy_partition.size);
 		ret = NAND_INVALID_SIZE;
 	}
-
 	if (NAND_SUCCESS != ret)
         	break;
 
         ret = nand_start_write (&phy_partition, size);
-
         if (NAND_SUCCESS != ret)
             break;
 
@@ -413,27 +415,7 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 		break;
 	}
 	memset(g_BigBUF, 0xff, YAFFS_BUFFER_SIZE);
-#endif
-
-#ifdef TRANS_CODE_SIZE
-	if (phy_partition.yaffs == 0) {
-		code_yaffs_buflen = DATA_BUFFER_SIZE;
-		code_yaffs_onewrite = PAGE_SIZE;
-	} else if (phy_partition.yaffs == 1) {
-		code_yaffs_buflen = YAFFS_BUFFER_SIZE;
-		code_yaffs_onewrite = PAGE_SIZE + PAGE_OOB;
-	}
-
-	g_BigSize = 0;
-	if (g_BigBUF == NULL)
-		g_BigBUF = (unsigned char *)malloc(YAFFS_BUFFER_SIZE);
-
-	if (g_BigBUF == NULL) {
-		printf("malloc is wrong : %d\n", YAFFS_BUFFER_SIZE);
-		ret = NAND_SYSTEM_ERROR;		
-		break;
-	}
-	memset(g_BigBUF, 0xff, YAFFS_BUFFER_SIZE);
+	//printf("code_yaffs_onewrite = %d  code_yaffs_buflen = %d\n", code_yaffs_onewrite, code_yaffs_buflen);
 #endif
 
         g_status.total_size  = size;
@@ -684,7 +666,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		//////////////////////////////
     	} else if (is_nbl_write == 1) {
 #ifdef CONFIG_NAND_SC8810	//only for sc8810 to write spl
-		nand_write_fdl(0x0, g_FixNBLBuf);
+		g_prevstatus = nand_write_fdl(0x0, g_FixNBLBuf);
 #else
 	   	/* write the spl loader image to the nand*/
 		for (i = 0; i < 3; i++) {
@@ -697,15 +679,9 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 				//printf("pos = %d  size = %d\n", pos, size);
 				if (size == 0)
 					break;
-#if 1
 				g_prevstatus = nand_write_fdl (size, g_FixNBLBuf + pos);
-#else
-				if (nand_write_fdl (size, g_FixNBLBuf + pos) == NAND_SUCCESS)
-                			g_prevstatus = NAND_SUCCESS;
-#endif
 				pos += size;
 			}
-
         	}//for (i = 0; i < 3; i++)
 #endif
 		is_nbl_write = 0;
@@ -724,6 +700,11 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		g_prevstatus = NAND_SUCCESS;
 		/* factorydownload tools */
 		is_factorydownload_tools = 1;
+		is_check_dlstatus = get_DL_Status();
+		if (is_check_dlstatus == 1) {
+			get_Dl_Erase_Address_Table(&Dl_Erase_Address);
+			get_Dl_Data_Address_Table(&Dl_Data_Address);
+		}
     	}
 #ifdef	TRANS_CODE_SIZE
 	else {
@@ -833,35 +814,42 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 			set_dl_op_val(addr, size, ERASEFLASH, SUCCESS, 1);	
 	}
 	
-	if ((is_factorydownload_tools == 1) && (addr == FactoryDownloadTool_EndPartition_Address)) {
-		printf("\nSave dload status into dlstatus.txt\n");
-		dl_op_buf_len = DL_OP_RECORD_LEN * (g_dl_op_index + 1);
-		if (dl_op_buf_len > 0x2000) {
-			printf("dload status is too long and does not save it.\n");
-		} else {
-			memset(g_PhasecheckBUF, 0, 0x2000);
-			for (cnt = 0; cnt <= g_dl_op_index; cnt++)
-				sprintf((g_PhasecheckBUF + cnt * DL_OP_RECORD_LEN), 
-				"{%02d Base:0x%08x Size:0x%08x Op:%s Status:%s Scnt:0x%08x}", 
-				cnt, 
-				g_dl_op_table[cnt].base, 
-				g_dl_op_table[cnt].size, 
-				Dl_Op_Type_Name[g_dl_op_table[cnt].type], 
-				Dl_Op_Status_Name[g_dl_op_table[cnt].status], 
-				g_dl_op_table[cnt].status_cnt);
-			/* printf("%s\n", g_PhasecheckBUF); the line will result in dead here, so mask it */
-			/* write dload_status to yaffs2 format */
-			char *productinfopoint = "/productinfo";
-			char *productinfofilename = "/productinfo/dlstatus.txt";
-			cmd_yaffs_mount(productinfopoint);
- 			cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, dl_op_buf_len);
-			cmd_yaffs_ls_chk(productinfofilename);
-			cmd_yaffs_umount(productinfopoint);
-		}
+	/*printf("Dl_Erase_Address.cnt = 0x%08x  Dl_Data_Address.cnt = 0x%08x\n", Dl_Erase_Address.cnt, Dl_Data_Address.cnt);
+	for (cnt = 0; cnt < Dl_Erase_Address.cnt; cnt ++)
+		printf("Dl_Erase_Address_Table[%d] = 0x%08x\n", cnt, Dl_Erase_Address.base[cnt]);
+	for (cnt = 0; cnt < Dl_Data_Address.cnt; cnt ++)
+		printf("Dl_Data_Address_Table[%d] = 0x%08x\n", cnt, Dl_Data_Address.base[cnt]);*/
 
-		/* check factorydownload status */
-		printf("\nCheck dload status\n");
-		for (cnt = 0; cnt <= g_dl_op_index; cnt++)
+	if ((is_factorydownload_tools == 1) && (is_check_dlstatus == 1) && (Dl_Erase_Address.cnt > 0)) {
+		if (addr == Dl_Erase_Address.base[Dl_Erase_Address.cnt - 1]) {
+			printf("\nSave dload status into dlstatus.txt\n");
+			dl_op_buf_len = DL_OP_RECORD_LEN * (g_dl_op_index + 1);
+			if (dl_op_buf_len > 0x2000) {
+				printf("dload status is too long and does not save it.\n");
+			} else {
+				memset(g_PhasecheckBUF, 0, 0x2000);
+				for (cnt = 0; cnt <= g_dl_op_index; cnt++)
+					sprintf((g_PhasecheckBUF + cnt * DL_OP_RECORD_LEN), 
+					"{%02d Base:0x%08x Size:0x%08x Op:%s Status:%s Scnt:0x%08x}", 
+					cnt, 
+					g_dl_op_table[cnt].base, 
+					g_dl_op_table[cnt].size, 
+					Dl_Op_Type_Name[g_dl_op_table[cnt].type], 
+					Dl_Op_Status_Name[g_dl_op_table[cnt].status], 
+					g_dl_op_table[cnt].status_cnt);
+				/* printf("%s\n", g_PhasecheckBUF); the line will result in dead here, so mask it */
+				/* write dload_status to yaffs2 format */
+				char *productinfopoint = "/productinfo";
+				char *productinfofilename = "/productinfo/dlstatus.txt";
+				cmd_yaffs_mount(productinfopoint);
+ 				cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, dl_op_buf_len);
+				cmd_yaffs_ls_chk(productinfofilename);
+				cmd_yaffs_umount(productinfopoint);
+			}
+
+			/* check factorydownload status */
+			printf("\nCheck dload status\n");
+			for (cnt = 0; cnt <= g_dl_op_index; cnt++)
 				printf("%02d Base:0x%08x Size:0x%08x Op:%d Status:%d Scnt:0x%08x\n", 
 				cnt, 
 				g_dl_op_table[cnt].base, 
@@ -870,31 +858,30 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 				g_dl_op_table[cnt].status, 
 				g_dl_op_table[cnt].status_cnt);
 		
-		dl_data_status = FAIL; 
-		dl_erase_status = FAIL;
-		dl_item_cnt = sizeof(Dl_Data_Address) / sizeof(unsigned long);
-		for (cnt = 0; cnt < dl_item_cnt; cnt++) {
-			dl_data_status = check_dl_data_status(Dl_Data_Address[cnt]);
-			if (dl_data_status == FAIL) {
-				printf("check address:0x%08x download status error\n", Dl_Data_Address[cnt]);
-				break;
+			dl_data_status = FAIL; 
+			dl_erase_status = FAIL;
+			for (cnt = 0; cnt < Dl_Data_Address.cnt; cnt++) {
+				dl_data_status = check_dl_data_status(Dl_Data_Address.base[cnt]);
+				if (dl_data_status == FAIL) {
+					printf("check address:0x%08x download status error\n", Dl_Data_Address.base[cnt]);
+					break;
+				}
 			}
-		}
 
-		dl_item_cnt = sizeof(Dl_Erase_Address) / sizeof(unsigned long);
-		for (cnt = 0; cnt < dl_item_cnt; cnt++) {
-			dl_erase_status = check_dl_erase_status(Dl_Erase_Address[cnt]);
-			if (dl_erase_status == FAIL) {
-			   	printf("check address:0x%08x erase status error\n", Dl_Erase_Address[cnt]);
-				break;
+			for (cnt = 0; cnt < Dl_Erase_Address.cnt; cnt++) {
+				dl_erase_status = check_dl_erase_status(Dl_Erase_Address.base[cnt]);
+				if (dl_erase_status == FAIL) {
+			   		printf("check address:0x%08x erase status error\n", Dl_Erase_Address.base[cnt]);
+					break;
+				}
 			}
-		}
 		
-		if ((dl_data_status == SUCCESS) && (dl_erase_status == SUCCESS))
-			ret = NAND_SUCCESS;
-		else
-			ret = NAND_SYSTEM_ERROR;
-	}
+			if ((dl_data_status == SUCCESS) && (dl_erase_status == SUCCESS))
+				ret = NAND_SUCCESS;
+			else
+				ret = NAND_SYSTEM_ERROR;
+		} //if (addr == Dl_Erase_Address.base[Dl_Erase_Address.cnt - 1])
+	} //if ((is_factorydownload_tools == 1) && (Dl_Erase_Address.cnt > 0))
 
     FDL2_SendRep (ret);
     return (NAND_SUCCESS == ret);

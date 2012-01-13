@@ -46,6 +46,7 @@ COBJS-y += cmd_help.o
 COBJS-y += cmd_nvedit.o
 COBJS-y += cmd_version.o
 COBJS-y += idh_layout.o
+COBJS-y += dload_op.o
 
 # environment
 COBJS-y += env_common.o

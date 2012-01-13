@@ -13,11 +13,12 @@
 #include <cmd_def.h>
 struct mtd_info *_local_mtd = 0;
 
-//#define FDL2_DEBUG 1
+/*#define FDL2_DEBUG 1
 #ifdef FDL2_DEBUG
 #else
 #define printf(arg...) do{}while(0)
-#endif
+#endif*/
+
 typedef struct {
 		unsigned char colParity;
 		unsigned lineParity;
@@ -126,7 +127,8 @@ int nand_erase_partition(unsigned int addr, unsigned int size)
 
 	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
 		printf("erasing block : %d    %d % \r", (cur_partition.offset / nand->erasesize + erase_blk), (erase_blk * 100 ) / (cur_partition.size / nand->erasesize));
-		if (nand_block_isbad(nand, cur_partition.offset + erase_blk * nand->erasesize)) {
+
+		if (((cur_partition.offset + erase_blk * nand->erasesize) != 0x0) && nand_block_isbad(nand, cur_partition.offset + erase_blk * nand->erasesize)) {
 			printf("\nerase block : %d is bad\n", (cur_partition.offset / nand->erasesize + erase_blk));
 		} else {
 			ret = nand_erase_fdl(cur_partition.offset + erase_blk * nand->erasesize, nand->erasesize);
@@ -365,6 +367,9 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 	opts.length = size;
 	opts.jffs2 = 0;
 	opts.quiet = 1;
+	if (addr == 0x0)
+		opts.scrub = 1;
+
 #ifdef FDL2_DEBUG
 	printf("function: %s erase off 0x%x length: 0x%x jffs2: 0x%x scurb: 0x%x\n",__FUNCTION__, opts.offset, opts.length, opts.jffs2, opts.scrub);
 #endif
@@ -390,6 +395,7 @@ unsigned long log2phy_table(struct real_mtd_partition *phypart)
 
 	return NAND_SUCCESS;
 }
+
 int nand_start_write(struct real_mtd_partition *phypart, unsigned int size)
 {
 	struct mtd_partition cur_partition;
@@ -402,8 +408,7 @@ int nand_start_write(struct real_mtd_partition *phypart, unsigned int size)
 	//printf("nand->size = 0x%016Lx\n", (unsigned long long)nand->size);
 	//printf("addr = 0x%08x  size = 0x%08x  flag = %d  part_size = 0x%08x\n", phypart->offset, size, phypart->yaffs, phypart->size);
 
-		is_system_write = phypart->yaffs;
-
+	is_system_write = phypart->yaffs;
 
 #ifdef FDL2_DEBUG
 	printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
@@ -422,7 +427,7 @@ int nand_start_write(struct real_mtd_partition *phypart, unsigned int size)
 
 	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
 		printf("erasing block : %d    %d % \r", (cur_partition.offset / nand->erasesize + erase_blk), (erase_blk * 100 ) / (cur_partition.size / nand->erasesize));
-		if (nand_block_isbad(nand, cur_partition.offset + erase_blk * nand->erasesize)) {
+		if (((cur_partition.offset + erase_blk * nand->erasesize) != 0x0) && nand_block_isbad(nand, cur_partition.offset + erase_blk * nand->erasesize)) {
 			printf("\nerase block : %d is bad\n", (cur_partition.offset / nand->erasesize + erase_blk));
 		} else {
 			ret = nand_erase_fdl(cur_partition.offset + erase_blk * nand->erasesize, nand->erasesize);
@@ -772,6 +777,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		return NAND_SYSTEM_ERROR;
 		}
 }
+
 int nand_end_write(void)
 {
 #ifdef FDL2_DEBUG
