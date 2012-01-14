@@ -359,7 +359,7 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 	/*if(addr < nand->erasesize) //to skip the first block erase
 	  return NAND_INVALID_ADDR;*/
 	if(size != nand->erasesize)
-	  return NAND_INVALID_SIZE;
+	  	return NAND_INVALID_SIZE;
 	
 	nand_erase_options_t opts;
 	memset(&opts, 0, sizeof(opts));
@@ -369,6 +369,10 @@ int nand_erase_fdl(unsigned int addr, unsigned int size)
 	opts.quiet = 1;
 	if (addr == 0x0)
 		opts.scrub = 1;
+	/*else if ((nand->erasesize == MAX_SPL_SIZE) && (addr < (3 * nand->erasesize))) {
+		//small page nand, block 0, 1 and 2 is reserved for spl
+		opts.scrub = 1;
+	}*/
 
 #ifdef FDL2_DEBUG
 	printf("function: %s erase off 0x%x length: 0x%x jffs2: 0x%x scurb: 0x%x\n",__FUNCTION__, opts.offset, opts.length, opts.jffs2, opts.scrub);
@@ -540,7 +544,7 @@ void set_header_info(u8 *bl_data, struct mtd_info *nand, int ecc_pos)
 	header->sct_size = (nand->writesize/chip->ecc.steps);
 	header->sct_per_page = chip->ecc.steps;
 	header->check_sum = CheckSum((unsigned int *)(bl_data + BOOTLOADER_HEADER_OFFSET + 4), (NAND_PAGE_LEN - BOOTLOADER_HEADER_OFFSET - 4));
-	
+
 	param.mode = 24;
 	param.ecc_num = 1;
 	param.sp_size = sizeof(ecc);
@@ -579,8 +583,9 @@ int nand_write_spl_page(u8 *buf, struct mtd_info *mtd, u32 pg, u32 ecc_pos)
 	}
 	chip->write_buf(mtd, chip->buffers->ecccode, mtd->oobsize);
 	chip->cmdfunc(mtd, NAND_CMD_PAGEPROG, -1, -1);
-	chip->waitfunc(mtd, chip);	
-	return 0;
+	chip->waitfunc(mtd, chip);
+	
+	return NAND_SUCCESS;
 }
 int nand_write_spl(u8 *buf, struct mtd_info *mtd)
 {
@@ -589,33 +594,24 @@ int nand_write_spl(u8 *buf, struct mtd_info *mtd)
 	u32 pg_end;
 	u32 pg;
 	u8 * data;
-	int ret;
+	int ret = NAND_SUCCESS;
+
 	//struct nand_chip *chip = mtd->priv;
 	set_header_info(buf, mtd, CONFIG_SYS_SPL_ECC_POS);
-	/*small page nand*/
-	if(mtd->erasesize == MAX_SPL_SIZE)	{
-		for(i = 0; i < 3; i++) {
-			ret = nand_erase_fdl(0, MAX_SPL_SIZE);
-		}
-	}
-	else{
-		ret = nand_erase_fdl(0, mtd->erasesize);
-	}
-	if(ret != 0) {
-		return ret;
-	}
+	/* erase spl block in nand_start_write(), so erase spl block code is deleted */
+
 	/* write spl to flash*/
-	for(i = 0; i < 3; i++) 	{
+	for (i = 0; i < 3; i++) {
 		pg_start = i * MAX_SPL_SIZE;
 		pg_end = (i + 1) * MAX_SPL_SIZE;
 		data = buf;
-		for(pg  = pg_start; pg < pg_end; pg += mtd->writesize)
-		{
-			nand_write_spl_page(data, mtd, pg, CONFIG_SYS_SPL_ECC_POS);
+		for(pg  = pg_start; pg < pg_end; pg += mtd->writesize) {
+			ret = nand_write_spl_page(data, mtd, pg, CONFIG_SYS_SPL_ECC_POS);
 			data += mtd->writesize;
 		}
 	}
-	return 0;	
+	
+	return ret;	
 }
 #endif
 int nand_write_fdl(unsigned int size, unsigned char *buf)
@@ -630,6 +626,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 	int ret=0;
 	int pos;
 	unsigned char buffer[4096];
+
 #ifdef CONFIG_NAND_SC8810//only for sc8810 to write spl
 	if(cur_write_pos < 0xc000)	{
 		return nand_write_spl(buf, nand);
