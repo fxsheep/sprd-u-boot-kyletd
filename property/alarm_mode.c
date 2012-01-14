@@ -19,12 +19,11 @@ extern unsigned int get_alarm_lead_set(void);
 void alarm_mode(void)
 {
     printf("%s\n", __func__);
-    //vlx_nand_boot(BOOT_PART, "androidboot.mode=alarm", BACKLIGHT_ON);
 
 #if BOOT_NATIVE_LINUX
     vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS, BACKLIGHT_ON);
 #else
-    vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS "androidboot.mode=alarm", BACKLIGHT_ON);
+    vlx_nand_boot(BOOT_PART, "androidboot.mode=alarm", BACKLIGHT_ON);
 #endif
 }
 
