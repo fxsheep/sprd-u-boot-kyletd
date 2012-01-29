@@ -81,13 +81,20 @@ static inline unsigned get_day(void)
 unsigned long sprd_rtc_get_sec(void)
 {
 	unsigned sec, min, hour, day;
+	unsigned first = 0, second = 0;
 
-    sec = get_sec();
-    min = get_min();
-    hour = get_hour();
-    day = get_day();
+	do {
+		sec = get_sec();
+		min = get_min();
+		hour = get_hour();
+		day = get_day();
 
-	return ((((day*24) + hour)*60 + min)*60 + sec);
+		second = ((((day*24) + hour)*60 + min)*60 + sec);
+		if((second - first) == 0)
+			break;
+		first = second;
+	}while(1);
+	return first;
 }
 static inline void sprd_rtc_set_alarm_sec(unsigned long secs);
 static inline void sprd_rtc_set_sec(unsigned long secs)
