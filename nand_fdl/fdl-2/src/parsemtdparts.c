@@ -313,56 +313,6 @@ static int mtdpart_setup_real(char *s)
 }
 
 char * get_mtdparts(void);
-int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long mastersize)
-{
-	unsigned long offset;
-	int i;
-	struct cmdline_mtd_partition *part;
-
-	cmdline = get_mtdparts();
-
-	/* parse command line */
-	if (!cmdline_parsed) {
-		mtdpart_setup_real(cmdline);
-
-		for (i = real_current_part, offset = 0; i < MTDPARTITION_MAX; i ++) {
-			if (realpart[i].offset == OFFSET_CONTINUOUS)
-			  		realpart[i].offset = offset;
-				else
-			  		offset = realpart[i].offset;
-			
-				if (realpart[i].size == SIZE_REMAINING)
-			  		realpart[i].size = mastersize - offset;
-
-				if (offset + realpart[i].size > mastersize) {
-					printf("partitioning exceeds flash size, truncating\n");
-					realpart[i].size = mastersize - offset;
-				}
-				offset += realpart[i].size;
-
-
-				printf("realpart %02d: offset %08x, size %08x\n",
-	     			(i - real_current_part),
-	     			realpart[i].offset,
-	     			realpart[i].size);
-		}
-	}
-
-	
-	for (i = real_current_part; i < MTDPARTITION_MAX; i ++) {
-		if (realpart[i].offset == current->offset) {
-			current->size = realpart[i].size;
-			if (current->offset == 0x01a60000) {
-				/* erase fixnv and backupfixnv */
-				current->size += realpart[i + 1].size;
-			}
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
 int real_parse_cmdline_partitions(struct real_mtd_partition *current, unsigned long long mastersize)
 {
 	unsigned long offset;
@@ -401,24 +351,29 @@ int real_parse_cmdline_partitions(struct real_mtd_partition *current, unsigned l
 	}
 
 	//printf("current->offset = 0x%08x,  real_current_part = %d\n", current->offset, real_current_part);
+	if ((strcmp(current->name, "fixnv") == 0) || ((strcmp(current->name, "backupfixnv") == 0))) {
+		for (j = real_current_part; j < MTDPARTITION_MAX; j ++)
+			if (strcmp(realpart[j].name, current->name) == 0) {
+				current->offset = realpart[j].offset;
+				current->size = realpart[j].size;
+				current->yaffs = realpart[j].yaffs;
+				return 0;
+			}
+		/* not find fixnv or backupfixnv */
+		current->offset = 0xffffffff;
+		return 0;
+	}
+	
 	index = (current->offset & 0x0000FFFF) + real_current_part;
 	if ((index >= real_current_part) && (index < MTDPARTITION_MAX)) {
 		current->offset = realpart[index].offset;
 		strcpy(current->name, realpart[index].name);
 		current->size = realpart[index].size;
 		current->yaffs = realpart[index].yaffs;
-		if (strcmp(current->name, "fixnv") == 0) {
-			/* erase fixnv and backupfixnv */
-			for (j = real_current_part; j < MTDPARTITION_MAX; j ++)
-				if (strcmp(realpart[j].name, "backupfixnv") == 0) {
-					current->size += realpart[j].size;
-					break;
-				}
-		}
 	} else {
 		current->offset = 0xffffffff;
 	}
 
-	return -1;
+	return 0;
 }
 

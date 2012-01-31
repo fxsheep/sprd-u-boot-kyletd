@@ -23,6 +23,7 @@ unsigned char raw_header[2048];
 #define MODEM_PART "modem"
 #define KERNEL_PART "kernel"
 #define FIXNV_PART "fixnv"
+#define BACKUPFIXNV_PART "backupfixnv"
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
 
@@ -168,6 +169,14 @@ int nv_is_correct(unsigned char *array, unsigned long size)
 		return -1;
 }
 
+int nv_is_correct_endflag(unsigned char *array, unsigned long size)
+{
+	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a))
+		return 1;
+	else
+		return -1;
+}
+
 void array_value_range(unsigned char * array, int start, int end)
 {
 	int aaa;
@@ -253,7 +262,9 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	char *productinfopoint = "/productinfo";
 	char *productinfofilename = "/productinfo/productinfo.bin";
 	char *productinfofilename2 = "/productinfo/productinfochange.bin";
-    char * mtdpart_def = NULL;
+	int fixnv_right, backupfixnv_right;
+	nand_erase_options_t opts;
+    	char * mtdpart_def = NULL;
         #ifdef CONFIG_SC8810
      	MMU_Init(CONFIG_MMU_TABLE_ADDR);
 	#endif
@@ -309,6 +320,65 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	/*int good_blknum, bad_blknum;
 	nand_block_info(nand, &good_blknum, &bad_blknum);
 	printf("good is %d  bad is %d\n", good_blknum, bad_blknum);*/
+	///////////////////////////////////////////////////////////////////////
+	/* recovery damaged fixnv or backupfixnv */
+	fixnv_right = 0;
+	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+	cmd_yaffs_mount(fixnvpoint);
+	ret = cmd_yaffs_ls_chk(fixnvfilename);
+	if (ret == (FIXNV_SIZE + 4)) {
+		cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+		if (1 == nv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+			fixnv_right = 1;//right
+	}
+	cmd_yaffs_umount(fixnvpoint);
+
+	backupfixnv_right = 0;
+	memset((unsigned char *)RUNTIMENV_ADR, 0xff, FIXNV_SIZE + 4);
+	cmd_yaffs_mount(backupfixnvpoint);
+	ret = cmd_yaffs_ls_chk(backupfixnvfilename);
+	if (ret == (FIXNV_SIZE + 4)) {
+		cmd_yaffs_mread_file(backupfixnvfilename, (unsigned char *)RUNTIMENV_ADR);
+		if (1 == nv_is_correct_endflag((unsigned char *)RUNTIMENV_ADR, FIXNV_SIZE))
+			backupfixnv_right = 1;//right
+	}
+	cmd_yaffs_umount(backupfixnvpoint);
+	//printf("fixnv_right = %d  backupfixnv_right = %d\n", fixnv_right, backupfixnv_right);
+	if ((fixnv_right == 1) && (backupfixnv_right == 0)) {
+		printf("fixnv is right, but backupfixnv is wrong, so erase and recovery backupfixnv\n");
+		////////////////////////////////
+		find_dev_and_part(BACKUPFIXNV_PART, &dev, &pnum, &part);
+		//printf("offset = 0x%08x  size = 0x%08x\n", part->offset, part->size);
+		nand = &nand_info[dev->id->num];
+		memset(&opts, 0, sizeof(opts));
+		opts.offset = part->offset;
+		opts.length = part->size;
+		opts.quiet = 1;
+		nand_erase_opts(nand, &opts);
+		////////////////////////////////
+		cmd_yaffs_mount(backupfixnvpoint);
+    		cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)FIXNV_ADR, (FIXNV_SIZE + 4));
+		cmd_yaffs_ls_chk(backupfixnvfilename);
+		cmd_yaffs_umount(backupfixnvpoint);
+	} else if ((fixnv_right == 0) && (backupfixnv_right == 1)) {
+		printf("backupfixnv is right, but fixnv is wrong, so erase and recovery fixnv\n");
+		////////////////////////////////
+		find_dev_and_part(FIXNV_PART, &dev, &pnum, &part);
+		//printf("offset = 0x%08x  size = 0x%08x\n", part->offset, part->size);
+		nand = &nand_info[dev->id->num];
+		memset(&opts, 0, sizeof(opts));
+		opts.offset = part->offset;
+		opts.length = part->size;
+		opts.quiet = 1;
+		nand_erase_opts(nand, &opts);
+		////////////////////////////////
+		cmd_yaffs_mount(fixnvpoint);
+    		cmd_yaffs_mwrite_file(fixnvfilename, (char *)RUNTIMENV_ADR, (FIXNV_SIZE + 4));
+		cmd_yaffs_ls_chk(fixnvfilename);
+		cmd_yaffs_umount(fixnvpoint);
+	} else if ((fixnv_right == 0) && (backupfixnv_right == 0)) {
+		printf("\n\nfixnv and backupfixnv are all wrong.\n\n");
+	}
 	///////////////////////////////////////////////////////////////////////
 	/* FIXNV_PART */
 	printf("Reading fixnv to 0x%08x\n", FIXNV_ADR);

@@ -34,7 +34,8 @@ typedef struct _DL_FILE_STATUS
 } DL_FILE_STATUS, *PDL_FILE_STATUS;
 static unsigned long g_checksum;
 static unsigned long g_sram_addr;
-static int read_yaffs_flag = 0;
+static int read_nv_flag = 0;
+static int read_bkupnv_flag = 0;
 static int read_dlstatus_flag = 0;
 __align(4) unsigned char g_fixnv_buf[FIXNV_SIZE + 4];
 __align(4) unsigned char g_fixnv_buf_yaffs[FIXNV_SIZE + 4];
@@ -52,6 +53,7 @@ unsigned long FDL2_GetRecvDataSize (void)
 }
 
 struct real_mtd_partition phy_partition;
+struct real_mtd_partition phy_nv_partition;
 static unsigned int is_nbl_write;
 static unsigned int is_phasecheck_write;
 static unsigned int g_NBLFixBufDataSize = 0;
@@ -221,7 +223,7 @@ unsigned long custom2log(unsigned long custom)
 	return log;
 }
 
-void phy_partition_info(struct real_mtd_partition phy)
+void phy_partition_info(struct real_mtd_partition phy, int line)
 {
 	int i;
 
@@ -230,7 +232,7 @@ void phy_partition_info(struct real_mtd_partition phy)
 		return;
 	}
 
-	//printf("name : %20s, offset : 0x%08x, size : 0x%08x, yaffs : %d\n", phy.name, phy.offset, phy.size, phy.yaffs);
+	printf("line : %d, name : %20s, offset : 0x%08x, size : 0x%08x, yaffs : %d\n", line, phy.name, phy.offset, phy.size, phy.yaffs);
 
 	return;
 }
@@ -244,6 +246,14 @@ int nv_is_correct(unsigned char *array, unsigned long size)
 		array[size + 2] = 0xff; array[size + 3] = 0xff;	
 		return 1;
 	} else
+		return -1;
+}
+
+int nv_is_correct_endflag(unsigned char *array, unsigned long size)
+{
+	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a))
+		return 1;
+	else
 		return -1;
 }
 
@@ -261,51 +271,78 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 		/* for fixnv, read total 64KB */
 		char *fixnvpoint = "/fixnv";
 		char *fixnvfilename = "/fixnv/fixnv.bin";
-		char *fixnvfilename2 = "/fixnv/fixnvchange.bin";
+		char *backupfixnvpoint = "/backupfixnv";
+		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
 
-		if (read_yaffs_flag == 0) {
+		if ((read_nv_flag == 0) && (read_bkupnv_flag == 0)) {
+			read_nv_flag = 1;//wrong
 			memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
 			/* read fixnv */
     			cmd_yaffs_mount(fixnvpoint);
 			ret = cmd_yaffs_ls_chk(fixnvfilename);
 			if (ret == (FIXNV_SIZE + 4)) {
 				cmd_yaffs_mread_file(fixnvfilename, g_fixnv_buf_yaffs);
-				if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
-					memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
-					/* read fixnv backup */
-					ret = cmd_yaffs_ls_chk(fixnvfilename2);
-					if (ret == (FIXNV_SIZE + 4)) {
-						cmd_yaffs_mread_file(fixnvfilename2, g_fixnv_buf_yaffs);
-						if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
-							memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
-							read_yaffs_flag = 2;
-						} else
-							read_yaffs_flag = 1;
-					} else
-						read_yaffs_flag = 2;//error
-					/* read fixnv backup */
-				} else
-					read_yaffs_flag = 1;//success
-			} else {
-				/* read fixnv backup */
-				ret = cmd_yaffs_ls_chk(fixnvfilename2);
-				if (ret == (FIXNV_SIZE + 4)) {
-					cmd_yaffs_mread_file(fixnvfilename2, g_fixnv_buf_yaffs);
-					if (-1 == nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE)) {
-						memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);
-						read_yaffs_flag = 2;
-					} else
-						read_yaffs_flag = 1;
-				} else
-					read_yaffs_flag = 2;//error
-				/* read fixnv backup */
+				if (1 == nv_is_correct_endflag(g_fixnv_buf_yaffs, FIXNV_SIZE))
+					read_nv_flag = 2;//right
 			}
 			cmd_yaffs_umount(fixnvpoint);
-		}
+
+			read_bkupnv_flag = 1;//wrong
+			memset(g_fixnv_buf, 0xff, FIXNV_SIZE + 4);
+			cmd_yaffs_mount(backupfixnvpoint);
+			ret = cmd_yaffs_ls_chk(backupfixnvfilename);
+			if (ret == (FIXNV_SIZE + 4)) {
+				cmd_yaffs_mread_file(backupfixnvfilename, g_fixnv_buf);
+				if (1 == nv_is_correct_endflag(g_fixnv_buf, FIXNV_SIZE))
+					read_bkupnv_flag = 2;//right
+			}
+			cmd_yaffs_umount(backupfixnvpoint);
+
+			if ((read_nv_flag == 2) && (read_bkupnv_flag == 1)) {
+				printf("fixnv is right, but backupfixnv is wrong, so erase and recovery backupfixnv\n");
+				memset(&phy_nv_partition, 0, sizeof(struct real_mtd_partition));
+				strcpy(phy_nv_partition.name, "backupfixnv");
+				log2phy_table(&phy_nv_partition);
+				phy_partition_info(phy_nv_partition, __LINE__);
+				printf("erase backupfixnv start\n");
+				nand_start_write(&phy_nv_partition, 0);
+				printf("\nerase backupfixnv end\n");
+				printf("write backupfixnv start\n");
+				cmd_yaffs_mount(backupfixnvpoint);
+    				cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)g_fixnv_buf_yaffs, (FIXNV_SIZE + 4));
+				cmd_yaffs_ls_chk(backupfixnvfilename);
+				cmd_yaffs_umount(backupfixnvpoint);
+				printf("write backupfixnv end\n");
+			} else if ((read_nv_flag == 1) && (read_bkupnv_flag == 2)) {
+				printf("backupfixnv is right, but fixnv is wrong, so erase and recovery fixnv\n");
+				memset(&phy_nv_partition, 0, sizeof(struct real_mtd_partition));
+				strcpy(phy_nv_partition.name, "fixnv");
+				log2phy_table(&phy_nv_partition);
+				phy_partition_info(phy_nv_partition, __LINE__);
+				/* erase fixnv partition */
+				printf("erase fixnv start\n");
+				nand_start_write(&phy_nv_partition, 0);
+				printf("\nerase fixnv end\n");
+				printf("write fixnv start\n");
+				cmd_yaffs_mount(fixnvpoint);
+    				cmd_yaffs_mwrite_file(fixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
+				cmd_yaffs_ls_chk(fixnvfilename);
+				cmd_yaffs_umount(fixnvpoint);
+				printf("write fixnv end\n");
+				memcpy((unsigned char *)g_fixnv_buf_yaffs, (unsigned char *)g_fixnv_buf, (FIXNV_SIZE + 4));
+			} else if ((read_nv_flag == 1) && (read_bkupnv_flag == 1)) {
+				printf("\n\nfixnv and backupfixnv are all wrong.\n\n");
+				memset(g_fixnv_buf_yaffs, 0xff, FIXNV_SIZE + 4);			
+			} else if ((read_nv_flag == 2) && (read_bkupnv_flag == 2))
+				printf("fixnv and backupfixnv are all right.\n");
+
+			nv_is_correct(g_fixnv_buf_yaffs, FIXNV_SIZE);
+			memset(g_fixnv_buf, 0xff, FIXNV_SIZE + 4);
+		} //if ((read_nv_flag == 0) && (read_bkupnv_flag == 0))
 
 		memcpy(buf, (unsigned char *)(g_fixnv_buf_yaffs + off), size);
 
-		if (read_yaffs_flag == 1)
+		if ((read_nv_flag == 2) || (read_bkupnv_flag == 2))
 			return NAND_SUCCESS;
 		return NAND_SYSTEM_ERROR;
 	}//if (strcmp(phypart->name, "fixnv") == 0)
@@ -368,7 +405,7 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 	phy_partition.offset = custom2log(start_addr);
 	ret = log2phy_table(&phy_partition);
-	phy_partition_info(phy_partition);
+	//phy_partition_info(phy_partition, __LINE__);
 
 	if (NAND_SUCCESS != ret)
         	break;
@@ -380,7 +417,10 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	if (NAND_SUCCESS != ret)
         	break;
 
-        ret = nand_start_write (&phy_partition, size);
+	if (strcmp(phy_partition.name, "fixnv") == 0)
+		ret = NAND_SUCCESS;
+	else
+        	ret = nand_start_write (&phy_partition, size);
         if (NAND_SUCCESS != ret)
             break;
 
@@ -638,18 +678,34 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
         	if (fix_nv_checksum != g_checksum)
             		SEND_ERROR_RSP(BSL_CHECKSUM_DIFF);
 		
-		//////////////////////////////
 		/* write fixnv to yaffs2 format : orginal */
 		char *fixnvpoint = "/fixnv";
 		char *fixnvfilename = "/fixnv/fixnv.bin";
-
+		
 		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
 		g_fixnv_buf[FIXNV_SIZE + 0] = g_fixnv_buf[FIXNV_SIZE + 1] = 0x5a;
 		g_fixnv_buf[FIXNV_SIZE + 2] = g_fixnv_buf[FIXNV_SIZE + 3] = 0x5a;
-		cmd_yaffs_mount(fixnvpoint);
-    		cmd_yaffs_mwrite_file(fixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
-		ret = cmd_yaffs_ls_chk(fixnvfilename);
-		cmd_yaffs_umount(fixnvpoint);
+		/* erase fixnv partition */
+		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+		strcpy(phy_partition.name, "fixnv");
+		ret = log2phy_table(&phy_partition);
+		phy_partition_info(phy_partition, __LINE__);
+		g_prevstatus = ret;
+		if (ret == NAND_SUCCESS) {
+			printf("erase fixnv start\n");
+			ret = nand_start_write (&phy_partition, fix_nv_size);
+			printf("\nerase fixnv end\n");
+			g_prevstatus = ret;
+			if (ret == NAND_SUCCESS) {
+				printf("write fixnv start\n");
+				cmd_yaffs_mount(fixnvpoint);
+    				cmd_yaffs_mwrite_file(fixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
+				ret = cmd_yaffs_ls_chk(fixnvfilename);
+				cmd_yaffs_umount(fixnvpoint);
+				printf("write fixnv end\n");
+				g_prevstatus = NAND_SUCCESS;			
+			}
+		}
 
 		/* write fixnv to yaffs2 format : backup */
 		char *backupfixnvpoint = "/backupfixnv";
@@ -658,11 +714,27 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
 		g_fixnv_buf[FIXNV_SIZE + 0] = g_fixnv_buf[FIXNV_SIZE + 1] = 0x5a;
 		g_fixnv_buf[FIXNV_SIZE + 2] = g_fixnv_buf[FIXNV_SIZE + 3] = 0x5a;
-		cmd_yaffs_mount(backupfixnvpoint);
-    		cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
-		ret = cmd_yaffs_ls_chk(backupfixnvfilename);
-		cmd_yaffs_umount(backupfixnvpoint);
-		g_prevstatus = NAND_SUCCESS;
+		/* erase backup fixnv partition */
+		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+		strcpy(phy_partition.name, "backupfixnv");
+		ret = log2phy_table(&phy_partition);
+		phy_partition_info(phy_partition, __LINE__);
+		g_prevstatus = ret;
+		if (ret == NAND_SUCCESS) {
+			printf("erase backupfixnv start\n");
+			ret = nand_start_write (&phy_partition, fix_nv_size);
+			printf("\nerase backupfixnv end\n");
+			g_prevstatus = ret;
+			if (ret == NAND_SUCCESS) {
+				printf("write backupfixnv start\n");
+				cmd_yaffs_mount(backupfixnvpoint);
+    				cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
+				ret = cmd_yaffs_ls_chk(backupfixnvfilename);
+				cmd_yaffs_umount(backupfixnvpoint);
+				printf("write backupfixnv end\n");
+				g_prevstatus = NAND_SUCCESS;
+			}
+		}
 		//////////////////////////////
     	} else if (is_nbl_write == 1) {
 #ifdef CONFIG_NAND_SC8810	//only for sc8810 to write spl
@@ -753,7 +825,7 @@ int FDL2_ReadFlash (PACKET_T *packet, void *arg)
 	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 	phy_partition.offset = custom2log(addr);
 	ret = log2phy_table(&phy_partition);
-	phy_partition_info(phy_partition);
+	//phy_partition_info(phy_partition, __LINE__);
     
 	if (size > MAX_PKT_SIZE) {
         	FDL_SendAckPacket (BSL_REP_DOWN_SIZE_ERROR);
@@ -806,7 +878,7 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 		phy_partition.offset = custom2log(addr);
 		ret = log2phy_table(&phy_partition);
-		phy_partition_info(phy_partition);
+		phy_partition_info(phy_partition, __LINE__);
 		if (NAND_SUCCESS == ret)
 			ret = nand_erase_partition(phy_partition.offset, phy_partition.size);
 

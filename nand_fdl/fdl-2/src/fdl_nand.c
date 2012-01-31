@@ -37,8 +37,6 @@ typedef struct {
 } yaffs_PackedTags2;
 
 #define MAX_SPL_SIZE    0x4000
-static unsigned int nand_write_size ;
-static unsigned int nand_write_addr;
 static unsigned int cur_write_pos;
 static unsigned int is_system_write;
 
@@ -422,9 +420,7 @@ int nand_start_write(struct real_mtd_partition *phypart, unsigned int size)
 	backupblk_len = 0;
 	backupblk_flag = 0;
 
-	nand_write_addr = phypart->offset;
 	cur_write_pos = phypart->offset;
-	nand_write_size = size;
 
 	cur_partition.offset = phypart->offset;
 	cur_partition.size = phypart->size;
@@ -780,8 +776,6 @@ int nand_end_write(void)
 #ifdef FDL2_DEBUG
 	printf("function: %s\n", __FUNCTION__);
 #endif
-	nand_write_addr = NULL;
-	nand_write_size = 0;
 	cur_write_pos = NULL;
 
 	memset(backupblk, 0xff, BLOCK_DATA_OOB);

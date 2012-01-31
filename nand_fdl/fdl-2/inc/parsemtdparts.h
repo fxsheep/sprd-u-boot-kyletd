@@ -17,6 +17,5 @@ struct real_mtd_partition {
 	unsigned long mask_flags;		/* master MTD flags to mask out for this partition */
 	unsigned long yaffs;	/* 1 is yaffs image, 0 is not raw image */
 };
-int parse_cmdline_partitions(struct mtd_partition *current, unsigned long long mastersize);
 
 #endif /* FDL_NAND_H */
