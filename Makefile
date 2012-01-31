@@ -543,7 +543,7 @@ unconfig:
 
 sinclude .boards.depend
 .boards.depend:	boards.cfg
-	awk '(NF && $$1 !~ /^#/) { print $$1 ": " $$1 "_config; $$(MAKE)" }' $< > $@
+	@awk '(NF && $$1 !~ /^#/) { print $$1 ": " $$1 "_config; $$(MAKE)" }' $< > $@
 
 #
 # Functions to generate common board directory names
