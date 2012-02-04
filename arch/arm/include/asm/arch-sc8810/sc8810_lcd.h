@@ -18,6 +18,12 @@
 #define _SC8810_LCD_H_
 
 #include <linux/types.h>
+#include <common.h>
+
+#define LCD_DelayMS(ms)  udelay(1000*(ms))
+
+#define LCD_REGISTER_TIMING 0
+#define LCD_GRAM_TIMING     1
 
 /* LCD mode */
 #define LCD_MODE_RGB 0

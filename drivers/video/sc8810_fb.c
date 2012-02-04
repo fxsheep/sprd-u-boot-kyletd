@@ -72,6 +72,9 @@ struct sc8810fb_info {
 	struct lcd_spec *panel;
 	uint32_t smem_start;
 	uint32_t smem_len;
+
+	uint32_t register_timing;
+	uint32_t gram_timing;
 };
 
 struct lcd_cfg{
@@ -223,6 +226,68 @@ static void lcdc_mcu_init(void)
 
 }
 
+static uint32_t lcdc_calc_lcm_timing(struct timing_mcu *timing)
+{
+	uint32_t ahb_clk;
+	uint32_t rcss, rlpw, rhpw, wcss, wlpw, whpw;
+
+	// for sc8810
+	ahb_clk = 250; // 250 MHz
+
+	FB_PRINT("@fool2[%s] ahb_clk: 0x%x\n", __FUNCTION__, ahb_clk);
+
+        /************************************************
+	* we assume : t = ? ns, AHB = ? MHz   so
+        *      1ns  cycle  :  AHB /1000
+	*      tns  cycles :  t * AHB / 1000
+	*
+	*****************************************/
+	rcss = LCDC_CYCLES(timing->rcss, ahb_clk, 1000);//ceiling
+
+        if (rcss > MAX_LCDC_TIMING_VALUE) {
+		rcss = MAX_LCDC_TIMING_VALUE ; // max 15 cycles
+	}
+
+	rlpw = LCDC_CYCLES(timing->rlpw, ahb_clk , 1000);
+	if (rlpw > MAX_LCDC_TIMING_VALUE) {
+		rlpw = MAX_LCDC_TIMING_VALUE ;
+	}
+
+	rhpw = LCDC_CYCLES(timing->rhpw, ahb_clk , 1000);
+	if (rhpw > MAX_LCDC_TIMING_VALUE) {
+		rhpw = MAX_LCDC_TIMING_VALUE ;
+	}
+
+	wcss = LCDC_CYCLES(timing->wcss, ahb_clk, 1000);
+	if (wcss > MAX_LCDC_TIMING_VALUE) {
+		wcss = MAX_LCDC_TIMING_VALUE ;
+	}
+
+	wlpw = LCDC_CYCLES(timing->wlpw, ahb_clk, 1000);
+	if (wlpw > MAX_LCDC_TIMING_VALUE) {
+		wlpw = MAX_LCDC_TIMING_VALUE ;
+	}
+
+	whpw = LCDC_CYCLES(timing->whpw, ahb_clk, 1000);
+	if (whpw > MAX_LCDC_TIMING_VALUE) {
+		whpw = MAX_LCDC_TIMING_VALUE ;
+	}
+
+	/*   LCDC_ChangePulseWidth() */
+	return whpw | (wlpw << 4) | (wcss << 8)
+                        | (rhpw << 16) |(rlpw << 20) | (rcss << 24);
+
+}
+
+static void lcdc_update_lcm_timing(uint32_t value) 
+{
+	/* LCD_UpdateTiming() */
+
+	__raw_writel(value, LCM_PARAMETER0); /* FIXME: hardcoded for !CS0 */
+
+	FB_PRINT("@fool2[%s] LCM_PARAMETER0: 0x%x\n", __FUNCTION__, __raw_readl(LCM_PARAMETER0));
+}
+
 static int mount_panel(struct sc8810fb_info *fb, struct lcd_spec *panel)
 {
 	fb->panel = panel;
@@ -231,6 +296,12 @@ static int mount_panel(struct sc8810fb_info *fb, struct lcd_spec *panel)
 
 	panel->ops->lcd_reset = panel_reset;
 
+	{
+		struct timing_mcu *timing = panel->info.mcu->timing;
+		fb->register_timing = lcdc_calc_lcm_timing(timing);
+		timing++;
+		fb->gram_timing = lcdc_calc_lcm_timing(timing);  
+	}
 	return 0;
 }
 
@@ -245,11 +316,18 @@ static void real_set_layer(struct sc8810fb_info *fb)
 
 static void real_refresh(struct sc8810fb_info *fb)
 {
-	//uint32_t reg_val;
-
 	fb->panel->ops->lcd_invalidate(fb->panel);
+	/* set timing parameters for LCD */
+	lcdc_update_lcm_timing(fb->gram_timing);
 
 	__raw_bits_or((1<<3), LCDC_CTRL); /* start refresh */
+	
+	while(__raw_readl(LCDC_IRQ_RAW) & (1<<0)); // wait util done
+
+	__raw_bits_or((1<<0), LCDC_IRQ_CLR);
+
+	/* set timing parameters for LCD */
+	lcdc_update_lcm_timing(fb->register_timing);
 }
 
 static void lcdc_lcm_configure(struct sc8810fb_info *fb)
@@ -291,100 +369,7 @@ static void lcdc_lcm_configure(struct sc8810fb_info *fb)
 	FB_PRINT("@fool2[%s] LCM_CTRL: 0x%x\n", __FUNCTION__, __raw_readl(LCM_CTRL));
 }
 
-#if 0
-uint32_t CHIP_GetMcuClk (void)
-{
-	uint32_t clk_mcu_sel;
-	uint32_t clk_mcu = 0;
 
-	clk_mcu_sel = __raw_readl(AHB_ARM_CLK);
-	clk_mcu_sel = (clk_mcu_sel >>  23)  &  0x3;
-	switch (clk_mcu_sel)
-         {
-            case 0:
-            	clk_mcu = 400000000;
-            	break;
-            case 1:
-            	clk_mcu = 153600000;
-            	break;
-            case 2:
-            	clk_mcu = 64000000;
-            	break;
-            case 3:
-            	clk_mcu = 26000000;
-            	break;
-            default:
-             	// can't go there
-            	 break;
-            }
-	return clk_mcu;
-}
-#endif
-
-static void lcdc_update_lcm_timing(struct sc8810fb_info *fb)
-{
-	uint32_t  reg_value;
-	uint32_t  ahb_div,ahb_clk;
-	uint32_t rcss, rlpw, rhpw, wcss, wlpw, whpw;
-	struct timing_mcu *timing;
-
-	// for sc8810
-	ahb_clk = 200; // 200 MHz
-
-	FB_PRINT("@fool2[%s] ahb_clk: 0x%x\n", __FUNCTION__, ahb_clk);
-
-	/* LCD_UpdateTiming() */
-
-	timing = fb->panel->info.mcu->timing;
-
-        /************************************************
-	* we assume : t = ? ns, AHB = ? MHz   so
-        *      1ns  cycle  :  AHB /1000
-	*      tns  cycles :  t * AHB / 1000
-	*
-	*****************************************/
-	rcss = LCDC_CYCLES(timing->rcss, ahb_clk, 1000);//ceiling
-
-        if (rcss > MAX_LCDC_TIMING_VALUE) {
-		rcss = MAX_LCDC_TIMING_VALUE ; // max 15 cycles
-	}
-
-	rlpw = LCDC_CYCLES(timing->rlpw, ahb_clk , 1000);
-	if (rlpw > MAX_LCDC_TIMING_VALUE) {
-		rlpw = MAX_LCDC_TIMING_VALUE ;
-	}
-
-	rhpw = LCDC_CYCLES(timing->rhpw, ahb_clk , 1000);
-	if (rhpw > MAX_LCDC_TIMING_VALUE) {
-		rhpw = MAX_LCDC_TIMING_VALUE ;
-	}
-
-	wcss = LCDC_CYCLES(timing->wcss, ahb_clk, 1000);
-	if (wcss > MAX_LCDC_TIMING_VALUE) {
-		wcss = MAX_LCDC_TIMING_VALUE ;
-	}
-
-	wlpw = LCDC_CYCLES(timing->wlpw, ahb_clk, 1000);
-	if (wlpw > MAX_LCDC_TIMING_VALUE) {
-		wlpw = MAX_LCDC_TIMING_VALUE ;
-	}
-
-	whpw = LCDC_CYCLES(timing->whpw, ahb_clk, 1000);
-	if (whpw > MAX_LCDC_TIMING_VALUE) {
-		whpw = MAX_LCDC_TIMING_VALUE ;
-	}
-
-	//wait  until AHB FIFO if empty
-	//while(!(__raw_readl(LCM_STATUS) & (1<<2)));
-	while(__raw_readl(LCM_CTRL) & BIT20);
-
-	/*   LCDC_ChangePulseWidth() */
-	reg_value = whpw | (wlpw << 4) | (wcss << 8)
-                        | (rhpw << 16) |(rlpw << 20) | (rcss << 24);
-	__raw_writel(reg_value, LCM_PARAMETER0); /* FIXME: hardcoded for !CS0 */
-
-	FB_PRINT("@fool2[%s] LCM_PARAMETER0: 0x%x\n", __FUNCTION__, __raw_readl(LCM_PARAMETER0));
-}
 
 static inline int set_lcdsize(struct lcd_spec *panel)
 {
@@ -532,7 +517,7 @@ static void hw_init(struct sc8810fb_info *fb)
 	lcdc_lcm_configure(fb);
 
 	/* set timing parameters for LCD */
-	lcdc_update_lcm_timing(fb);
+	lcdc_update_lcm_timing(fb->register_timing);
 
 }
 

@@ -14,10 +14,8 @@
  * GNU General Public License for more details.
  */
 
-#include <common.h>
-
 #include <asm/arch/sc8810_lcd.h>
-#define mdelay(a) udelay(a * 1000)
+
 #define printk printf
 
 //#define  LCD_DEBUG
@@ -26,11 +24,6 @@
 #else
 #define LCD_PRINT(...)
 #endif
-
-static void __raw_bits_or(unsigned int v, unsigned int a)
-{
-        __raw_writel((__raw_readl(a) | v), a);
-}
 
 static int32_t hx8369_init(struct lcd_spec *self)
 {
@@ -193,7 +186,7 @@ static int32_t hx8369_init(struct lcd_spec *self)
 	//24 bit don't need to set 2DH
 
 	send_cmd(0x11); //Sleep Out
-	mdelay(120); //120ms
+	LCD_DelayMS(120); //120ms
 
 	if (0) { //  for test the lcd
 		int i;
@@ -206,9 +199,9 @@ static int32_t hx8369_init(struct lcd_spec *self)
 			send_data(0xff0000);
 	}
 	send_cmd(0x29); //Display On
-	mdelay(120); //120ms
+	LCD_DelayMS(120); //120ms
 	send_cmd(0x2C); //Write data
-	//mdelay(120); //120ms
+	//LCD_DelayMS(120); //120ms
 	LCD_PRINT("hx8369_init: end\n");
 
 
@@ -310,16 +303,16 @@ static int32_t hx8369_enter_sleep(struct lcd_spec *self, uint8_t is_sleep)
 	if(is_sleep) {
 		//Sleep In
 		send_cmd(0x28);
-		mdelay(120);
+		LCD_DelayMS(120);
 		send_cmd(0x10);
-		mdelay(120);
+		LCD_DelayMS(120);
 	}
 	else {
 		//Sleep Out
 		send_cmd(0x11);
-		mdelay(120);
+		LCD_DelayMS(120);
 		send_cmd(0x29);
-		mdelay(120);
+		LCD_DelayMS(120);
 	}
 	return 0;
 }
@@ -350,19 +343,30 @@ static struct lcd_operations lcd_hx8369_operations = {
 	.lcd_readid          = hx8369_read_id,
 };
 
-static struct timing_mcu lcd_hx8369_timing = {
-	.rcss = 25,  // 25 ns
-	.rlpw = 70,
-	.rhpw = 70,
-	.wcss = 10,
-	.wlpw = 50,
-	.whpw = 50,
+static struct timing_mcu lcd_hx8369_timing[] = {
+[LCD_REGISTER_TIMING] = {                // read/write register timing
+		.rcss = 25,  // 25 ns
+		.rlpw = 70,
+		.rhpw = 70,
+		.wcss = 10,
+		.wlpw = 50,
+		.whpw = 50,
+	},
+[LCD_GRAM_TIMING] = {                // read/write gram timing
+		.rcss = 25,  // 25 ns
+		.rlpw = 70,
+		.rhpw = 70,
+		.wcss = 10,
+		.wlpw = 15,
+		.whpw = 25,
+	}
 };
+
 
 static struct info_mcu lcd_hx8369_info = {
 	.bus_mode = LCD_BUS_8080,
 	.bus_width = 24,
-	.timing = &lcd_hx8369_timing,
+	.timing = lcd_hx8369_timing,
 	.ops = NULL,
 };
 
