@@ -62,8 +62,6 @@
 #define CONFIG_SYS_NAND_RESET_CNT 200000
 #endif
 
-static unsigned long sc8800x_bootrom_ecclayout = 0;
-
 /* Define default oob placement schemes for large and small page devices */
 static struct nand_ecclayout nand_oob_8 = {
 	.eccbytes = 3,
@@ -800,7 +798,7 @@ static int nand_wait(struct mtd_info *mtd, struct nand_chip *this)
 static int nand_read_page_raw(struct mtd_info *mtd, struct nand_chip *chip,
 			      uint8_t *buf, int page)
 {
-	uint8_t ecc_calc[CONFIG_SYS_NAND_OOBSIZE];
+	uint8_t ecc_calc[128];
 	chip->ecc.hwctl(mtd, NAND_ECC_READ);
 	chip->read_buf(mtd, buf, mtd->writesize);
 	chip->ecc.calculate(mtd, NULL, ecc_calc);
@@ -999,24 +997,6 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 	}
 	chip->read_buf(mtd, chip->oob_poi, mtd->oobsize);
-
-	sc8800x_bootrom_ecclayout = 0;
-	if ((page >= 0) && (page < (2 * 64)))
-		sc8800x_bootrom_ecclayout = 1;
-
-	if (sc8800x_bootrom_ecclayout) {
-		/* transfer */
-		memset(tmplayout, 0xff, 64);
-		for (i = 0; i <= 3; i ++) {
-			tmplayout[eccpos[4 * i + 1]] = chip->oob_poi[16 * i + 8];
-			tmplayout[eccpos[4 * i + 2]] = chip->oob_poi[16 * i + 9];
-			tmplayout[eccpos[4 * i + 0]] = chip->oob_poi[16 * i + 10];
-			tmplayout[eccpos[4 * i + 3]] = 0x0;	
-		}
-		memcpy(chip->oob_poi, tmplayout, 64);
-	}
-
-	sc8800x_bootrom_ecclayout = 0;
 
 #ifdef NAND_DEBUG
 	printf("nand_read_page_hwecc next\n");
@@ -1778,25 +1758,8 @@ static void nand_write_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->ecc.calculate(mtd, p, &ecc_calc[i]);
 	}
 
-	if (sc8800x_bootrom_ecclayout) {
-		for (i = 0; i <= 3; i ++) {
-			ecclayouttemp = ecc_calc[4 * i + 0];
-			ecc_calc[4 * i + 0] = ecc_calc[4 * i + 1];
-			ecc_calc[4 * i + 1] = ecc_calc[4 * i + 2];
-			ecc_calc[4 * i + 2] = ecclayouttemp;
-			ecc_calc[4 * i + 3] = 0xff;
-		}
-
-		for (i = 0; i <= 3; i ++) {
-			chip->oob_poi[i * 16 + 8] = ecc_calc[i * 4 + 0];
-			chip->oob_poi[i * 16 + 9] = ecc_calc[i * 4 + 1];
-			chip->oob_poi[i * 16 + 10] = ecc_calc[i * 4 + 2];
-			chip->oob_poi[i * 16 + 11] = ecc_calc[i * 4 + 3];
-		}
-	} else {
-		for (i = 0; i < chip->ecc.total; i++)
-			chip->oob_poi[eccpos[i]] = ecc_calc[i];
-	}
+	for (i = 0; i < chip->ecc.total; i++)
+		chip->oob_poi[eccpos[i]] = ecc_calc[i];
 
 	chip->write_buf(mtd, chip->oob_poi, mtd->oobsize);
 #ifdef CONFIG_MTD_NAND_SPRD
@@ -1863,18 +1826,10 @@ static int nand_write_page(struct mtd_info *mtd, struct nand_chip *chip,
 	int status;
 
 	chip->cmdfunc(mtd, NAND_CMD_SEQIN, 0x00, page);
-
-	sc8800x_bootrom_ecclayout = 0;
-	if ((page >= 0) && (page < (2 * 64)))
-		sc8800x_bootrom_ecclayout = 1;
-
 	if (unlikely(raw))
 		chip->ecc.write_page_raw(mtd, chip, buf);
 	else
 		chip->ecc.write_page(mtd, chip, buf);
-
-	sc8800x_bootrom_ecclayout = 0;
-
 	/*
 	 * Cached progamming disabled for now, Not sure if its worth the
 	 * trouble. The speed gain is not very impressive. (2.3->2.6Mib/s)
@@ -2549,6 +2504,9 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	struct nand_flash_dev *type = NULL;
 	int i, dev_id, maf_idx;
 	int tmp_id, tmp_manf;
+#ifdef CONFIG_MTD_NAND_SC8810
+	u8 id_data[5];
+#endif
 
 #ifdef CONFIG_MTD_NAND_SPRD
 	unsigned long flash_id = 0;
@@ -2574,10 +2532,18 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	dev_id = (flash_id >> 8)&0xff;
 #else
 	chip->cmdfunc(mtd, NAND_CMD_READID, 0x0, -1);
+#ifdef CONFIG_MTD_NAND_SC8810
+	for (i = 0; i < 5; i++)
+		id_data[i] = chip->read_byte(mtd);
+	/* Read manufacturer and device IDs */
+	*maf_id = id_data[0];
+	dev_id = id_data[1];
+#else
 
 	/* Read manufacturer and device IDs */
 	*maf_id = chip->read_byte(mtd);
 	dev_id = chip->read_byte(mtd);
+#endif
 #endif
 
 	/* Try again to make sure, as some systems the bus-hold or other
@@ -2733,6 +2699,12 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	          " 0x%02x, Chip ID: 0x%02x (%s %s)\n", *maf_id, dev_id,
 	          nand_manuf_ids[maf_idx].name, type->name);
 #endif
+
+#ifdef	CONFIG_NAND_SC8810
+	extern void nand_hardware_config(struct mtd_info *mtd, struct nand_chip*, u8[5]);
+	nand_hardware_config(mtd, chip, id_data);
+#endif
+
 	return type;
 }
 

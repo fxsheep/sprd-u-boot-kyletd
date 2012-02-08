@@ -36,12 +36,13 @@ typedef struct {
 		yaffs_ECCOther ecc;
 } yaffs_PackedTags2;
 
+#define CONFIG_SYS_SPL_ECC_POS		8
 #define MAX_SPL_SIZE    0x4000
+#define FDL_NAND_BUF_LEN	(8192 + 512)
+
 static unsigned int cur_write_pos;
 static unsigned int is_system_write;
-
-#define BLOCK_DATA_OOB		((2048 + 64) * 64)
-static unsigned char backupblk[BLOCK_DATA_OOB];
+static unsigned char *backupblk = NULL;
 static unsigned long backupblk_len = 0;
 static unsigned long backupblk_flag = 0;
 
@@ -102,9 +103,8 @@ int nand_erase_allflash(void)
 	return nand_erase_opts(nand, &opts);
 #else
 	blocks = nand->size / nand->erasesize;
-#ifndef CONFIG_SC8810
 	nand_scan_patition(blocks, nand->erasesize, nand->writesize);
-#endif
+
 	return NAND_SUCCESS;
 #endif
 }
@@ -148,111 +148,10 @@ int nand_erase_partition(unsigned int addr, unsigned int size)
 	return NAND_SUCCESS;
 }
 
-/*
-*   addr : block start address in bytes
-*   size : block length in bytes
-*   ret  : < 0 : non-0xff block ; 0 : all-0xff block
-*/
-int nand_check_data(unsigned int addr, unsigned int size)
-{
-
-	struct mtd_info *nand;
-	struct mtd_oob_ops ops;
-	int ret = 0;
-	unsigned char buffer[4096];
-	unsigned long pos, cur;
-	int aaa;
-
-	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
-	  	return NAND_SYSTEM_ERROR;
-
-	nand = &nand_info[nand_curr_device];
-
-	if(size != nand->erasesize)
-	  return NAND_INVALID_SIZE;
-	
-
-	for (pos = addr; pos < (addr + size); pos += nand->writesize) {
-		ops.mode = MTD_OOB_AUTO;
-		ops.len = nand->writesize;
-		ops.datbuf = (uint8_t *)buffer;
-		ops.oobbuf = (uint8_t *)buffer + nand->writesize; 
-		ops.ooblen = 64; 
-		ops.ooboffs = 0;
-		memset(buffer, 0x5a, 4096);
-		ret = nand_do_read_ops(nand, (unsigned long long)pos, &ops);
-		if (ret < 0) {
-			printf("read data error\n");
-			return -1;
-		} else {
-			/* check data */
-			for (cur = 0; cur < nand->writesize; cur ++)
-				if (buffer[cur] != 0xff)
-					return -1;
-			ret = 0;
-		}
-	}
-		
-	return ret;
-}
-
-/*
-*   addr : block start address in bytes
-*   size : block length in bytes
-*   ret  : < 0 : bad block ; 0 : good block
-*/
-int check_write_read_block(struct mtd_info *nand, unsigned int addr, unsigned int size, int mode)
-{
-	struct mtd_oob_ops ops;
-	int ret = 0;
-	unsigned char buffer[4096];
-	unsigned long pos, cur;
-	unsigned long chunksize;
-	int aaa;
-
-	for (pos = addr; pos < (addr + size); pos += nand->writesize) {
-		ret = 0;
-		for (aaa = 0; aaa < 4096; aaa ++)
-				buffer[aaa] = aaa % 0xff;
-		if (!mode) {
-			chunksize = nand->writesize;
-			ret = nand_write_skip_bad(nand, pos, &chunksize, buffer);
-			if (0 != ret) {
-				return -1;
-			}
-		} else { // system write
-			ops.mode = MTD_OOB_AUTO;
-			ops.len = nand->writesize;
-			ops.datbuf = (uint8_t *)buffer;
-			ops.oobbuf = (uint8_t *)buffer + nand->writesize;
-			ops.ooblen = sizeof(yaffs_PackedTags2);
-			ops.ooboffs = 0;
-			ret = nand_do_write_ops(nand, (unsigned long long)pos, &ops);
-			if (0 != ret)
-				return -1;
-		}
-		if (ret == 0) {
-			ops.mode = MTD_OOB_AUTO;
-			ops.len = nand->writesize;
-			ops.datbuf = (uint8_t *)buffer;
-			ops.oobbuf = (uint8_t *)buffer + nand->writesize; 
-			ops.ooblen = 64; 
-			ops.ooboffs = 0;
-			memset(buffer, 0x5a, 4096);
-			ret = nand_do_read_ops(nand, (unsigned long long)pos, &ops);
-			
-			if(ret != 0)
-				return -1;
-		}
-	}
-	
-	return ret;
-}
-
 int move2goodblk(struct mtd_info *nand, int yaffs_flag)
 {
 	int pageno, size, pageall, ret;
-	unsigned char buffer[2048 + 64];
+	unsigned char buffer[FDL_NAND_BUF_LEN];
 
 write2nextblk:
 	printf("old write address : 0x%08x\n", cur_write_pos);
@@ -271,7 +170,7 @@ write2nextblk:
 		size = nand->writesize;
 		pageall = backupblk_len / nand->writesize;
 		for (pageno = 0; pageno < pageall; pageno ++) {
-			memset(buffer, 0xff, (2048 + 64));
+			memset(buffer, 0xff, FDL_NAND_BUF_LEN);
 			memcpy(buffer, backupblk + pageno * size, size);
 			ret = nand_write_skip_bad(nand, cur_write_pos, &size, buffer);
 			if (0 == ret) {
@@ -281,9 +180,9 @@ write2nextblk:
 				ops.len = nand->writesize;
 				ops.datbuf = (uint8_t *)buffer;
 				ops.oobbuf = (uint8_t *)buffer + nand->writesize; 
-				ops.ooblen = 64; 
+				ops.ooblen = nand->oobsize; 
 				ops.ooboffs = 0;
-				memset(buffer, 0x0, 2048 + 64);
+				memset(buffer, 0x0, FDL_NAND_BUF_LEN);
 				ret = nand_do_read_ops(nand,(unsigned long long)(cur_write_pos),&ops);
 				if (ret < 0) {
 					printf("read error, mark bad block : 0x%08x\n", cur_write_pos);
@@ -320,9 +219,9 @@ write2nextblk:
 				ops.len = nand->writesize;
 				ops.datbuf = (uint8_t *)buffer;
 				ops.oobbuf = (uint8_t *)buffer + nand->writesize; 
-				ops.ooblen = 64; 
+				ops.ooblen = nand->oobsize; 
 				ops.ooboffs = 0;
-				memset(buffer, 0x0, 2048 + 64);
+				memset(buffer, 0x0, FDL_NAND_BUF_LEN);
 				ret = nand_do_read_ops(nand,(unsigned long long)(cur_write_pos),&ops);
 				if (ret < 0) {
 					printf("read error, mark bad block : 0x%08x\n", cur_write_pos);
@@ -398,7 +297,23 @@ unsigned long log2phy_table(struct real_mtd_partition *phypart)
 	return NAND_SUCCESS;
 }
 
-int nand_start_write(struct real_mtd_partition *phypart, unsigned int size)
+int get_nand_pageoob(NAND_PAGE_OOB_STATUS *nand_page_oob_info)
+{
+	struct mtd_info *nand;
+
+	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
+		return NAND_SYSTEM_ERROR;
+
+	nand = &nand_info[nand_curr_device];
+	memset(nand_page_oob_info, 0, sizeof(NAND_PAGE_OOB_STATUS));
+	nand_page_oob_info->erasesize = nand->erasesize;
+	nand_page_oob_info->writesize = nand->writesize;
+	nand_page_oob_info->oobsize = nand->oobsize;
+
+	return NAND_SUCCESS;
+}
+
+int nand_start_write(struct real_mtd_partition *phypart, unsigned int size, NAND_PAGE_OOB_STATUS *nand_page_oob_info)
 {
 	struct mtd_partition cur_partition;
 	int erase_blk, ret = 0;
@@ -409,16 +324,27 @@ int nand_start_write(struct real_mtd_partition *phypart, unsigned int size)
 	nand = &nand_info[nand_curr_device];
 	//printf("nand->size = 0x%016Lx\n", (unsigned long long)nand->size);
 	//printf("addr = 0x%08x  size = 0x%08x  flag = %d  part_size = 0x%08x\n", phypart->offset, size, phypart->yaffs, phypart->size);
+	memset(nand_page_oob_info, 0, sizeof(NAND_PAGE_OOB_STATUS));
+	nand_page_oob_info->erasesize = nand->erasesize;
+	nand_page_oob_info->writesize = nand->writesize;
+	nand_page_oob_info->oobsize = nand->oobsize;
 
 	is_system_write = phypart->yaffs;
 
 #ifdef FDL2_DEBUG
 	printf("function %s, addr 0x%x, size 0x%x\n", __FUNCTION__, addr, size);
 #endif
-	
-	memset(backupblk, 0xff, BLOCK_DATA_OOB);
+
 	backupblk_len = 0;
-	backupblk_flag = 0;
+	backupblk_flag = 0;	
+	if (backupblk == NULL)
+		backupblk = (unsigned char *)malloc((nand->writesize + nand->oobsize) * (nand->erasesize / nand->writesize));
+
+	if (backupblk == NULL) {
+		printf("backup block malloc is wrong : %d\n", nand->erasesize);
+		return NAND_SYSTEM_ERROR;
+	}
+	memset(backupblk, 0xff, (nand->writesize + nand->oobsize) * (nand->erasesize / nand->writesize));
 
 	cur_write_pos = phypart->offset;
 
@@ -534,8 +460,7 @@ void set_header_info(u8 *bl_data, struct mtd_info *nand, int ecc_pos)
 	}
 	header->magic_num = 0xaa55a5a5;
 	header->spare_size = (nand->oobsize/chip->ecc.steps);
-	
-	header->ecc_mode = ecc_mode_convert(CONFIG_SYS_NAND_ECC_MODE);
+	header->ecc_mode = ecc_mode_convert(chip->eccbitmode);
 	header->ecc_pos = ecc_pos;
 	header->sct_size = (nand->writesize/chip->ecc.steps);
 	header->sct_per_page = chip->ecc.steps;
@@ -621,10 +546,10 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 	nand = &nand_info[nand_curr_device];
 	int ret=0;
 	int pos;
-	unsigned char buffer[4096];
+	unsigned char buffer[FDL_NAND_BUF_LEN];
 
 #ifdef CONFIG_NAND_SC8810//only for sc8810 to write spl
-	if(cur_write_pos < 0xc000)	{
+	if(cur_write_pos < 0xc000) {
 		return nand_write_spl(buf, nand);
 	}
 #endif
@@ -664,7 +589,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		/* backup */
 		memcpy(backupblk + backupblk_len, buf, size);
 		backupblk_len += size;
-		if (backupblk_len >= (128 * 1024))
+		if (backupblk_len >= nand->erasesize)
 			backupblk_flag = 1; /* full */
 		else
 			backupblk_flag = 0;
@@ -712,7 +637,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		/* backup */
 		memcpy(backupblk + backupblk_len, buf, size);
 		backupblk_len += size;
-		if (backupblk_len >= BLOCK_DATA_OOB)
+		if (backupblk_len >= (nand->writesize + nand->oobsize) * (nand->erasesize / nand->writesize))
 			backupblk_flag = 1; /* full */
 		else
 			backupblk_flag = 0;
@@ -743,9 +668,9 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		ops.len = nand->writesize;
 		ops.datbuf = (uint8_t *)buffer;
 		ops.oobbuf = (uint8_t *)buffer + nand->writesize; 
-		ops.ooblen = 64; 
+		ops.ooblen = nand->oobsize; 
 		ops.ooboffs = 0;
-		memset(buffer, 0x0, 4096);
+		memset(buffer, 0x0, FDL_NAND_BUF_LEN);
 		ret = nand_do_read_ops(nand,(unsigned long long)(cur_write_pos-nand->writesize),&ops);
 		if (ret < 0) {
 			cur_write_pos -= nand->writesize;
@@ -759,7 +684,7 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 		}
 
 		if (backupblk_flag) {
-			memset(backupblk, 0xff, BLOCK_DATA_OOB);
+			memset(backupblk, 0xff, (nand->writesize + nand->oobsize) * (nand->erasesize / nand->writesize));
 			backupblk_len = 0;
 			backupblk_flag = 0;
 		}
@@ -773,12 +698,14 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 
 int nand_end_write(void)
 {
-#ifdef FDL2_DEBUG
-	printf("function: %s\n", __FUNCTION__);
-#endif
-	cur_write_pos = NULL;
+	struct mtd_info *nand;
 
-	memset(backupblk, 0xff, BLOCK_DATA_OOB);
+	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
+		return NAND_SYSTEM_ERROR;
+	nand = &nand_info[nand_curr_device];
+
+	cur_write_pos = NULL;
+	memset(backupblk, 0xff, (nand->writesize + nand->oobsize) * (nand->erasesize / nand->writesize));
 	backupblk_len = 0;
 	backupblk_flag = 0;
 	return NAND_SUCCESS;
@@ -788,7 +715,7 @@ int nand_read_fdl(struct real_mtd_partition *phypart, unsigned int off, unsigned
 	struct mtd_info *nand;
 	int ret=0;
 	int pos;
-	unsigned char buffer[64];
+	unsigned char buffer[FDL_NAND_BUF_LEN];
 	unsigned long addr = phypart->offset;
 
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
@@ -818,9 +745,9 @@ int nand_read_fdl(struct real_mtd_partition *phypart, unsigned int off, unsigned
 		ops.len = nand->writesize;
 		ops.datbuf = (uint8_t *)buf;
 		ops.oobbuf = (uint8_t *)buffer; 
-		ops.ooblen = 64; 
+		ops.ooblen = nand->oobsize;
 		ops.ooboffs = 0;
-		memset(buffer, 0xff, 64);
+		memset(buffer, 0xff, FDL_NAND_BUF_LEN);
 		memset(buf, 0xff, size);
 		ret = nand_do_read_ops(nand,(unsigned long long)(addr + off), &ops);
 		if (ret < 0) {

@@ -18,4 +18,11 @@ struct real_mtd_partition {
 	unsigned long yaffs;	/* 1 is yaffs image, 0 is not raw image */
 };
 
+typedef struct _NAND_PAGE_OOB_STATUS
+{
+	unsigned long	erasesize;
+	unsigned long	writesize;
+	unsigned long	oobsize;
+} NAND_PAGE_OOB_STATUS;
+
 #endif /* FDL_NAND_H */

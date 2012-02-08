@@ -50,8 +50,9 @@ extern void nand_wait_ready(struct mtd_info *mtd);
  * is supported now. If you add a chip with bigger oobsize/page
  * adjust this accordingly.
  */
-#define NAND_MAX_OOBSIZE	218
-#define NAND_MAX_PAGESIZE	4096
+/* sprd definition max pagesize and oobsize */
+#define NAND_MAX_OOBSIZE	(512)  //218
+#define NAND_MAX_PAGESIZE	(8192) //4096
 
 /*
  * Constants for hardware specific CLE/ALE/NCE function
@@ -407,6 +408,8 @@ struct nand_chip {
 	int		badblockpos;
 
 	int 		state;
+	/* sprd definition ecc correct mode : 2 bit correct, sc8810 support 1, 2, 4, 8, 12,14, 24 */
+	int		eccbitmode;
 
 	uint8_t		*oob_poi;
 	struct nand_hw_control  *controller;

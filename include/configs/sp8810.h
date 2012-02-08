@@ -82,55 +82,23 @@
 /* Start copying real U-boot from the second page */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
 #define CONFIG_SYS_NAND_U_BOOT_SIZE	0x60000
-
 #define RAM_TYPPE_IS_SDRAM	0
 
 #ifdef CONFIG_NAND_SPL
 /* Load U-Boot to this address */
 #define CONFIG_SYS_NAND_U_BOOT_DST	0x00f00000
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_NAND_U_BOOT_DST
-
 #define CONFIG_SYS_SDRAM_BASE 0x00000000
-#define CONFIG_SYS_INIT_SP_ADDR     \
-	(CONFIG_SYS_SDRAM_BASE + 0x4000)
-
-#define CONFIG_SYS_NAND_SPARE_SIZE	64
-#define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
-#define CONFIG_SYS_NAND_PAGE_COUNT	64
-#define CONFIG_SYS_NAND_SIZE		(128 * 1024 * 1024)
-#define CONFIG_SYS_NAND_BAD_BLOCK_POS	0
-
-#define CONFIG_SYS_NAND_5_ADDR_CYCLE
-
+#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x4000)
 #else
 
 #define CONFIG_MMU_TABLE_ADDR (0x40000000)
-
 #define CONFIG_SYS_SDRAM_BASE 0x00000000
 #define CONFIG_SYS_INIT_SP_ADDR     \
 	(CONFIG_SYS_SDRAM_BASE + 0x1000 - GENERATED_GBL_DATA_SIZE)
 
 #define CONFIG_SKIP_LOWLEVEL_INIT
 #endif
-
-#define CONFIG_SYS_NAND_PAGE_SIZE	2048
-/* Size of the block protected by one OOB (Spare Area in Samsung terminology) */
-#define CONFIG_SYS_NAND_ECCSIZE	512
-/* Number of ECC bytes per OOB - S3C6400 calculates 4 bytes ECC in 1-bit mode */
-#define CONFIG_SYS_NAND_ECCBYTES	4
-/* Number of ECC-blocks per NAND page */
-#define CONFIG_SYS_NAND_ECCSTEPS	(CONFIG_SYS_NAND_PAGE_SIZE / CONFIG_SYS_NAND_ECCSIZE)
-/* 2 bit correct, sc8810 support 1, 2, 4, 8, 12,14, 24 */
-#define CONFIG_SYS_NAND_ECC_MODE	2
-#define CONFIG_SYS_SPL_ECC_POS		8
-/* Size of a single OOB region */
-#define CONFIG_SYS_NAND_OOBSIZE	64
-/* Number of ECC bytes per page */
-#define CONFIG_SYS_NAND_ECCTOTAL	(CONFIG_SYS_NAND_ECCBYTES * CONFIG_SYS_NAND_ECCSTEPS)
-/* ECC byte positions */
-#define CONFIG_SYS_NAND_ECCPOS		{40, 41, 42, 43, 44, 45, 46, 47, \
-				 48, 49, 50, 51, 52, 53, 54, 55, \
-				 56, 57, 58, 59, 60, 61, 62, 63}
 
 #define CONFIG_HW_WATCHDOG
 
@@ -252,7 +220,7 @@
 /*#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),384k(2ndbl),128k(params),512k(vmjaluna),6016k(modem),7680k(kernel),5120k(dsp),1280k(fixnv),2560k(runtimenv),6400k(recovery),100m(system),198m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"*/
 //#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),10m(recovery),150m(system),300m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"
 //#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot)"
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),200m(system),230m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),2m(productinfo),512k(kpanic)"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),256k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),200m(system),230m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),3840k(productinfo),512k(kpanic)"
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 

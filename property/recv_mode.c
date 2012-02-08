@@ -19,24 +19,20 @@
 #define dprintf(fmt, args...) printf(fmt, ##args)
 
 
-extern unsigned char raw_header[2048];
-#ifdef FLASH_PAGE_SIZE
-#undef FALSH_PAGE_SIZE
-#endif
-#define FLASH_PAGE_SIZE 2048
+extern unsigned char raw_header[];
 
 #include <android_recovery.h>
 
 static const int MISC_PAGES = 3;			// number of pages to save
 static const int MISC_COMMAND_PAGE = 1;		// bootloader command is this page
-static char buf[4096];
+static char buf[8192];
 unsigned boot_into_recovery = 0;
 
 
 int get_recovery_message(struct recovery_message *out)
 {
 	loff_t offset = 0;
-	unsigned pagesize = 2048;
+	unsigned pagesize;
 	size_t size;
 
 	struct mtd_info *nand;
@@ -60,8 +56,10 @@ int get_recovery_message(struct recovery_message *out)
         return -1;
     } 
 
+	nand = &nand_info[dev->id->num];	
+	pagesize = nand->writesize;
+	
 	offset = pagesize * MISC_COMMAND_PAGE + part->offset; 
-	nand = &nand_info[dev->id->num];
 	size = pagesize;
 	ret = nand_read_skip_bad(nand, offset, &size, (void *)buf);
 	if(ret != 0){ 
@@ -76,7 +74,7 @@ int get_recovery_message(struct recovery_message *out)
 int set_recovery_message(const struct recovery_message *in)
 {
 	loff_t offset = 0;
-	unsigned pagesize = 2048;
+	unsigned pagesize;
 	size_t size;
 	
 	struct mtd_info *nand;
@@ -102,6 +100,8 @@ int set_recovery_message(const struct recovery_message *in)
 	
 	offset = part->offset; 
 	nand = &nand_info[dev->id->num];
+	pagesize = nand->writesize;
+	
 	size = pagesize*(MISC_COMMAND_PAGE + 1);
 
 	ret = nand_read_skip_bad(nand, offset, SCRATCH_ADDR, size);

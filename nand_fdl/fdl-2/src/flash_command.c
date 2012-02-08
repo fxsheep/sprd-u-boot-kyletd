@@ -25,13 +25,14 @@ extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
 
 #define FIXNV_SIZE		(64 * 1024)
 #define PHASECHECK_SIZE		(3 * 1024)
-#define TRANS_CODE_SIZE		(MAX_PKT_SIZE - (2 * 1024))
+#define TRANS_CODE_SIZE		(12 * 1024) /* dloadtools optimization value */
 
 typedef struct _DL_FILE_STATUS
 {
     unsigned long   total_size;
     unsigned long   recv_size;
 } DL_FILE_STATUS, *PDL_FILE_STATUS;
+
 static unsigned long g_checksum;
 static unsigned long g_sram_addr;
 static int read_nv_flag = 0;
@@ -61,6 +62,7 @@ static unsigned char g_FixNBLBuf[0x8000];
 static unsigned int g_PhasecheckBUFDataSize = 0;
 static unsigned char g_PhasecheckBUF[0x2000];
 static DL_OP_RECORD_S g_dl_op_table[DL_OP_MTD_COUNT];
+static NAND_PAGE_OOB_STATUS nand_page_oob_info = {0};
 static unsigned long g_dl_op_index = 0;
 static unsigned long is_factorydownload_tools = 0;
 static unsigned long is_check_dlstatus = 0; /* 1 : check  0 : don't check */
@@ -69,10 +71,8 @@ static DL_Address_CNT_S Dl_Erase_Address = {NULL, 0};
 
 #ifdef  TRANS_CODE_SIZE
 #define min(A,B)		(((A) < (B)) ? (A) : (B))
-#define PAGE_SIZE		(2048)
-#define PAGE_OOB		(64)
 #define	DATA_BUFFER_SIZE	(TRANS_CODE_SIZE * 2)
-#define YAFFS_BUFFER_SIZE	(DATA_BUFFER_SIZE + (DATA_BUFFER_SIZE / PAGE_SIZE) * PAGE_OOB)
+static unsigned long  yaffs_buffer_size = 0;
 static unsigned long g_BigSize = 0;
 static unsigned long code_yaffs_buflen	= 0;
 static unsigned long code_yaffs_onewrite = 0;
@@ -305,7 +305,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				log2phy_table(&phy_nv_partition);
 				phy_partition_info(phy_nv_partition, __LINE__);
 				printf("erase backupfixnv start\n");
-				nand_start_write(&phy_nv_partition, 0);
+				nand_start_write(&phy_nv_partition, 0, &nand_page_oob_info);
 				printf("\nerase backupfixnv end\n");
 				printf("write backupfixnv start\n");
 				cmd_yaffs_mount(backupfixnvpoint);
@@ -321,7 +321,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				phy_partition_info(phy_nv_partition, __LINE__);
 				/* erase fixnv partition */
 				printf("erase fixnv start\n");
-				nand_start_write(&phy_nv_partition, 0);
+				nand_start_write(&phy_nv_partition, 0, &nand_page_oob_info);
 				printf("\nerase fixnv end\n");
 				printf("write fixnv start\n");
 				cmd_yaffs_mount(fixnvpoint);
@@ -405,7 +405,7 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 	phy_partition.offset = custom2log(start_addr);
 	ret = log2phy_table(&phy_partition);
-	//phy_partition_info(phy_partition, __LINE__);
+	phy_partition_info(phy_partition, __LINE__);
 
 	if (NAND_SUCCESS != ret)
         	break;
@@ -418,9 +418,9 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
         	break;
 
 	if (strcmp(phy_partition.name, "fixnv") == 0)
-		ret = NAND_SUCCESS;
+		ret = get_nand_pageoob(&nand_page_oob_info);
 	else
-        	ret = nand_start_write (&phy_partition, size);
+        	ret = nand_start_write(&phy_partition, size, &nand_page_oob_info);
         if (NAND_SUCCESS != ret)
             break;
 
@@ -437,25 +437,27 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	}
 
 #ifdef TRANS_CODE_SIZE
+	yaffs_buffer_size = (DATA_BUFFER_SIZE + (DATA_BUFFER_SIZE / nand_page_oob_info.writesize) * nand_page_oob_info.oobsize);
+
 	if (phy_partition.yaffs == 0) {
 		code_yaffs_buflen = DATA_BUFFER_SIZE;
-		code_yaffs_onewrite = PAGE_SIZE;
+		code_yaffs_onewrite = nand_page_oob_info.writesize;
 	} else if (phy_partition.yaffs == 1) {
-		code_yaffs_buflen = YAFFS_BUFFER_SIZE;
-		code_yaffs_onewrite = PAGE_SIZE + PAGE_OOB;
+		code_yaffs_buflen = yaffs_buffer_size;
+		code_yaffs_onewrite = nand_page_oob_info.writesize + nand_page_oob_info.oobsize;
 	}
-
+	
 	g_BigSize = 0;
 	if (g_BigBUF == NULL)
-		g_BigBUF = (unsigned char *)malloc(YAFFS_BUFFER_SIZE);
+		g_BigBUF = (unsigned char *)malloc(yaffs_buffer_size);
 
 	if (g_BigBUF == NULL) {
-		printf("malloc is wrong : %d\n", YAFFS_BUFFER_SIZE);
+		printf("malloc is wrong : %d\n", yaffs_buffer_size);
 		ret = NAND_SYSTEM_ERROR;		
 		break;
 	}
-	memset(g_BigBUF, 0xff, YAFFS_BUFFER_SIZE);
-	//printf("code_yaffs_onewrite = %d  code_yaffs_buflen = %d\n", code_yaffs_onewrite, code_yaffs_buflen);
+	memset(g_BigBUF, 0xff, yaffs_buffer_size);
+	//printf("code_yaffs_onewrite = %d  code_yaffs_buflen = %d  yaffs_buffer_size = %d\n", code_yaffs_onewrite, code_yaffs_buflen, yaffs_buffer_size);
 #endif
 
         g_status.total_size  = size;
@@ -629,7 +631,7 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
 			}
 			//printf("\n");
 			g_BigSize = 0;
-			memset(g_BigBUF, 0xff, YAFFS_BUFFER_SIZE);
+			memset(g_BigBUF, 0xff, yaffs_buffer_size);
 		}
 #else
         	g_prevstatus = nand_write_fdl( (unsigned int) size, (unsigned char *) (packet->packet_body.content));
@@ -693,7 +695,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		g_prevstatus = ret;
 		if (ret == NAND_SUCCESS) {
 			printf("erase fixnv start\n");
-			ret = nand_start_write (&phy_partition, fix_nv_size);
+			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info);
 			printf("\nerase fixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {
@@ -722,7 +724,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		g_prevstatus = ret;
 		if (ret == NAND_SUCCESS) {
 			printf("erase backupfixnv start\n");
-			ret = nand_start_write (&phy_partition, fix_nv_size);
+			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info);
 			printf("\nerase backupfixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {

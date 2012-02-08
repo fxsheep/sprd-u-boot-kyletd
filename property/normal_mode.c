@@ -13,11 +13,8 @@
 #include <boot_mode.h>
 #include <malloc.h>
 
-unsigned char raw_header[2048];
-#ifdef FLASH_PAGE_SIZE
-#undef FALSH_PAGE_SIZE
-#endif
-#define FLASH_PAGE_SIZE 2048
+unsigned char raw_header[8192];
+static int flash_page_size = 0;
 
 #define VMJALUNA_PART "vmjaluna"
 #define MODEM_PART "modem"
@@ -627,8 +624,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 
 	off = part->offset;
 	nand = &nand_info[dev->id->num];
-
-	size = (DSP_SIZE + (FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+	flash_page_size = nand->writesize;
+	size = (DSP_SIZE + (flash_page_size - 1)) & (~(flash_page_size - 1));
 	if(size <= 0) {
 		printf("dsp image should not be zero\n");
 		return;
@@ -655,7 +652,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	off=part->offset;
 	nand = &nand_info[dev->id->num];
 	//read boot image header
-	size = 2048;
+	size = nand->writesize;
 	ret = nand_read_offset_ret(nand, off, &size, (void *)hdr, &off);
 	if(ret != 0){
 		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
@@ -668,7 +665,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	else
 	{
 		//read kernel image
-		size = (hdr->kernel_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+		size = (hdr->kernel_size+(flash_page_size - 1)) & (~(flash_page_size - 1));
 		if(size <=0){
 			printf("kernel image should not be zero\n");
 			return;
@@ -679,7 +676,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			return;
 		}
 		//read ramdisk image
-		size = (hdr->ramdisk_size+(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+		size = (hdr->ramdisk_size+(flash_page_size - 1)) & (~(flash_page_size - 1));
 		if(size<0){
 			printf("ramdisk size error\n");
 			return;
@@ -706,8 +703,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 
 	off = part->offset;
 	nand = &nand_info[dev->id->num];
-
-	size = (MODEM_SIZE +(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+	size = (MODEM_SIZE +(flash_page_size - 1)) & (~(flash_page_size - 1));
 	if(size <= 0) {
 		printf("modem image should not be zero\n");
 		return;
@@ -734,8 +730,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 
 	off = part->offset;
 	nand = &nand_info[dev->id->num];
-
-	size = (VMJALUNA_SIZE +(FLASH_PAGE_SIZE - 1)) & (~(FLASH_PAGE_SIZE - 1));
+	size = (VMJALUNA_SIZE +(flash_page_size - 1)) & (~(flash_page_size - 1));
 	if(size <= 0) {
 		printf("modem image should not be zero\n");
 		return;
