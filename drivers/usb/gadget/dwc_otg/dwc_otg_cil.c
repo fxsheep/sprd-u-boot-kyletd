@@ -270,10 +270,12 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t * core_if)
 	dwc_modify_reg32(&core_if->core_global_regs->gahbcfg, 1, 0);
 	dwc_write_reg32(&core_if->core_global_regs->gintmsk, 0);
 
+/*
 	if (core_if->wq_otg) {
 		DWC_WORKQ_WAIT_WORK_DONE(core_if->wq_otg, 500);
 		DWC_WORKQ_FREE(core_if->wq_otg);
 	}
+*/
 	if (core_if->dev_if) {
 		dwc_free(core_if->dev_if);
 	}
@@ -429,10 +431,17 @@ static uint32_t calc_num_in_eps(dwc_otg_core_if_t * core_if)
 		hwcfg1 >>= 2;
 	}
 
+	/*
+	 * the dedicate fifo maybe less than number of IN eps, but our
+	 * composite usb function normally won't use all dedicated fifo,
+	 * so, just let allocate more the IN eps. Sword,
+	 */
+	#if 0
 	if (core_if->hwcfg4.b.ded_fifo_en) {
 		num_in_eps =
 		    (num_in_eps > num_tx_fifos) ? num_tx_fifos : num_in_eps;
 	}
+	#endif
 
 	return num_in_eps;
 }
@@ -533,8 +542,8 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 
 		/* core_init() is now called on every switch so only call the
 		 * following for the first time through. */
-		if (!core_if->phy_init_done) {
-			core_if->phy_init_done = 1;
+		//if (!core_if->phy_init_done) {
+		//	core_if->phy_init_done = 1;
 			DWC_DEBUGPL(DBG_CIL, "FS_PHY detected\n");
 			usbcfg.d32 = dwc_read_reg32(&global_regs->gusbcfg);
 			usbcfg.b.physel = 1;
@@ -542,7 +551,7 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 
 			/* Reset after a PHY select */
 			dwc_otg_core_reset(core_if);
-		}
+		//}
 
 		/* Program DCFG.DevSpd or HCFG.FSLSPclkSel to 48Mhz in FS.      Also
 		 * do this on HNP Dev/Host mode switches (done in dev_init and
@@ -573,8 +582,9 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 	else {
 		//sword
 		/* High speed PHY. */
-		if (!core_if->phy_init_done) {
-			core_if->phy_init_done = 1;
+		/* re set phy anyway sword*/
+		//if (!core_if->phy_init_done) {
+		//core_if->phy_init_done = 1;
 			/* HS PHY parameters.  These parameters are preserved
 			 * during soft reset so only program the first time.  Do
 			 * a soft reset immediately after setting phyif.  */
@@ -600,7 +610,7 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 			dwc_write_reg32(&global_regs->gusbcfg, usbcfg.d32);
 			/* Reset after setting the PHY parameters */
 			dwc_otg_core_reset(core_if);
-		}
+		//}
 	}
 
 	if ((core_if->hwcfg2.b.hs_phy_type == 2) &&
@@ -3619,7 +3629,6 @@ void dwc_otg_core_reset(dwc_otg_core_if_t * core_if)
 	/* Core Soft Reset */
 	count = 0;
 	greset.b.csftrst = 1;
-	DWC_DEBUGPL(DBG_CIL,"greset %x\r\n", greset.d32);
 	dwc_write_reg32(&global_regs->grstctl, greset.d32);
 	do {
 		greset.d32 = dwc_read_reg32(&global_regs->grstctl);
@@ -3628,15 +3637,13 @@ void dwc_otg_core_reset(dwc_otg_core_if_t * core_if)
 				 __func__, greset.d32);
 			break;
 		}
-		//dwc_udelay(1);
-		//sword
-		dwc_mdelay(1);
+		dwc_udelay(1);
 	}
 	while (greset.b.csftrst == 1);
 
 	/* Wait for 3 PHY Clocks */
-	/* orignal 100ms is too long, change to 5ms, sword */
-	dwc_mdelay(5);
+	/* orignal 100ms is too long, change to 1ms, sword */
+	dwc_mdelay(1);
 }
 
 uint8_t dwc_otg_is_device_mode(dwc_otg_core_if_t * _core_if)

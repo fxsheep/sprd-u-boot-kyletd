@@ -738,6 +738,7 @@ static inline void ep0_out_start(dwc_otg_core_if_t * core_if,
 	/** DOEPCTL0 Register write */
 	doepctl.b.epena = 1;
 	doepctl.b.cnak = 1;
+	//doepctl.b.snak = 1;
 	dwc_write_reg32(&dev_if->out_ep_regs[0]->doepctl, doepctl.d32);
 
 #ifdef VERBOSE
@@ -776,6 +777,7 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t * pcd)
 	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
 	dwc_otg_dev_if_t *dev_if = core_if->dev_if;
 	depctl_data_t doepctl = {.d32 = 0 };
+	depctl_data_t diepctl = {.d32 = 0 };
 	daint_data_t daintmsk = {.d32 = 0 };
 	doepmsk_data_t doepmsk = {.d32 = 0 };
 	diepmsk_data_t diepmsk = {.d32 = 0 };
@@ -827,8 +829,20 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t * pcd)
 		dwc_write_reg32(&dev_if->out_ep_regs[i]->doepctl, doepctl.d32);
 	}
 
+	/* Set data pid0 for all eps except for ep0 */
+	doepctl.b.setd0pid = 1;
+	for (i = 1; i <= dev_if->num_out_eps; i++) {
+		dwc_write_reg32(&dev_if->out_ep_regs[i]->doepctl, doepctl.d32);
+	}
+
+	diepctl.b.setd0pid = 1;
+	for (i = 1; i <= dev_if->num_in_eps; i++) {
+		dwc_write_reg32(&dev_if->in_ep_regs[i]->diepctl, diepctl.d32);
+	}
 	/* Flush the NP Tx FIFO */
 	dwc_otg_flush_tx_fifo(core_if, 0x10);
+	/* Flush the NP Rx FIFO */
+	dwc_otg_flush_rx_fifo(core_if);
 	/* Flush the Learning Queue */
 	resetctl.b.intknqflsh = 1;
 	dwc_write_reg32(&core_if->core_global_regs->grstctl, resetctl.d32);
@@ -979,11 +993,6 @@ int32_t dwc_otg_pcd_handle_enum_done_intr(dwc_otg_pcd_t * pcd)
 	print_ep0_state(pcd);
 #endif
 
-	if (pcd->ep0state == EP0_DISCONNECT) {
-		pcd->ep0state = EP0_IDLE;
-	} else if (pcd->ep0state == EP0_STALL) {
-		pcd->ep0state = EP0_IDLE;
-	}
 
 	pcd->ep0state = EP0_IDLE;
 

@@ -415,13 +415,13 @@ int32_t dwc_otg_handle_conn_id_status_change_intr(dwc_otg_core_if_t * core_if)
 	DWC_DEBUGPL(DBG_CIL,
 		    " ++Connector ID Status Change Interrupt++  (%s)\n",
 		    (dwc_otg_is_host_mode(core_if) ? "Host" : "Device"));
-
+#if 0
 	/*
 	 * Need to schedule a work, as there are possible DELAY function calls
 	 */
 	DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_conn_id_status_change,
 			   core_if, "connection id status change");
-
+#endif
 	/* Set flag and clear interrupt */
 	gintsts.b.conidstschng = 1;
 	dwc_write_reg32(&core_if->core_global_regs->gintsts, gintsts.d32);

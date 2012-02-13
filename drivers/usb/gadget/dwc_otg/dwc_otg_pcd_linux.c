@@ -285,7 +285,6 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
  */
 static int ep_dequeue(struct usb_ep *usb_ep, struct usb_request *usb_req)
 {
-	dwc_debug("%s(%p,%p)\n", __func__, usb_ep, usb_req);
 
 	if (!usb_ep || !usb_req) {
 		DWC_WARN("bad argument\n");
@@ -570,15 +569,16 @@ static void usb_startup(void)
         __raw_bits_and(~BIT_1, AHB_CTL3);
         __raw_bits_and(~BIT_2, AHB_CTL3);
         usb_ldo_switch(1);
+        usb_ldo_switch(1);
         __raw_bits_or(BIT_6, AHB_CTL3);
 
 
-	//__raw_bits_or(BIT_7, AHB_SOFT_RST);
-	//dwc_mdelay(10);
-	//__raw_bits_and(~BIT_7, AHB_SOFT_RST);
+	__raw_bits_or(BIT_6|BIT_7, AHB_SOFT_RST);
+	dwc_mdelay(5);
+	__raw_bits_and(~(BIT_6|BIT_7), AHB_SOFT_RST);
 
 	__raw_bits_or(BIT_5, AHB_CTL0);
-        dwc_mdelay(30);
+        dwc_mdelay(5);
 }
 
 static void udc_disable(void)

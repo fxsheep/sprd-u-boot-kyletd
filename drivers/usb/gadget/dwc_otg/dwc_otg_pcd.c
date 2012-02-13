@@ -74,6 +74,21 @@ static dwc_otg_pcd_ep_t *get_ep_from_handle(dwc_otg_pcd_t * pcd, void *handle)
 	return NULL;
 }
 
+static void dump_log(unsigned char * buf, int len, int direction)
+{
+#ifdef DEBUG
+	int i = 0;
+
+	dwc_debug("**log_buf :%s len:%d\n", (direction ? "in" : "out"), len);
+	if (len > 64)
+		len = 64;
+	for (i = 0; i < len; i += 4)	{
+		trace_printk("%02x %02x %02x %02x\n",
+			     buf[i],buf[i+1],buf[i+2],buf[i+3]
+			     );
+	}
+#endif
+}
 /**
 * This function completes a request.  It call's the request call back.
 */
@@ -1511,17 +1526,6 @@ int dwc_otg_pcd_ep_disable(dwc_otg_pcd_t * pcd, void *ep_handle)
 	return 0;
 
 }
-static void dump_log(char * buf, int len, int direction)
-{
-	int i = 0;
-
-	dwc_debug("**log_buf :%s data...\r\n", (direction ? "sent" : "received"));
-	if (len > 64)
-		len = 64;
-	for (i = 0; i < len; i++)	{
-		dwc_debug("%2x\r\n", *((unsigned char*)buf+i) );
-	}
-}
 
 int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 			 uint8_t * buf, dwc_dma_t dma_buf, uint32_t buflen,
@@ -1535,7 +1539,7 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 
 	ep = get_ep_from_handle(pcd, ep_handle);
 	if ((!ep->desc && ep->dwc_ep.num != 0)) {
-		DWC_WARN("bad ep\n");
+		DWC_WARN("bad ep %p  num :%d\n", ep->desc, ep->dwc_ep.num);
 		return -DWC_E_INVALID;
 	}
 

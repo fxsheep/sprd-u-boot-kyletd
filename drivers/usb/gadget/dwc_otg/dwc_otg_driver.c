@@ -135,7 +135,6 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.dma_desc_enable = 0,
 	.dma_burst_size = -1,
 	.speed = -1,
-	//.speed = 1,
 	.host_support_fs_ls_low_power = -1,
 	.host_ls_low_power_phy_clk = -1,
 	.enable_dynamic_fifo = -1,
