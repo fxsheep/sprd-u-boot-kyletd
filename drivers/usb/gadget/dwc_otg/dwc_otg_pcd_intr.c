@@ -3572,8 +3572,7 @@ do { \
 					/* Clear the bit in DOEPINTn for this interrupt */
 					CLEAR_OUT_EP_INTR(core_if, epnum,
 							  xfercompl);
-					if (core_if->dma_desc_enable == 0
-					    || pcd->ep0state != EP0_IDLE)
+					if (pcd->ep0state != EP0_IDLE)
 						handle_ep0(pcd);
 #ifdef DWC_EN_ISOC
 				} else if (dwc_ep->type == DWC_OTG_EP_TYPE_ISOC) {
