@@ -237,6 +237,7 @@ static int start_linux()
 }
 
 
+//if not to boot native linux, cmdline=NULL, kerne_pname=boot, backlight_set=on.
 void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 {
     boot_img_hdr *hdr = (void *)raw_header;
@@ -285,7 +286,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	off=part->offset;
 	nand = &nand_info[dev->id->num];
 	//read boot image header
-	size = 1<<19;
+	size = 1<<19;//where the size come from????
 	char * bmp_img = malloc(size);
 	if(!bmp_img){
 	    printf("not enough memory for splash image\n");
@@ -308,7 +309,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	    Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
 #endif
 	    lcd_display();
-	    set_backlight(30);
+	    set_backlight(255);
     }
 #endif
     set_vibrator(0);

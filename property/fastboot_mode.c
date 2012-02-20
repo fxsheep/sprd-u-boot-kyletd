@@ -64,7 +64,7 @@ void fastboot_mode(void)
     lcd_display_bitmap((ulong)bmp_img, 0, 0);
     lcd_printf("   fastboot mode");
     lcd_display();
-    set_backlight(30);
+    set_backlight(255);
     //char img_addr[9];
     //sprintf(img_addr, "%x\n", bmp_img);
     //setenv("splashimage", img_addr);
