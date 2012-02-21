@@ -654,6 +654,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	nand = &nand_info[dev->id->num];
 	//read boot image header
 	size = nand->writesize;
+	flash_page_size = nand->writesize;
 	ret = nand_read_offset_ret(nand, off, &size, (void *)hdr, &off);
 	if(ret != 0){
 		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
