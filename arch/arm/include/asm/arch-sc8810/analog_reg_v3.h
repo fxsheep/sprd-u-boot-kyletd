@@ -317,6 +317,8 @@ extern   "C"
 #define HWRST_STATUS_RECOVERY (0x20)
 #define HWRST_STATUS_FASTBOOT (0X30)
 #define HWRST_STATUS_NORMAL (0X40)
+#define HWRST_STATUS_ALARM (0X50)
+#define HWRST_STATUS_SLEEP (0X60)
 
 //ryan:add for poweroff debug.
 ///ANA_LDO_PD_SET

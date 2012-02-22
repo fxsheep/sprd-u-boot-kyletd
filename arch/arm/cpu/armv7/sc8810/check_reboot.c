@@ -10,16 +10,23 @@
 
 unsigned check_reboot_mode(void)
 {
-    unsigned rst_mode= 0;
-    rst_mode = ANA_REG_GET(ANA_HWRST_STATUS);
-    rst_mode &= HWRST_STATUS_POWERON_MASK;
-    ANA_REG_SET(ANA_HWRST_STATUS, 0); //clear flag
-    if(rst_mode == HWRST_STATUS_RECOVERY)
-      return RECOVERY_MODE;
-    else if(rst_mode == HWRST_STATUS_FASTBOOT)
-      return FASTBOOT_MODE;
-    else if(rst_mode == HWRST_STATUS_NORMAL)
-      return NORMAL_MODE;
+	unsigned rst_mode= 0;
+
+	rst_mode = ANA_REG_GET(ANA_HWRST_STATUS);
+	rst_mode &= HWRST_STATUS_POWERON_MASK;
+	ANA_REG_SET(ANA_HWRST_STATUS, 0); //clear flag
+	if(rst_mode == HWRST_STATUS_RECOVERY)
+		return RECOVERY_MODE;
+	else if(rst_mode == HWRST_STATUS_FASTBOOT)
+		return FASTBOOT_MODE;
+	else if(rst_mode == HWRST_STATUS_NORMAL)
+		return NORMAL_MODE;
+	else if(rst_mode == HWRST_STATUS_ALARM)
+		return ALARM_MODE;
+	else if(rst_mode == HWRST_STATUS_SLEEP)
+		return SLEEP_MODE;
+	else
+		return 0;
 }
 
 void reboot_devices(unsigned reboot_mode)
