@@ -196,6 +196,12 @@ else
 CFLAGS += -DRAM256M
 endif
 
+ifeq ($(AUTOBOOT_FLAG), true)
+CFLAGS += -DCONFIG_AUTOBOOT
+else
+CFLAGS += -DCONFIG_AUTOBOOT
+endif
+
 # $(CPPFLAGS) sets -g, which causes gcc to pass a suitable -g<format>
 # option to the assembler.
 AFLAGS_DEBUG :=
