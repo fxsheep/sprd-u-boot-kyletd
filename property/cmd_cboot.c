@@ -44,6 +44,10 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     if(argc > 2)
       goto usage;
 
+#ifdef CONFIG_AUTOBOOT
+	normal_mode();
+#endif
+
     boot_pwr_check();
 	
 #ifndef CONFIG_SC8810	
