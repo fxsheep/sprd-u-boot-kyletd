@@ -239,7 +239,7 @@
 #define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
 #define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
 #elif defined CONFIG_OPENPHONE
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),150m(system),280m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),2m(productinfo),512k(kpanic)"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),200m(system),230m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),2m(productinfo),512k(kpanic)"
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 /* used blocks are 4019 and remaining block are 4096 - 4019 */
@@ -269,7 +269,7 @@
 //#define CONFIG_USB_ETHER
 #define CONFIG_CMD_FASTBOOT
 #define SCRATCH_ADDR    0x1000000
-#define FB_DOWNLOAD_BUF_SIZE (150*1024*1024)
+#define FB_DOWNLOAD_BUF_SIZE (200*1024*1024)
 
 #define CONFIG_MODEM_CALIBERATE
 /*
