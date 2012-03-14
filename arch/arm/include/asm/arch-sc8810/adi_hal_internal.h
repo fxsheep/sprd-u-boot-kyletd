@@ -50,6 +50,13 @@ void ADI_init (void);
         adi_tmp_val &= (unsigned short)(value); \
         ADI_Analogdie_reg_write(reg_addr, adi_tmp_val); \
     }while(0)
+#define ANA_REG_BIC(reg_addr, value)    \
+    do{\
+        unsigned short adi_tmp_val = ADI_Analogdie_reg_read(reg_addr); \
+        adi_tmp_val &= (unsigned short)(~value); \
+        ADI_Analogdie_reg_write(reg_addr, adi_tmp_val); \
+    }while(0)
+
 
 #define ANA_REG_SET(reg_addr, value)    ADI_Analogdie_reg_write(reg_addr, (unsigned short)(value))
 

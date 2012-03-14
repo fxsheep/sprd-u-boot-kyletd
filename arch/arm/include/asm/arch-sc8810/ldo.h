@@ -19,8 +19,8 @@
 
 /* set or clear the bit of register in reg_addr address */
 #define REG_SETCLRBIT(_reg_addr, _set_bit, _clr_bit)	\
-	do	\
-	{	\
+	do {						\
+		unsigned int reg_val = 0;			\
         reg_val = ANA_REG_GET(_reg_addr);   \
         	reg_val |= (_set_bit);	\
         	reg_val &= ~(_clr_bit);	\
@@ -32,18 +32,18 @@
 
 /* macro used to get voltage level(one bit level) */
 #define GET_LEVELBIT(_reg_addr, _bit_mask, _bit_set, _level_var)   \
-	{	\
+	do {							\
 		(_level_var) |=	\
                         ((ANA_REG_GET(_reg_addr)&(_bit_mask))?(_bit_set):0);    \
-	}
+	} while (0)
 
 /* macro used to get voltage level */
 #define GET_LEVEL(_reg_addr, _bit0_mask, _bit1_mask, _level_var)    \
-        {	\
+	do {							\
         	(_level_var) |=	\
                         (((ANA_REG_GET(_reg_addr)&(_bit0_mask))?(BIT_0):0)|    \
                          ((ANA_REG_GET(_reg_addr)&(_bit1_mask))?(BIT_1):0)); \
-        }	
+	} while (0)
 
 /* macro used to set voltage level according to bit field */
 #define SET_LEVELBIT(_reg_addr, _bit_mask, _set_bit, _rst_bit)  \
@@ -116,6 +116,18 @@ typedef enum
     LDO_LDO_RF1     ,
     LDO_LDO_USBD    ,
     ////end SC8800G
+    //sc8810 
+    LDO_DCDCARM,
+    LDO_DCDC,
+    LDO_LDO_BG,
+    LDO_LDO_SDIO0,
+    LDO_LDO_SIM3,
+    LDO_LDO_SIM2,
+    LDO_LDO_WIF1,
+    LDO_LDO_WIF0,
+    LDO_LDO_SDIO1,
+    //end sc8810
+
     LDO_LDO_MAX     //id for calculate LDO number only!
 }LDO_ID_E;
 
@@ -124,42 +136,23 @@ typedef enum
 
 typedef enum 
 {
-    SLP_LDO_NULL  = 0,  //id for NULL
-    SLP_LDO_ABB,        //id for abb
-    SLP_LDO_VBO,        //id for voice band
-    SLP_LDO_AUX1,       //id for sensor core
-    SLP_LDO_AUX2,       //id for sensor analog and io
-    SLP_LDO_USB,        //id for USB
-    SLP_LDO_RF,         //id for RF
-    SLP_LDO_COREV,      //id for ldo core
-    SLP_LDO_PLL,
-    SLP_LDO_AFC,
-    SLP_LDO_SDIO,       //id for ldo sdio
-    SLP_LDO_IO18,       //id for vddio18
-    SLP_LDO_IO28,       //id for vddio28
-    SLP_LDO_BG,          //id for ldo BG
-    ///SC8800G
-    SLP_LDO_PA,
-    SLP_LDO_DVDD18,
+    //SC8810
+    SLP_LDO_SDIO1,
     SLP_LDO_VDD25,
     SLP_LDO_VDD18,
     SLP_LDO_VDD28,
+    SLP_LDO_AVDDBB,
+    SLP_LDO_SDIO0,
+    SLP_LDO_VB,
     SLP_LDO_CAMA,
     SLP_LDO_CAMD1,
     SLP_LDO_CAMD0,
+    SLP_LDO_USBH,
     SLP_LDO_SIM1,
     SLP_LDO_SIM0,
     SLP_LDO_RF1,
     SLP_LDO_RF0,
-    ///END SC8800G
-    ///SC8810
-    SLP_LDO_SDIO1,
-	SLP_LDO_WIF0,
-	SLP_LDO_WIF1,
-	SLP_LDO_SIM2,
-	SLP_LDO_SIM3,
-	SLP_LDO_DCDCARM,
-	//END SC8810	    
+   //end sc8810
     SLP_LDO_MAX
 }SLP_LDO_E;
 
@@ -169,7 +162,7 @@ typedef enum
 	LDO_VOLT_LEVEL1,
 	LDO_VOLT_LEVEL2,
 	LDO_VOLT_LEVEL3,
-	LDO_VOLT_LEVEL_MAX
+	LDO_VOLT_LEVEL_FAULT_MAX
 }LDO_VOLT_LEVEL_E;
 
 //LDO error flag definition

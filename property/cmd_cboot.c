@@ -65,12 +65,14 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
     }
 #else
 	CHG_Init();
+#ifndef CONFIG_MACH_CORI
 	if(is_bat_low()){
 				printf("shut down again for low battery\n");
 				power_down_devices();
 				while(1)
 				  ;
 	}
+#endif    
 #endif	
     
     boot_pwr_check();

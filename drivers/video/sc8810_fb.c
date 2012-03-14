@@ -33,6 +33,7 @@
 
 #include <asm/arch/regs_global.h>
 #include <asm/arch/regs_cpc.h>
+#include <asm/arch/ldo.h>
 
 #define mdelay(a) udelay(a * 1000)
 #define printk printf
@@ -92,17 +93,16 @@ static struct lcd_cfg lcd_panel[] = {
 		.panel = &lcd_panel_hx8357,
 		},
 };
-
-#else
-#ifdef CONFIG_LCD_788
-extern struct lcd_spec lcd_panel_hx8357;
+#elif defined CONFIG_LCD_QVGA
+extern struct lcd_spec lcd_panel_ili9341s;
 static struct lcd_cfg lcd_panel[] = {
-	[0]={
-		.lcd_id = 0x57,
-		.panel = &lcd_panel_hx8357,
-		},
+    [0]={
+        .lcd_id = 0x61,
+        .panel = &lcd_panel_ili9341s,
+        },
 };
 #else
+
 extern struct lcd_spec lcd_panel_hx8369;
 static struct lcd_cfg lcd_panel[] = {
 	[0]={
@@ -110,7 +110,6 @@ static struct lcd_cfg lcd_panel[] = {
 		.panel = &lcd_panel_hx8369,
 		},
 };
-#endif
 #endif
 
 #ifdef CONFIG_LCD_WVGA
@@ -129,6 +128,13 @@ vidinfo_t panel_info = {
 };
 #endif
 
+#ifdef CONFIG_LCD_QVGA
+vidinfo_t panel_info = {
+	.vl_col = 240,
+	.vl_bpix = 4,
+	.vl_row = 320,
+};
+#endif
 static void __raw_bits_and(unsigned int v, unsigned int a)
 {
         __raw_writel((__raw_readl(a) & v), a);
@@ -196,6 +202,7 @@ static struct ops_mcu lcm_mcu_ops = {
 
 static int32_t panel_reset()
 {
+#ifndef CONFIG_MACH_CORI        
 	//panel reset
 	__raw_writel(0x1, LCM_RSTN);
 	mdelay(0x10);
@@ -203,6 +210,14 @@ static int32_t panel_reset()
 	mdelay(0x10);
 	__raw_writel(0x1, LCM_RSTN);
 	mdelay(0x10);
+#else
+	__raw_writel(0x1, LCM_RSTN);
+	mdelay(0x80);
+	__raw_writel(0x0, LCM_RSTN);
+	mdelay(0x80);
+	__raw_writel(0x1, LCM_RSTN);
+	mdelay(0x80);
+#endif        
 
 	return 0;
 }
@@ -577,7 +592,11 @@ void set_backlight(uint32_t value)
 	ANA_REG_AND(WHTLED_CTL, ~(WHTLED_PD_SET | WHTLED_PD_RST));
 	ANA_REG_OR(WHTLED_CTL,  WHTLED_PD_RST);
 	ANA_REG_MSK_OR (WHTLED_CTL, ( (value << WHTLED_V_SHIFT) &WHTLED_V_MSK), WHTLED_V_MSK);
-
+#elif CONFIG_MACH_CORI
+    __raw_bits_or((1<<5),  0x8B000008);
+    __raw_bits_or((1<<10), 0x8A000384);
+    __raw_bits_or((1<<10), 0x8A000388);
+    __raw_bits_or((1<<10), 0x8A000380);
 #else
 	//if (gpio_request(143, "LCD_BL")) {
 	//	FB_PRINT("Failed ro request LCD_BL GPIO_%d \n",
@@ -658,6 +677,13 @@ static int sc8810fb_probe(void * lcdbase)
 	struct sc8810fb_info *fb= &sc8810fb;
 
 	FB_PRINT("[%s]\n", __FUNCTION__);
+
+#ifdef CONFIG_MACH_CORI        
+    LDO_SetVoltLevel(LDO_LDO_SIM3, LDO_VOLT_LEVEL1);
+    LDO_TurnOnLDO(LDO_LDO_SIM3);
+    LDO_SetVoltLevel(LDO_LDO_VDD28, LDO_VOLT_LEVEL3);
+    LDO_TurnOnLDO(LDO_LDO_VDD28);
+#endif
 
 	fb->ops = &lcm_mcu_ops;
 	//we maybe readid ,so hardware should be init

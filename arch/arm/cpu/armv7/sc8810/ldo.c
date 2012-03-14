@@ -27,20 +27,18 @@
 #define LDO_INVALID_REG	0xFFFFFFFF
 #define LDO_INVALID_BIT		0xFFFFFFFF
 
-#define TRUE			1
-#define FALSE		0
+
+#define CURRENT_STATUS_INIT	0x00000001
+#define CURRENT_STATUS_ON	0x00000002
+#define CURRENT_STATUS_OFF	0x00000004
+
+#define LDO_INVALID_REG_ADDR		(0x1)
 
 #define CHIP_REG_OR(reg_addr, value)    (*(volatile unsigned int *)(reg_addr) |= (unsigned int)(value))
 #define CHIP_REG_AND(reg_addr, value)   (*(volatile unsigned int *)(reg_addr) &= (unsigned int)(value))
 #define CHIP_REG_GET(reg_addr)          (*(volatile unsigned int *)(reg_addr))
 #define CHIP_REG_SET(reg_addr, value)   (*(volatile unsigned int *)(reg_addr)  = (unsigned int)(value))
-
-#undef NULL
-#ifndef NULL
-#define NULL 0x0
-#endif
-
-#define SCI_ASSERT(condition) BUG_ON(!(condition))
+ 
 #define SCI_PASSERT(condition, format...)  \
 	do {		\
 		if(!(condition)) { \
@@ -49,294 +47,512 @@
 		} \
 	}while(0)
 
-typedef enum
-{
-	SLP_BIT_CLR = 0,
-	SLP_BIT_SET
-}SLP_BIT_DEF_E;
-
-typedef struct
-{
+struct ldo_ctl_info {
+/**
+	need config area
+*/
 	LDO_ID_E id;
 	unsigned int bp_reg;
-	unsigned int bp;
-	unsigned int bp_rst;
+	unsigned int bp_bits;
+	unsigned int bp_rst_reg;
+	unsigned int bp_rst;//bits
+
 	unsigned int level_reg_b0;
 	unsigned int b0;
 	unsigned int b0_rst;
+
 	unsigned int level_reg_b1;
 	unsigned int b1;
 	unsigned int b1_rst;
-	unsigned int valid_time;
+
 	unsigned int init_level;
+/**
+	not need config area
+*/
 	int ref;
-}LDO_CTL_T, * LDO_CTL_PTR;
+	int current_status;
+	int current_volt_level;
+};
 
-typedef struct
-{
+struct ldo_sleep_ctl_info {
 	SLP_LDO_E id;
-	unsigned int ldo_reg;
+	unsigned int ldo_sleep_reg;
 	unsigned int mask;
-	SLP_BIT_DEF_E value;
-	int valid;
-	unsigned int reserved;
-}SLP_LDO_CTL_T, * SLP_LDO_CTL_PTR;
-
-
-LDO_CTL_T ldo_ctl_data[] =
-{
-    {
-        LDO_LDO_ABB,   NULL,           NULL,   NULL,   ANA_LDO_VCTL0,  BIT_12, BIT_13,
-        ANA_LDO_VCTL0,  BIT_14, BIT_15, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_RF1,   NULL,           NULL,   NULL,   ANA_LDO_VCTL0,  BIT_8,  BIT_9,
-        ANA_LDO_VCTL0,  BIT_10, BIT_11, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_RF0,   NULL,           NULL,   NULL,   ANA_LDO_VCTL0,  BIT_4,  BIT_5,
-        ANA_LDO_VCTL0,  BIT_6,  BIT_7,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_RTC,   NULL,           NULL,   NULL,   ANA_LDO_VCTL0,  BIT_0,  BIT_1,
-        ANA_LDO_VCTL0,  BIT_2,  BIT_3,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_SDIO,  ANA_LDO_PD_CTL0, BIT_2,  BIT_3,  ANA_LDO_VCTL1,  BIT_12,BIT_13,
-        ANA_LDO_VCTL1,  BIT_14, BIT_15, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_AVBO,  ANA_LDO_PD_CTL0, BIT_14, BIT_15, ANA_LDO_VCTL1,  BIT_8,  BIT_9,
-        ANA_LDO_VCTL1,  BIT_10, BIT_11, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_SIM1,  ANA_LDO_PD_CTL0, BIT_6,  BIT_7,  ANA_LDO_VCTL1,  BIT_4,  BIT_5,
-        ANA_LDO_VCTL1,  BIT_6,  BIT_7,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_SIM0,  ANA_LDO_PD_CTL0, BIT_4,  BIT_5,  ANA_LDO_VCTL1,  BIT_0,  BIT_1,
-        ANA_LDO_VCTL1,  BIT_2,  BIT_3,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_USB,   ANA_LDO_PD_CTL0, BIT_0,  BIT_1,  ANA_LDO_VCTL2,  BIT_12, BIT_13,
-        ANA_LDO_VCTL2,  BIT_14, BIT_15, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_USBD,  NULL,           NULL,   NULL,   NULL,           NULL,   NULL,
-        NULL,           NULL,   NULL,   NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_CAMA,  ANA_LDO_PD_CTL0, BIT_12, BIT_13, ANA_LDO_VCTL2,  BIT_8,  BIT_9,
-        ANA_LDO_VCTL2,  BIT_10, BIT_11, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_CAMD1, ANA_LDO_PD_CTL0, BIT_10, BIT_11, ANA_LDO_VCTL2,  BIT_4,  BIT_5,
-        ANA_LDO_VCTL2,  BIT_6,  BIT_7,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_CAMD0, ANA_LDO_PD_CTL0, BIT_8,  BIT_9,  ANA_LDO_VCTL2,  BIT_0,  BIT_1,
-        ANA_LDO_VCTL2,  BIT_2,  BIT_3,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_VDD25, NULL,           NULL,   NULL,   ANA_LDO_VCTL3,  BIT_8,  BIT_9,
-        ANA_LDO_VCTL3,  BIT_10, BIT_11, NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_VDD18, NULL,           NULL,   NULL,   ANA_LDO_VCTL3,  BIT_4,  BIT_5,
-        ANA_LDO_VCTL3,  BIT_6,  BIT_7,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_VDD28, NULL,           NULL,   NULL,   ANA_LDO_VCTL3,  BIT_0,  BIT_1,
-        ANA_LDO_VCTL3,  BIT_2,  BIT_3,  NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    },
-    {
-        LDO_LDO_MAX,   NULL,           NULL,   NULL,   NULL,           NULL,   NULL,
-        NULL,           NULL,   NULL,   NULL,   LDO_VOLT_LEVEL_MAX,     NULL
-    }
+	unsigned  int value;
 };
 
-SLP_LDO_CTL_T slp_ldo_ctl_data[] =
+
+static struct ldo_ctl_info ldo_ctl_data[] =
 {
-    {SLP_LDO_SDIO1,     ANA_LDO_SLP_CTL0,    BIT_15, SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_VDD25,     ANA_LDO_SLP_CTL0,    BIT_13, SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_VDD18,     ANA_LDO_SLP_CTL0,    BIT_12, SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_VDD28,     ANA_LDO_SLP_CTL0,    BIT_11, SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_ABB,       ANA_LDO_SLP_CTL0,    BIT_10, SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_SDIO,      ANA_LDO_SLP_CTL0,    BIT_9,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_VBO,       ANA_LDO_SLP_CTL0,    BIT_8,  SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_CAMA,      ANA_LDO_SLP_CTL0,    BIT_7,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_CAMD1,     ANA_LDO_SLP_CTL0,    BIT_6,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_CAMD0,     ANA_LDO_SLP_CTL0,    BIT_5,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_USB,       ANA_LDO_SLP_CTL0,    BIT_4,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_SIM1,      ANA_LDO_SLP_CTL0,    BIT_3,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_SIM0,      ANA_LDO_SLP_CTL0,    BIT_2,  SLP_BIT_CLR,    TRUE,   NULL},
-    {SLP_LDO_RF1,       ANA_LDO_SLP_CTL0,    BIT_1,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_RF0,       ANA_LDO_SLP_CTL0,    BIT_0,  SLP_BIT_SET,    TRUE,   NULL},
-    {SLP_LDO_MAX,       NULL,           NULL,   SLP_BIT_SET,    TRUE,   NULL}
+	{
+		.id = LDO_DCDCARM,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_9,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_9,
+		.level_reg_b0 = LDO_INVALID_REG_ADDR,
+		.b0 = 0,
+		.b0_rst = 0,
+		.level_reg_b1 = LDO_INVALID_REG_ADDR,
+		.b1 = 0,
+		.b1_rst = 0,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_VDD25,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_8,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_8,
+		.level_reg_b0 = ANA_LDO_VCTL3,
+		.b0 = BIT_8,
+		.b0_rst = BIT_9,
+		.level_reg_b1 = ANA_LDO_VCTL3,
+		.b1 = BIT_10,
+		.b1_rst = BIT_11,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_VDD18,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_7,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_7,
+		.level_reg_b0 = ANA_LDO_VCTL3,
+		.b0 = BIT_4,
+		.b0_rst = BIT_5,
+		.level_reg_b1 = ANA_LDO_VCTL3,
+		.b1 = BIT_6,
+		.b1_rst = BIT_7,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_VDD28,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_6,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_6,
+		.level_reg_b0 = ANA_LDO_VCTL3,
+		.b0 = BIT_0,
+		.b0_rst = BIT_1,
+		.level_reg_b1 = ANA_LDO_VCTL3,
+		.b1 = BIT_2,
+		.b1_rst = BIT_3,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_ABB,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_5,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_5,
+		.level_reg_b0 = ANA_LDO_VCTL0,
+		.b0 = BIT_12,
+		.b0_rst = BIT_13,
+		.level_reg_b1 = ANA_LDO_VCTL0,
+		.b1 = BIT_14,
+		.b1_rst = BIT_15,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_RF0,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_3,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_3,
+		.level_reg_b0 = ANA_LDO_VCTL0,
+		.b0 = BIT_4,
+		.b0_rst = BIT_5,
+		.level_reg_b1 = ANA_LDO_VCTL0,
+		.b1 = BIT_6,
+		.b1_rst = BIT_7,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_RF1,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_4,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_4,
+		.level_reg_b0 = ANA_LDO_VCTL0,
+		.b0 = BIT_8,
+		.b0_rst = BIT_9,
+		.level_reg_b1 = ANA_LDO_VCTL0,
+		.b1 = BIT_10,
+		.b1_rst = BIT_11,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_MEM,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_2,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_2,
+		.level_reg_b0 = LDO_INVALID_REG_ADDR,
+		.b0 = 0,
+		.b0_rst = 0,
+		.level_reg_b1 = LDO_INVALID_REG_ADDR,
+		.b1 = 0,
+		.b1_rst = 0,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_DCDC,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_1,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_1,
+		.level_reg_b0 = LDO_INVALID_REG_ADDR,
+		.b0 = 0,
+		.b0_rst = 0,
+		.level_reg_b1 = LDO_INVALID_REG_ADDR,
+		.b1 = 0,
+		.b1_rst = 0,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_BG,
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = BIT_0,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = BIT_0,
+		.level_reg_b0 = LDO_INVALID_REG_ADDR,
+		.b0 = 0,
+		.b0_rst = 0,
+		.level_reg_b1 = LDO_INVALID_REG_ADDR,
+		.b1 = 0,
+		.b1_rst = 0,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_AVB,
+		.bp_reg = ANA_LDO_PD_CTL0,
+		.bp_bits = BIT_14,
+		.bp_rst_reg = ANA_LDO_PD_CTL0,
+		.bp_rst = BIT_15,
+		.level_reg_b0 = ANA_LDO_VCTL1,
+		.b0 = BIT_8,
+		.b0_rst = BIT_9,
+		.level_reg_b1 = ANA_LDO_VCTL1,
+		.b1 = BIT_10,
+		.b1_rst = BIT_11,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_CAMA,
+		.bp_reg = ANA_LDO_PD_CTL0,
+		.bp_bits = BIT_12,
+		.bp_rst_reg = ANA_LDO_PD_CTL0,
+		.bp_rst = BIT_13,
+		.level_reg_b0 = ANA_LDO_VCTL2,
+		.b0 = BIT_8,
+		.b0_rst = BIT_9,
+		.level_reg_b1 = ANA_LDO_VCTL2,
+		.b1 = BIT_10,
+		.b1_rst = BIT_11,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_CAMD1,
+		.bp_reg = ANA_LDO_PD_CTL0,
+		.bp_bits = BIT_10,
+		.bp_rst_reg = ANA_LDO_PD_CTL0,
+		.bp_rst = BIT_11,
+		.level_reg_b0 = ANA_LDO_VCTL2,
+		.b0 = BIT_4,
+		.b0_rst = BIT_5,
+		.level_reg_b1 = ANA_LDO_VCTL2,
+		.b1 = BIT_6,
+		.b1_rst = BIT_7,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_CAMD0,
+		.bp_reg = ANA_LDO_PD_CTL0,
+		.bp_bits = BIT_8,
+		.bp_rst_reg = ANA_LDO_PD_CTL0,
+		.bp_rst = BIT_9,
+		.level_reg_b0 = ANA_LDO_VCTL2,
+		.b0 = BIT_0,
+		.b0_rst = BIT_1,
+		.level_reg_b1 = ANA_LDO_VCTL2,
+		.b1 = BIT_2,
+		.b1_rst = BIT_3,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_SIM1,
+		.bp_reg = ANA_LDO_PD_CTL0,
+		.bp_bits = BIT_6,
+		.bp_rst_reg = ANA_LDO_PD_CTL0,
+		.bp_rst = BIT_7,
+		.level_reg_b0 = ANA_LDO_VCTL1,
+		.b0 = BIT_4,
+		.b0_rst = BIT_5,
+		.level_reg_b1 = ANA_LDO_VCTL1,
+		.b1 = BIT_6,
+		.b1_rst = BIT_7,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_SIM0,
+		.bp_reg = ANA_LDO_PD_CTL0,
+		.bp_bits = BIT_4,
+		.bp_rst_reg = ANA_LDO_PD_CTL0,
+		.bp_rst = BIT_5,
+		.level_reg_b0 = ANA_LDO_VCTL1,
+		.b0 = BIT_0,
+		.b0_rst = BIT_1,
+		.level_reg_b1 = ANA_LDO_VCTL1,
+		.b1 = BIT_2,
+		.b1_rst = BIT_3,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_SDIO0,
+		.bp_reg = ANA_LDO_PD_CTL0,
+		.bp_bits = BIT_2,
+		.bp_rst_reg = ANA_LDO_PD_CTL0,
+		.bp_rst = BIT_3,
+		.level_reg_b0 = ANA_LDO_VCTL1,
+		.b0 = BIT_12,
+		.b0_rst = BIT_13,
+		.level_reg_b1 = ANA_LDO_VCTL1,
+		.b1 = BIT_14,
+		.b1_rst = BIT_15,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_USB,
+		.bp_reg = ANA_LDO_PD_CTL0,
+		.bp_bits = BIT_0,
+		.bp_rst_reg = ANA_LDO_PD_CTL0,
+		.bp_rst = BIT_1,
+		.level_reg_b0 = ANA_LDO_VCTL2,
+		.b0 = BIT_12,
+		.b0_rst = BIT_13,
+		.level_reg_b1 = ANA_LDO_VCTL2,
+		.b1 = BIT_14,
+		.b1_rst = BIT_15,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_SIM3,
+		.bp_reg = ANA_LDO_PD_CTL1,
+		.bp_bits = BIT_8,
+		.bp_rst_reg = ANA_LDO_PD_CTL1,
+		.bp_rst = BIT_9,
+		.level_reg_b0 = ANA_LDO_VCTL4,
+		.b0 = BIT_12,
+		.b0_rst = BIT_13,
+		.level_reg_b1 = ANA_LDO_VCTL4,
+		.b1 = BIT_14,
+		.b1_rst = BIT_15,
+		.init_level = LDO_VOLT_LEVEL3,	//CMMB 1.2V
+	},
+	{
+		.id = LDO_LDO_SIM2,
+		.bp_reg = ANA_LDO_PD_CTL1,
+		.bp_bits = BIT_6,
+		.bp_rst_reg = ANA_LDO_PD_CTL1,
+		.bp_rst = BIT_7,
+		.level_reg_b0 = ANA_LDO_VCTL4,
+		.b0 = BIT_8,
+		.b0_rst = BIT_9,
+		.level_reg_b1 = ANA_LDO_VCTL4,
+		.b1 = BIT_10,
+		.b1_rst = BIT_11,
+		.init_level = LDO_VOLT_LEVEL1,	//E-NAND 3.0V
+	},
+	{
+		.id = LDO_LDO_WIF1,
+		.bp_reg = ANA_LDO_PD_CTL1,
+		.bp_bits = BIT_4,
+		.bp_rst_reg = ANA_LDO_PD_CTL1,
+		.bp_rst = BIT_5,
+		.level_reg_b0 = ANA_LDO_VCTL4,
+		.b0 = BIT_4,
+		.b0_rst = BIT_5,
+		.level_reg_b1 = ANA_LDO_VCTL4,
+		.b1 = BIT_6,
+		.b1_rst = BIT_7,
+		.init_level = LDO_VOLT_LEVEL2,	//WIFI 1.8V
+	},
+	{
+		.id = LDO_LDO_WIF0,
+		.bp_reg = ANA_LDO_PD_CTL1,
+		.bp_bits = BIT_2,
+		.bp_rst_reg = ANA_LDO_PD_CTL1,
+		.bp_rst = BIT_3,
+		.level_reg_b0 = ANA_LDO_VCTL4,
+		.b0 = BIT_0,
+		.b0_rst = BIT_1,
+		.level_reg_b1 = ANA_LDO_VCTL4,
+		.b1 = BIT_2,
+		.b1_rst = BIT_3,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_SDIO1,
+		.bp_reg = ANA_LDO_PD_CTL1,
+		.bp_bits = BIT_0,
+		.bp_rst_reg = ANA_LDO_PD_CTL1,
+		.bp_rst = BIT_1,
+		.level_reg_b0 = ANA_LDO_VCTL3,
+		.b0 = BIT_12,
+		.b0_rst = BIT_13,
+		.level_reg_b1 = ANA_LDO_VCTL3,
+		.b1 = BIT_14,
+		.b1_rst = BIT_15,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_RTC,
+		.bp_reg = LDO_INVALID_REG_ADDR,
+		.bp_bits = 0,
+		.bp_rst_reg = LDO_INVALID_REG_ADDR,
+		.bp_rst = 0,
+		.level_reg_b0 = ANA_LDO_VCTL0,
+		.b0 = 0,
+		.b0_rst = 1,
+		.level_reg_b1 = ANA_LDO_VCTL0,
+		.b1 = 2,
+		.b1_rst = 3,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_USBD,
+		.bp_reg = LDO_INVALID_REG_ADDR,
+		.bp_bits = 0,
+		.bp_rst_reg = LDO_INVALID_REG_ADDR,
+		.bp_rst = 0,
+		.level_reg_b0 = LDO_INVALID_REG_ADDR,
+		.b0 = 0,
+		.b0_rst = 0,
+		.level_reg_b1 = LDO_INVALID_REG_ADDR,
+		.b1 = 0,
+		.b1_rst = 0,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
 };
 
-static  LDO_CTL_PTR Ldo_Get_Cfg(void)
-{
-	return ldo_ctl_data;
-}
+static struct ldo_sleep_ctl_info slp_ldo_ctl_data[] = {
+    {SLP_LDO_SDIO1,    ANA_LDO_SLP_CTL0,    BIT_14, 0},
+    {SLP_LDO_VDD25,     ANA_LDO_SLP_CTL0,    BIT_13, 1},
+    {SLP_LDO_VDD18,     ANA_LDO_SLP_CTL0,    BIT_12, 0},
+    {SLP_LDO_VDD28,     ANA_LDO_SLP_CTL0,    BIT_11, 0},
+    {SLP_LDO_AVDDBB,       ANA_LDO_SLP_CTL0,    BIT_10, 1},
+    {SLP_LDO_SDIO0,      ANA_LDO_SLP_CTL0,    BIT_9,  1},
+    {SLP_LDO_VB,       ANA_LDO_SLP_CTL0,    BIT_8,  0},
+    {SLP_LDO_CAMA,      ANA_LDO_SLP_CTL0,    BIT_7,  1},
+    {SLP_LDO_CAMD1,     ANA_LDO_SLP_CTL0,    BIT_6,  1},
+    {SLP_LDO_CAMD0,     ANA_LDO_SLP_CTL0,    BIT_5,  1},
+    {SLP_LDO_USBH,       ANA_LDO_SLP_CTL0,    BIT_4,  1},
+    {SLP_LDO_SIM1,      ANA_LDO_SLP_CTL0,    BIT_3,  1},
+    {SLP_LDO_SIM0,      ANA_LDO_SLP_CTL0,    BIT_2,  0},
+    {SLP_LDO_RF1,       ANA_LDO_SLP_CTL0,    BIT_1,  1},
+    {SLP_LDO_RF0,       ANA_LDO_SLP_CTL0,    BIT_0,  1},
+};
 
-/**---------------------------------------------------------------------------*
- **                         Global variables                                  *
- **---------------------------------------------------------------------------*/
-
-LDO_CTL_PTR g_ldo_ctl_tab = NULL;
-
-
-/*****************************************************************************/
-//  Description:  Slp_Ldo_Get_Cfg
-//	Global resource dependence: NONE
-//  Author:
-//	Note:    Slp_Ldo_Get_Cfg
-/*****************************************************************************/
-static SLP_LDO_CTL_PTR Slp_Ldo_Get_Cfg(void)
-{
-	return  slp_ldo_ctl_data;
-}
-
-/**---------------------------------------------------------------------------*
+ /**---------------------------------------------------------------------------*
  **                         Function Declaration                              *
  **---------------------------------------------------------------------------*/
-
-/*****************************************************************************/
-//  Description:  Turn on the LDO specified by input parameter ldo_id
-//	Global resource dependence: NONE
-//  Author:  Tao.Feng && Yi.Qiu
-//	Note:    return value = LDO_ERR_OK if operation is executed successfully
-/*****************************************************************************/
-static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
+static struct ldo_ctl_info* LDO_GetLdoCtl(LDO_ID_E ldo_id)
 {
 	int i = 0;
-	LDO_CTL_PTR ctl = NULL;
+	struct ldo_ctl_info* ctl = NULL;
 
-	SCI_ASSERT(NULL != g_ldo_ctl_tab);
-
-	for(i=0; g_ldo_ctl_tab[i].id != LDO_LDO_MAX; i++)
-    	{
-    		if( g_ldo_ctl_tab[i].id == ldo_id)
-    		{
-    			ctl = &g_ldo_ctl_tab[i];
-    			break;
-    		}
-    	}
+	for ( i = 0; i < ARRAY_SIZE(ldo_ctl_data); ++i) {
+		if (ldo_ctl_data[i].id == ldo_id) {
+			ctl = &ldo_ctl_data[i];
+			break;
+		}
+	}
 
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
-
 	return ctl;
 }
 
-/*****************************************************************************/
-//  Description:  Turn on the LDO specified by input parameter ldo_id
-//	Global resource dependence: NONE
-//  Author:  Tao.Feng && Yi.Qiu
-//	Note:    return value = LDO_ERR_OK if operation is executed successfully
-/*****************************************************************************/
- LDO_ERR_E LDO_TurnOnLDO(LDO_ID_E ldo_id)
+LDO_ERR_E LDO_TurnOnLDO(LDO_ID_E ldo_id)
 {
-	unsigned int reg_val;
-	LDO_CTL_PTR ctl = NULL;
-	unsigned long flags;
+	struct ldo_ctl_info* ctl = NULL;
 
 	ctl = LDO_GetLdoCtl(ldo_id);
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
 
-	if(ctl->bp_reg == NULL){
-		if (LDO_LDO_USBD == ldo_id){
-			local_irq_save(flags);
-			CHIP_REG_AND(GR_CLK_GEN5, (~LDO_USB_PD));
-			//__raw_bits_and((~LDO_USB_PD), GR_CLK_GEN5);
-			local_irq_restore(flags);
+	if ((ctl->ref++) == 0) {
+		if(ctl->bp_reg == LDO_INVALID_REG_ADDR) {
+			if (LDO_LDO_USBD == ldo_id)
+				CHIP_REG_AND((~LDO_USB_PD), GR_CLK_GEN5);
+
+		} else {
+			if (ctl->bp_reg == ctl->bp_rst_reg) {
+				REG_SETCLRBIT(ctl->bp_rst_reg, ctl->bp_rst, ctl->bp_bits);
+			}
+			else {
+				ANA_REG_BIC(ctl->bp_reg, ctl->bp_bits);
+				ANA_REG_OR(ctl->bp_rst_reg, ctl->bp_rst);//high priority
+			}
 		}
-		return LDO_ERR_OK;
+		ctl->current_status = CURRENT_STATUS_ON;
 	}
-	//SCI_DisableIRQ();
-	local_irq_save(flags);
-
-	SCI_PASSERT(ctl->ref >= 0, ("ctl->ref = %d", ctl->ref));
-	if(ctl->ref == 0)
-		REG_SETCLRBIT(ctl->bp_reg, ctl->bp_rst, ctl->bp);
-
-	ctl->ref++;
-
-	//SCI_RestoreIRQ();
-	local_irq_restore(flags);
 
 	return LDO_ERR_OK;
 }
 
-/*****************************************************************************/
-//  Description:  Turo off the LDO specified by parameter ldo_id
-//	Global resource dependence: NONE
-//  Author: Tao.Feng && Yi.Qiu
-//	Note:
-/*****************************************************************************/
+
  LDO_ERR_E LDO_TurnOffLDO(LDO_ID_E ldo_id)
 {
-	unsigned int reg_val;
-	LDO_CTL_PTR ctl = NULL;
+	struct ldo_ctl_info* ctl = NULL;
 	unsigned long flags;
 
 	ctl = LDO_GetLdoCtl(ldo_id);
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
 
-	if(ctl->bp_reg == NULL){
-		if (LDO_LDO_USBD == ldo_id){
-			local_irq_save(flags);
-			CHIP_REG_OR(GR_CLK_GEN5, (~LDO_USB_PD));
-			//__raw_bits_or((~LDO_USB_PD), GR_CLK_GEN5);
-			local_irq_restore(flags);
-		}
-		return LDO_ERR_OK;
-	}
-	//SCI_DisableIRQ();
 	local_irq_save(flags);
+	
+	if ((--ctl->ref) == 0) {
+		if(ctl->bp_reg == LDO_INVALID_REG_ADDR) {
+			if (LDO_LDO_USBD == ldo_id)
+				CHIP_REG_OR((LDO_USB_PD), GR_CLK_GEN5);
+		} else {
+			if (ctl->bp_reg == ctl->bp_rst_reg) {
+				REG_SETCLRBIT(ctl->bp_reg, ctl->bp_bits, ctl->bp_rst);
+			}
+			else {
+				ANA_REG_BIC(ctl->bp_rst_reg, ctl->bp_rst);//high priority
+				ANA_REG_OR(ctl->bp_reg, ctl->bp_bits);
+			}
+		}
+		ctl->current_status = CURRENT_STATUS_OFF;
+	}
 
-        if(ctl->ref > 0)
-            ctl->ref--;
-
-	if(ctl->ref == 0)
-		REG_SETCLRBIT(ctl->bp_reg, ctl->bp, ctl->bp_rst);
-
-	//SCI_RestoreIRQ();
 	local_irq_restore(flags);
 
 	return LDO_ERR_OK;
 }
 
-/*****************************************************************************/
-//  Description: Find the LDO status -- ON or OFF
-//	Global resource dependence:
-//  Author: Tao.Feng && Yi.Qiu
-//	Note: return SCI_TRUE means LDO is ON, SCI_FALSE is OFF
-/*****************************************************************************/
  int LDO_IsLDOOn(LDO_ID_E ldo_id)
 {
 	unsigned int  masked_val = 0;
-	LDO_CTL_PTR ctl = NULL;
+	struct ldo_ctl_info* ctl = NULL;
 
 	ctl = LDO_GetLdoCtl(ldo_id);
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
 
-	masked_val = (LDO_REG_GET(ctl->bp_reg) & ctl->bp);
+	if (ctl->current_status == CURRENT_STATUS_INIT)
+		masked_val = (LDO_REG_GET(ctl->bp_reg) & ctl->bp_bits);
+	else
+		return (ctl->current_status == CURRENT_STATUS_OFF ? 0 : 1);
 
 	return (masked_val ? 0 : 1);
 }
 
-/*****************************************************************************/
-//  Description:  change the LDO voltage level specified by parameter ldo_id
-//	Global resource dependence:
-//  Author: Tao.Feng && Yi.Qiu
-//	Note:
-/*****************************************************************************/
  LDO_ERR_E LDO_SetVoltLevel(LDO_ID_E ldo_id, LDO_VOLT_LEVEL_E volt_level)
-
 {
 	unsigned int b0_mask,b1_mask;
-	LDO_CTL_PTR  ctl = NULL;
+	struct ldo_ctl_info* ctl = NULL;
+	unsigned long flags;
 
 	b0_mask = (volt_level & BIT_0)?~0:0;
 	b1_mask = (volt_level & BIT_1)?~0:0;
@@ -344,140 +560,98 @@ static  LDO_CTL_PTR LDO_GetLdoCtl(LDO_ID_E ldo_id)
 	ctl = LDO_GetLdoCtl(ldo_id);
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
 
-	if(ctl->level_reg_b0 == NULL)
-	{
-		return LDO_ERR_ERR;
+	if(ctl->level_reg_b0 == ctl->level_reg_b1) {
+		if (ctl->level_reg_b0 == LDO_INVALID_REG_ADDR)
+			goto Err_Exit;
+		else
+			SET_LEVEL(ctl->level_reg_b0, b0_mask, b1_mask, ctl->b0, ctl->b0_rst, ctl->b1, ctl->b1_rst);
+	} else {
+		if (ctl->level_reg_b0 == LDO_INVALID_REG_ADDR || ctl->level_reg_b1 == LDO_INVALID_REG_ADDR) {
+			goto Err_Exit;
+		} else {
+			SET_LEVELBIT(ctl->level_reg_b0, b0_mask, ctl->b0, ctl->b0_rst);
+			SET_LEVELBIT(ctl->level_reg_b1, b1_mask, ctl->b1, ctl->b1_rst);
+		}
 	}
 
-	if(ctl->level_reg_b0 == ctl->level_reg_b1)
-	{
-		SET_LEVEL(ctl->level_reg_b0, b0_mask, b1_mask, ctl->b0, ctl->b0_rst, ctl->b1, ctl->b1_rst);
-	}
-	else
-	{
-		SET_LEVELBIT(ctl->level_reg_b0, b0_mask, ctl->b0, ctl->b0_rst);
-		SET_LEVELBIT(ctl->level_reg_b1, b1_mask, ctl->b1, ctl->b1_rst);
-	}
-
+	ctl->current_volt_level = volt_level;
 	return LDO_ERR_OK;
+Err_Exit:
+	return LDO_ERR_ERR;
 }
 
-/*****************************************************************************/
-//  Description: Get LDO voltage level
-//	Global resource dependence:
-//  Author: Tao.Feng && Yi.Qiu
-//	Note:
-/*****************************************************************************/
+
  LDO_VOLT_LEVEL_E LDO_GetVoltLevel(LDO_ID_E ldo_id)
 {
 	unsigned int level_ret = 0;
-	LDO_CTL_PTR ctl = NULL;
+	struct ldo_ctl_info* ctl = NULL;
+	unsigned long flags;
 
 	ctl = LDO_GetLdoCtl(ldo_id);
 	SCI_PASSERT(ctl != NULL, ("ldo_id = %d", ldo_id));
 
-	if(ctl->level_reg_b0 == ctl->level_reg_b1)
-	{
-		GET_LEVEL(ctl->level_reg_b0, ctl->b0, ctl->b1, level_ret);
+	if (ctl->current_volt_level == LDO_VOLT_LEVEL_FAULT_MAX) {
+		if(ctl->level_reg_b0 == ctl->level_reg_b1) {
+			GET_LEVEL(ctl->level_reg_b0, ctl->b0, ctl->b1, level_ret);
+		} else {
+			GET_LEVELBIT(ctl->level_reg_b0, ctl->b0, BIT_0, level_ret);
+			GET_LEVELBIT(ctl->level_reg_b1, ctl->b1, BIT_1, level_ret);
+		}
 	}
 	else
 	{
-		GET_LEVELBIT(ctl->level_reg_b0, ctl->b0, BIT_0, level_ret);
-		GET_LEVELBIT(ctl->level_reg_b1, ctl->b1, BIT_1, level_ret);
+		level_ret = ctl->current_volt_level;
 	}
 
 	return level_ret;
 }
 
-
-/*****************************************************************************/
-//  Description:  Shut down any LDO that do not used when system enters deepsleep
-//	Global resource dependence: s_ldo_reopen[]
-//  Author: Tao.Feng && Yi.Qiu
-//	Note:
-/*****************************************************************************/
 void LDO_DeepSleepInit(void)
 {
 	int i;
-	SLP_LDO_CTL_PTR  slp_ldo_ctl_tab;
+	unsigned int aux;
 
-	slp_ldo_ctl_tab = Slp_Ldo_Get_Cfg();
-
-	SCI_ASSERT(NULL != slp_ldo_ctl_tab);
-
-	for(i=0; slp_ldo_ctl_tab[i].id != SLP_LDO_MAX; i++)
-    	{
-		if(slp_ldo_ctl_tab[i].value == SLP_BIT_SET)
-			ANA_REG_OR(slp_ldo_ctl_tab[i].ldo_reg, slp_ldo_ctl_tab[i].mask);
-			//__raw_bits_or(slp_ldo_ctl_tab[i].mask, slp_ldo_ctl_tab[i].ldo_reg);
-		else
-			ANA_REG_AND(slp_ldo_ctl_tab[i].ldo_reg, ~slp_ldo_ctl_tab[i].mask);
-			//__raw_bits_and(~slp_ldo_ctl_tab[i].mask, slp_ldo_ctl_tab[i].ldo_reg);
-    	}
+	for ( i = 0; i < ARRAY_SIZE(slp_ldo_ctl_data); ++i) {
+		aux = ANA_REG_GET(slp_ldo_ctl_data[i].ldo_sleep_reg);
+		aux &= ~slp_ldo_ctl_data[i].mask;
+		aux |= slp_ldo_ctl_data[i].value;
+		ANA_REG_SET(slp_ldo_ctl_data[i].ldo_sleep_reg, aux);
+	}
 
 }
 
-/*****************************************************************************/
-//  Description:    this function is used to initialize LDO voltage level.
-//	Global resource dependence:
-//  Author: Tao.Feng && Yi.Qiu
-//	Note:
-/*****************************************************************************/
 int LDO_Init(void)
 {
 	int i;
+	for ( i = 0; i < ARRAY_SIZE(ldo_ctl_data); ++i) {
+		if( ldo_ctl_data[i].init_level != LDO_VOLT_LEVEL_FAULT_MAX) {
+			LDO_SetVoltLevel(ldo_ctl_data[i].id, ldo_ctl_data[i].init_level);
+		}
+		ldo_ctl_data[i].ref = 0;
+		ldo_ctl_data[i].current_status = CURRENT_STATUS_INIT;
+		ldo_ctl_data[i].current_volt_level = ldo_ctl_data[i].init_level;
+	}
 
-	g_ldo_ctl_tab = Ldo_Get_Cfg();
-
-	SCI_ASSERT(NULL != g_ldo_ctl_tab);
-
-	for(i=0; g_ldo_ctl_tab[i].id != LDO_LDO_MAX; i++)
-    	{
-    		if( g_ldo_ctl_tab[i].init_level != LDO_VOLT_LEVEL_MAX)
-    			LDO_SetVoltLevel(g_ldo_ctl_tab[i].id, g_ldo_ctl_tab[i].init_level);
-
-		g_ldo_ctl_tab[i].ref = 0;
-    	}
-
-	//deepsleep init set for ldo
 	LDO_DeepSleepInit();
 
 	return LDO_ERR_OK;
 }
 
-/*****************************************************************************/
-//  Description: turn off system core ldo
-//  Global resource dependence:
-//  Author: Mingwei.Zhang
-//  Note:
-/*****************************************************************************/
-static void LDO_TurnOffCoreLDO (void)
+static void LDO_TurnOffCoreLDO(void)
 {
-    	ANA_REG_SET (ANA_LDO_PD_SET, ANA_LDO_PD_SET_MSK);/// turn off system core ldo
+	ANA_REG_SET (ANA_LDO_PD_RST, 0);
+	ANA_REG_SET (ANA_LDO_PD_SET, ANA_LDO_PD_SET_MSK);/// turn off system core ldo
 }
 
-/*****************************************************************************/
-//  Description: turn off all module ldo befor system core ldo
-//  Global resource dependence:
-//  Author: Mingwei.Zhang
-//  Note:
-/*****************************************************************************/
-
-static void LDO_TurnOffAllModuleLDO (void)
+static void LDO_TurnOffAllModuleLDO(void)
 {
-    	ANA_REG_OR(ANA_AUDIO_PA_CTL1, PA_LDO_EN_RST);///PA poweroff
+	ANA_REG_OR(ANA_AUDIO_PA_CTL1, PA_LDO_EN_RST);///PA poweroff
 	ANA_REG_SET (ANA_LDO_PD_CTL1, ANA_LDO_PD_CTL_MSK);
 	ANA_REG_SET (ANA_LDO_PD_CTL0, ANA_LDO_PD_CTL_MSK);
-	ANA_REG_SET (ANA_LDO_PD_RST, ANA_LDO_PD_RST_MSK);
 }
-/*****************************************************************************/
-//  Description:  Shut down all LDO when system poweroff
-//  Global resource dependence:
-//  Author: Mingwei.Zhang
-//  Note:
-/*****************************************************************************/
-void LDO_TurnOffAllLDO (void)
+
+void LDO_TurnOffAllLDO(void)
 {
-    LDO_TurnOffAllModuleLDO();
-    LDO_TurnOffCoreLDO();
+	LDO_TurnOffAllModuleLDO();
+	LDO_TurnOffCoreLDO();
 }
