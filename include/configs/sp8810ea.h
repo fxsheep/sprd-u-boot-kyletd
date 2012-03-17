@@ -281,6 +281,9 @@
 #define CONSOLE_COLOR_MAGENTA 0x001f
 #define CONSOLE_COLOR_CYAN 0x001f
 #endif
+
+#define CONFIG_FB_LCDC_CS1
+
 #endif // CONFIG_LCD
 
 #define CALIBRATE_ENUM_MS 15000
