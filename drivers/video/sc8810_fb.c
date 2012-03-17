@@ -301,7 +301,7 @@ static uint32_t lcdc_calc_lcm_timing(struct timing_mcu *timing)
 		wlpw = MAX_LCDC_TIMING_VALUE ;
 	}
 
-	whpw = LCDC_CYCLES(timing->whpw, ahb_clk, 1000);
+	whpw = LCDC_CYCLES(timing->whpw, ahb_clk, 1000) - 1;
 	if (whpw > MAX_LCDC_TIMING_VALUE) {
 		whpw = MAX_LCDC_TIMING_VALUE ;
 	}
@@ -318,7 +318,7 @@ static void lcdc_update_lcm_timing(uint32_t value)
 
 	__raw_writel(value, LCM_PARAMETER0); /* FIXME: hardcoded for !CS0 */
 
-	FB_PRINT("@fool2[%s] LCM_PARAMETER0: 0x%x\n", __FUNCTION__, __raw_readl(LCM_PARAMETER0));
+	FB_PRINT("[%s] LCM_PARAMETER0: 0x%x\n", __FUNCTION__, __raw_readl(LCM_PARAMETER0));
 }
 
 static int mount_panel(struct sc8810fb_info *fb, struct lcd_spec *panel)

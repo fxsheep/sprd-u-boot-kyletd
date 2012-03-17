@@ -1704,5 +1704,16 @@ PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*
 	sc8810_emc_Init();
 	g_ahb_clk = 200000000;
 	for (i=0; i<0xff1; i++);
+
+	// AHB master priority:  DSP > lcdc > other > GPU
+	REG32(0x20000020) = 0x7D;
+	REG32(0x20000024) = 0x4D;
+	REG32(0x20000030) = 0x1c31D;
+	REG32(0x20000050) = 0x1c31D;
+	REG32(0x20000058) = 0x1c31D;
+	REG32(0x20000060) = 0x1c31E;
+	REG32(0x20000038) = 0x1c31F;
+	REG32(0x20000040) = 0x1c31F;
+	REG32(0x20000048) = 0x1c31F;
 }
 
