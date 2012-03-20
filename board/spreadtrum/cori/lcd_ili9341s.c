@@ -258,7 +258,7 @@ static int32_t ili9341s_init(struct lcd_spec *self)
 	send_cmd( 0x29); // (DISPON)
 
 	mdelay(40); // 40ms
-	
+#if 0	
 	if (1) { //  for test the lcd
 		int i;
 		send_cmd(0x2C); //Write data
@@ -273,6 +273,7 @@ static int32_t ili9341s_init(struct lcd_spec *self)
 	mdelay(120); //120ms
 	send_cmd(0x2C); //Write data
 	//mdelay(120); //120ms
+#endif
 	LCD_PRINT("ili9341s_init: end\n");
 
 	return 0;
@@ -434,20 +435,20 @@ static struct timing_mcu lcd_ili9341s_timing = {
 
 static struct timing_mcu lcd_ili9341s_timing[] = {
 [LCD_REGISTER_TIMING] = {        
-	.rcss = 340,  // 25 ns
-	.rlpw = 100,
-	.rhpw = 200,
-	.wcss = 140,
-	.wlpw = 40,
-	.whpw = 40,
+	.rcss = 25,  // 25 ns
+	.rlpw = 45,
+	.rhpw = 90,
+	.wcss = 0,
+	.wlpw = 15,
+	.whpw = 15,
 },
 [LCD_GRAM_TIMING] = {        
-	.rcss = 340,  // 25 ns
-	.rlpw = 100,
-	.rhpw = 200,
-	.wcss = 140,
-	.wlpw = 40,
-	.whpw = 40,
+	.rcss = 25,  // 25 ns
+	.rlpw = 45,
+	.rhpw = 90,
+	.wcss = 0,
+	.wlpw = 15,
+	.whpw = 15,
 }
 
 };
