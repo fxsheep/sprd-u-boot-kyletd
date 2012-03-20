@@ -21,10 +21,14 @@
  **---------------------------------------------------------------------------*/
 #include "sci_types.h"
 #include "com_drvapi.h"
+#ifndef CONFIG_EMMC_BOOT
 #include "fiq_drvapi.h"
+#endif
 #include "chip.h"
 #ifndef WIN32
+#ifndef CONFIG_EMMC_BOOT
 #include "tx_api_thumb.h"
+#endif
 #include "pwm_drvapi.h"
 #include "deepsleep_drvapi.h"
 #endif //WIN32

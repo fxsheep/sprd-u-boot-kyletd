@@ -30,7 +30,11 @@ AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL -g
 
 SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o cpu_spec.o mmu_asm.o
+ifdef CONFIG_EMMC_BOOT
+COBJS	= nand_boot.o mmc.o lowlevel_init.o div0.o adi_drv.o sdram.o mmu.o sdram_prod.o chip_cfg.o serial_sc8800x.o
+else
 COBJS	= nand_boot.o nand_ecc.o sc8810_nand.o lowlevel_init.o div0.o adi_drv.o sdram.o mmu.o sdram_prod.o chip_cfg.o serial_sc8800x.o
+endif
 
 SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c
 SRCS	+= $(SRCTREE)/arch/arm/cpu/armv7/start.S
@@ -90,6 +94,11 @@ $(obj)%.o:	$(SRCTREE)/arch/arm/cpu/armv7/sc8810/%.S
 
 $(obj)%.o:	$(SRCTREE)/drivers/serial/%.c
 	$(CC) $(CFLAGS) -mlittle-endian -c -o $@ $<
+ifdef CONFIG_EMMC_BOOT
+$(obj)%.o:	$(SRCTREE)/drivers/mmc/%.c
+	$(CC) $(CFLAGS) -mlittle-endian -c -o $@ $<
+endif
+
 # defines $(obj).depend target
 include $(SRCTREE)/rules.mk
 

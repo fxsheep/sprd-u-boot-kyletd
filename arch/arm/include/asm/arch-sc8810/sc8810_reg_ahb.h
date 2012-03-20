@@ -98,6 +98,12 @@ extern   "C"
 #define USB_DP_PULLDOWN_BIT     BIT_20
 #define USB_DM_PULLDOWN_BIT     BIT_21
 
+#define AHB_SDIO_SOFT_RST BIT_12
+
+#define AHB_SDIO_CTRL_HOST0 0
+#define AHB_SDIO_CTRL_HOST1 1
+#define AHB_SDIO_CTRL_SLAVE 2
+
 
 /**----------------------------------------------------------------------------*
 **                             Data Prototype                                 **

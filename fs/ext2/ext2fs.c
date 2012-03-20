@@ -25,12 +25,16 @@
 
 #include <common.h>
 #include <ext2fs.h>
+#ifdef CONFIG_CMD_EXT4_WRITE
+#include <ext_common.h>
+#endif
 #include <malloc.h>
 #include <asm/byteorder.h>
 
 extern int ext2fs_devread (int sector, int byte_offset, int byte_len,
 			   char *buf);
 
+#ifndef CONFIG_CMD_EXT4_WRITE // #if 0 samsung
 /* Magic value used to identify an ext2 filesystem.  */
 #define	EXT2_MAGIC		0xEF53
 /* Amount of indirect blocks in an inode.  */
@@ -168,9 +172,14 @@ struct ext2_data {
 
 
 typedef struct ext2fs_node *ext2fs_node_t;
+#endif
 
 struct ext2_data *ext2fs_root = NULL;
+#ifndef CONFIG_CMD_EXT4_WRITE
 ext2fs_node_t ext2fs_file = NULL;
+#else
+struct ext2fs_node *ext2fs_file;
+#endif
 int symlinknest = 0;
 uint32_t *indir1_block = NULL;
 int indir1_size = 0;
@@ -242,15 +251,24 @@ static int ext2fs_read_inode
 	return (1);
 }
 
-
-void ext2fs_free_node (ext2fs_node_t node, ext2fs_node_t currroot) {
+#ifndef CONFIG_CMD_EXT4_WRITE
+void ext2fs_free_node (ext2fs_node_t node, ext2fs_node_t currroot)
+#else
+void ext2fs_free_node(struct ext2fs_node *node, struct ext2fs_node *currroot)
+#endif
+{
 	if ((node != &ext2fs_root->diropen) && (node != currroot)) {
 		free (node);
 	}
 }
 
 
-static int ext2fs_read_block (ext2fs_node_t node, int fileblock) {
+#ifndef CONFIG_CMD_EXT4_WRITE
+static int ext2fs_read_block (ext2fs_node_t node, int fileblock)
+#else
+static int ext2fs_read_block(struct ext2fs_node *node, int fileblock)
+#endif
+{
 	struct ext2_data *data = node->data;
 	struct ext2_inode *inode = &node->inode;
 	int blknr;
@@ -390,7 +408,12 @@ static int ext2fs_read_block (ext2fs_node_t node, int fileblock) {
 
 
 int ext2fs_read_file
-	(ext2fs_node_t node, int pos, unsigned int len, char *buf) {
+#ifndef CONFIG_CMD_EXT4_WRITE
+	(ext2fs_node_t node, int pos, unsigned int len, char *buf)
+#else
+	(struct ext2fs_node *node, int pos, unsigned int len, char *buf)
+#endif
+{
 	int i;
 	int blockcnt;
 	int log2blocksize = LOG2_EXT2_BLOCK_SIZE (node->data);
@@ -450,7 +473,12 @@ int ext2fs_read_file
 }
 
 
+#ifndef CONFIG_CMD_EXT4_WRITE
 static int ext2fs_iterate_dir (ext2fs_node_t dir, char *name, ext2fs_node_t * fnode, int *ftype)
+#else
+int ext2fs_iterate_dir(struct ext2fs_node *dir, char *name,
+				       struct ext2fs_node **fnode, int *ftype)
+#endif
 {
 	unsigned int fpos = 0;
 	int status;
@@ -479,7 +507,11 @@ static int ext2fs_iterate_dir (ext2fs_node_t dir, char *name, ext2fs_node_t * fn
 		}
 		if (dirent.namelen != 0) {
 			char filename[dirent.namelen + 1];
+			#ifndef CONFIG_CMD_EXT4_WRITE
 			ext2fs_node_t fdiro;
+			#else
+			struct ext2fs_node *fdiro;
+			#endif
 			int type = FILETYPE_UNKNOWN;
 
 			status = ext2fs_read_file (diro,
@@ -582,7 +614,12 @@ static int ext2fs_iterate_dir (ext2fs_node_t dir, char *name, ext2fs_node_t * fn
 }
 
 
-static char *ext2fs_read_symlink (ext2fs_node_t node) {
+#ifndef CONFIG_CMD_EXT4_WRITE
+static char *ext2fs_read_symlink (ext2fs_node_t node)
+#else
+static char *ext2fs_read_symlink(struct ext2fs_node *node)
+#endif
+{
 	char *symlink;
 	struct ext2fs_node *diro = node;
 	int status;
@@ -619,15 +656,27 @@ static char *ext2fs_read_symlink (ext2fs_node_t node) {
 
 
 int ext2fs_find_file1
+#ifndef CONFIG_CMD_EXT4_WRITE
 	(const char *currpath,
-	 ext2fs_node_t currroot, ext2fs_node_t * currfound, int *foundtype) {
+	ext2fs_node_t currroot, ext2fs_node_t * currfound, int *foundtype)
+#else
+	(const char *currpath, struct ext2fs_node *currroot,
+		struct ext2fs_node **currfound, int *foundtype)
+#endif
+{
+
 	char fpath[strlen (currpath) + 1];
 	char *name = fpath;
 	char *next;
 	int status;
 	int type = FILETYPE_DIRECTORY;
+	#ifndef CONFIG_CMD_EXT4_WRITE
 	ext2fs_node_t currnode = currroot;
 	ext2fs_node_t oldnode = currroot;
+	#else
+	struct ext2fs_node *currnode = currroot;
+	struct ext2fs_node *oldnode = currroot;
+	#endif
 
 	strncpy (fpath, currpath, strlen (currpath) + 1);
 
@@ -723,8 +772,14 @@ int ext2fs_find_file1
 
 
 int ext2fs_find_file
+#ifndef CONFIG_CMD_EXT4_WRITE
 	(const char *path,
-	 ext2fs_node_t rootnode, ext2fs_node_t * foundnode, int expecttype) {
+	 ext2fs_node_t rootnode, ext2fs_node_t * foundnode, int expecttype)
+#else
+	(const char *path, struct ext2fs_node *rootnode,
+	struct ext2fs_node **foundnode, int expecttype)
+#endif
+{
 	int status;
 	int foundtype = FILETYPE_DIRECTORY;
 
@@ -750,7 +805,11 @@ int ext2fs_find_file
 
 
 int ext2fs_ls (char *dirname) {
+#ifndef CONFIG_CMD_EXT4_WRITE
 	ext2fs_node_t dirnode;
+#else
+	struct ext2fs_node *dirnode;
+#endif
 	int status;
 
 	if (ext2fs_root == NULL) {
@@ -770,7 +829,11 @@ int ext2fs_ls (char *dirname) {
 
 
 int ext2fs_open (char *filename) {
+#ifndef CONFIG_CMD_EXT4_WRITE
 	ext2fs_node_t fdiro = NULL;
+#else
+	struct ext2fs_node *fdiro = NULL;
+#endif
 	int status;
 	int len;
 
@@ -800,8 +863,9 @@ fail:
 }
 
 
-int ext2fs_close (void
-	) {
+
+int ext2fs_close(void)
+{
 	if ((ext2fs_file != NULL) && (ext2fs_root != NULL)) {
 		ext2fs_free_node (ext2fs_file, &ext2fs_root->diropen);
 		ext2fs_file = NULL;

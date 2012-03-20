@@ -1642,6 +1642,198 @@ void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv, uint32 dqs_drv
 	REG32(PINMAP_REG_BASE + 0x274) = dat_drv;
 }
 
+#ifdef SPL_USB_DOWNLOAD
+typedef void (*JUMPTOHANDLER) (void);
+#ifdef CONFIG_SP8810
+#define KEY_DOWNLOAD_MODE_MAP 0x10 //keyout0-keyin7
+#else
+#define KEY_DOWNLOAD_MODE_MAP 0x01 //keyout0-keyin7
+#endif
+void uart_trace(uint32 ch)
+{
+	volatile uint32 i;
+	REG32(0x84000000) = ch;
+	for(i = 0; i < 0x4000; i++);
+}
+PUBLIC void _KeypadEnable()
+{
+	volatile uint32 i;
+	REG32(0x8b000008) |= BIT_26 | BIT_8; //enable keypad
+	//REG32(0X8B00004C) |= BIT_1;
+	//for(i = 0; i < 0x100; i++);
+	//REG32(0X8B00004C) &= ~BIT_1; //soft reset
+	//REG32(0x87000010) |= 0xfff; //clear all interrupt
+
+	//REG32(0x87000018) = 0xffff;
+	//REG32(0x87000028) = 0;//debounce
+	//REG32(0x8700001c) = 0xf;//debounce counter	
+
+	//REG32(0x87000000) |= 0x000001; //
+	//REG32(0x87000000) |= 0x000001; //
+	for(i = 0; i < 0x10000; i++);
+}
+PUBLIC void _KeypadClear()
+{
+	REG32(0x87000010) |= 0xffff; //clear all interrupt
+}
+//if download mode return 1, else return 0
+PUBLIC uint32 _Check_DownloadMode()
+{
+	volatile  uint32 key_raw_int_sts = 0;
+	volatile  uint32 key_sts = 0;
+	uint32 time;
+	volatile uint32 i;
+	//for(i = 0; i < 0x100000; i++);
+	uart_trace(0x99);
+	i = REG32(0x87000000);
+	
+	uart_trace(i & 0xff);
+	uart_trace((i >> 8) & 0xff);
+	uart_trace((i >> 16) & 0xff);
+	uart_trace((i >> 24) & 0xff);
+
+	for(time = 0; time < 10; time++)
+	{
+		//_KeypadClear();
+		//while(1)
+		{
+		for(i = 0; i < 0x200000; i++);
+		key_raw_int_sts = REG32(0x87000008);
+		key_sts = REG32(0x8700002c);		
+		
+		
+			//for(i = 0; i < 0x200000; i++);
+			uart_trace(key_raw_int_sts & 0xff);
+			uart_trace((key_raw_int_sts >> 8) & 0xff);
+			uart_trace((key_raw_int_sts >> 16) & 0xff);
+			uart_trace((key_raw_int_sts >> 24) & 0xff);
+
+
+			uart_trace(key_sts & 0xff);
+			uart_trace((key_sts >> 8)& 0xff);
+			uart_trace((key_sts >> 16)& 0xff);
+			uart_trace((key_sts >> 24)& 0xff);
+
+			uart_trace(0x11);			
+		
+		}
+		key_raw_int_sts &= BIT_0;
+		key_sts &= 0x77;
+
+		if((key_sts == KEY_DOWNLOAD_MODE_MAP))
+		{
+			uart_trace(0x66);
+			return 1; //check ok
+		}
+	}
+	return 0;
+}
+PUBLIC void _JumpToDownload()
+{
+	uart_trace(0x77);
+
+	JUMPTOHANDLER handler = (JUMPTOHANDLER)(0xffff0000);
+	handler();
+}
+LOCAL uint32 SystemCountGet()
+{
+	uint32 clock;
+	uint32 clock_c;
+	clock = REG32(0x87003004);
+	clock_c = REG32(0x87003004);
+	while(clock != clock_c)
+	{
+		clock = REG32(0x87003004);
+		clock_c = REG32(0x87003004);
+	}
+	return clock;
+}
+#define SPL_USB_DOWNLOAD_TIMEOUT 3000
+PUBLIC void _WaitUsbDownloadKey()
+{
+	uint32 time0;
+	uint32 time1;
+	uint32 key_raw_int_sts = 0;
+	uint32 key_sts = 0;
+
+	time0 = SystemCountGet();
+	while(1)
+	{
+		key_raw_int_sts = REG32(0x87000008);
+		key_sts = REG32(0x8700002c);
+		key_raw_int_sts &= BIT_0;
+		key_sts &= 0x77;
+		if((key_raw_int_sts != 0) && (key_sts == 0))
+		{
+			_JumpToDownload();
+		}
+		time1 = SystemCountGet();
+		if((time1 - time0) > SPL_USB_DOWNLOAD_TIMEOUT)
+		{
+			break;
+		}
+	}
+}
+#if 0
+PUBLIC void _WaitUsbDownloadKey()
+{
+	uint32 key_raw_int_sts = 0;
+	uint32 key_sts = 0;
+	uint32 time;
+	volatile uint32 i;
+	uart_trace(0x11);
+	uart_trace(0x22);
+	
+	//wait key1 release
+#if 0
+	while(1)
+	{
+		key_raw_int_sts = REG32(0x87000008);
+		key_raw_int_sts &= BIT_4;
+		if(key_raw_int_sts != 0)	
+		{
+			uart_trace(0x77);
+			_KeypadClear();
+			break;
+		}
+	}
+#endif
+	uart_trace(0x33);
+	i = 0 ;
+//	for(time = 0; time < 2; time++)
+	{
+		//usb download key press
+		while(1)
+		{	
+			//_KeypadClear();
+			//for(i = 0; i < 0x200000; i++)
+			key_raw_int_sts = REG32(0x87000008);
+			key_sts = REG32(0x8700002c);
+			
+			uart_trace(0x44);
+			uart_trace(key_sts & 0xff);
+			uart_trace((key_sts >> 8) & 0xff);
+
+			uart_trace(key_raw_int_sts & 0xff);
+			//key_sts >>=  8;
+			key_raw_int_sts &= BIT_0;
+			key_sts &= 0x77;
+			if((key_raw_int_sts != 0) && (key_sts == 0))
+			{
+				uart_trace(0x88);
+				_JumpToDownload();
+				//break;;
+			}
+			if(i > 0x3000000)
+			{
+				break;
+			}
+		}
+	}
+	return ;	
+}
+#endif
+#endif
 void sc8810_emc_Init()
 {
 	
@@ -1693,6 +1885,16 @@ void sc8810_emc_Init()
 	for(i = 0; i < 1000; i++);
 	
 	REG32(0x20900224) = (3 << 4) | (1 << 8) | (7 << 14) | (0 << 12/*select mpll*/);
+#endif
+#ifdef SPL_USB_DOWNLOAD
+	_KeypadEnable();
+	//if not in download mode
+	//if(_Check_DownloadMode() == 0)
+	{
+	//	return;	
+	}
+	_WaitUsbDownloadKey();
+	
 #endif
 	ddr_init();
 }

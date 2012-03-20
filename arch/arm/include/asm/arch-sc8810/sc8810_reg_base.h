@@ -179,7 +179,11 @@ extern   "C"
 #define BUS_MON_CTL_BASE                BUS_MON0_CTL_BASE
 
 #define SDIO0_BASE_ADDR                 0x20500000
+#ifdef CONFIG_EMMC_BOOT
+#define SDIO1_BASE_ADDR                 0x20600000
+#else
 #define SDIO1_BASE_ADDR                 0x20500100
+#endif
 #define ROT_REG_BASE                    0x20800200
 #define NAND_CTL_BASE                   0x60001c00
 #define NF_LCM_CTL_BEGIN                0x60000000      //NAND Flash and LCM Control Registers

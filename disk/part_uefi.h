@@ -1,0 +1,42 @@
+#ifndef _DISK_PART_UEFI_H
+#define _DISK_PART_UEFI_H
+
+typedef enum _PARTITION_INDEX_TAG
+{
+	PARTITON_NULL = 0,
+	PARTITION_VM,
+	PARTITION_MODEM,
+	PARTITION_DSP,
+	PARTITION_FIX_NV,
+	PARTITION_BACK_NV,
+	PARTITION_RUNTIME_NV,
+	PARTITION_PROD_INFO,
+	PARTITION_KERNEL,
+	PARTITION_SYSTEM,
+	PARTITION_LOGO,
+	PARTITION_USER_DAT,
+	PARTITION_CACHE,
+	PARTITION_TOTAL_COUNT
+}EFI_PARTITION_INDEX;
+
+typedef enum _PARTITION_ATTR_TAG
+{
+	PARTITION_RAW = 0,
+	PARTITION_EXT4 = 1,
+	PARTITION_ATTR_COUNT
+}PARTITION_ATTR_TAG;
+
+#define MAX_PARTITION_INFO	16
+
+#define MAX_SIZE_FLAG	0xFFFFFFFF
+typedef struct _PARTITION_CFG
+{
+	unsigned int partition_index;
+	unsigned int partition_size;  //
+	unsigned int partition_attr;
+} __attribute__ ((packed)) PARTITION_CFG,*PPARTITION_CFG;
+
+
+unsigned int write_uefi_parition_table(PARTITION_CFG *p_partition_cfg);
+
+#endif	/* _DISK_PART_UEFI_H */

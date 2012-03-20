@@ -67,6 +67,7 @@ extern   "C"
 #define TB_LCDC_INT                     0x1D
 #define TB_SDIO_INT                     0x1E
 #define TB_BM_INT                   0x1F
+#define TB_SDIO1_INT                     0x1F
 
 #define PCM_IRQ_INT              TB_IIS_INT
 #define TB_ADC_INT              0x20

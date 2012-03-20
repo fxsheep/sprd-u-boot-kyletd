@@ -198,6 +198,9 @@ LIBS += arch/$(ARCH)/lib/lib$(ARCH).o
 LIBS += fs/cramfs/libcramfs.o fs/fat/libfat.o fs/fdos/libfdos.o fs/jffs2/libjffs2.o \
 	fs/reiserfs/libreiserfs.o fs/ext2/libext2fs.o fs/yaffs2/libyaffs2.o \
 	fs/ubifs/libubifs.o
+ifdef CONFIG_CMD_EXT4_WRITE
+LIBS += fs/ext4/libext4fs.o
+endif
 LIBS += net/libnet.o
 LIBS += disk/libdisk.o
 LIBS += drivers/bios_emulator/libatibiosemu.o

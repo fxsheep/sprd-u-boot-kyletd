@@ -38,17 +38,5 @@ typedef struct DL_Address_CNT
 void get_Dl_Erase_Address_Table(DL_Address_CNT_S *dls);
 void get_Dl_Data_Address_Table(DL_Address_CNT_S *dls);
 
-char *Dl_Op_Type_Name[] = {
-"StartData  ",
-"Download   ",
-"EndData    ",
-"EraseFlash ",
-"ReadFlash  "
-};
-
-char *Dl_Op_Status_Name[] = {
-"Success ",
-"Fail    "
-};
 
 #endif /*  DLOAD_OP_H */

@@ -541,6 +541,9 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	dataflash_print_info();
 #endif
 
+#ifdef CONFIG_EMMC_BOOT
+	mmc_legacy_init(1);
+#endif
 	/* initialize environment */
 	env_relocate ();
     boot_pwr_check();

@@ -44,7 +44,7 @@
 #include "pwm_reg_v1.h"
 #include "rotation_reg_v0.h"
 #include "rtc_reg_v3.h"
-#include "sdio_reg_v0.h"
+#include "sdio_reg_v3.h"
 #include "sim_reg_v3.h"
 #include "spi_reg_v0.h"
 #include "sys_timer_reg_v0.h"

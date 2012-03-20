@@ -37,6 +37,14 @@ FDL2_PATH = $(TOPDIR)/nand_fdl/fdl-2
 FDL1_PATH = $(TOPDIR)/nand_fdl/fdl-1
 COM_PATH = $(TOPDIR)/nand_fdl/common
 
+EMMC_PATH = $(TOPDIR)/drivers/mmc
+
+ifdef CONFIG_EMMC_BOOT
+UEFI_LIB = $(TOPDIR)/disk/libdisk.o 
+EXT4_LIB = $(TOPDIR)/fs/ext4/libext4fs.o $(TOPDIR)/common/cmd_ext4.o
+EMMC_LIB = $(TOPDIR)/drivers/mmc/libmmc.o $(TOPDIR)/arch/arm/cpu/armv7/sc8810/ldo.o
+endif
+
 FDL2_SOBJS_LIST = init.o
 FDL1_SOBJS_LIST = init.o
 
@@ -44,6 +52,10 @@ COM_COBJS	= dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o mcu_command
 COM_OBJS = $(addprefix $(COM_PATH)/src/,$(COM_COBJS))
 
 FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o parsemtdparts.o
+ifdef CONFIG_EMMC_BOOT
+FDL2_COBJS_LIST += fdl_emmc_command.o fdl_partition.o
+endif
+
 FDL1_COBJS_LIST = board_init.o chip_init.o fdl_command.o fdl_main.o fdl_stdio.o sdram_init.o sdram_prod.o
 FDL1_COBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_COBJS_LIST))
 FDL1_SOBJS = $(addprefix $(FDL1_PATH)/src/,$(FDL1_SOBJS_LIST))
@@ -68,7 +80,11 @@ CPU_LIB = $(TOPDIR)/arch/arm/cpu/armv7/sc8810/timer.o $(TOPDIR)/arch/arm/cpu/arm
 endif
 
 GENERIC_LIB = $(TOPDIR)/lib/libgeneric.o
+ifdef CONFIG_EMMC_BOOT
+UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(YAFFS2_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB) $(ARCH_LIB) $(EMMC_LIB) $(UEFI_LIB) $(EXT4_LIB)
+else
 UBOOT_LIBS = $(MTD_LIB) $(ARM_LIB) $(NAND_LIB) $(YAFFS2_LIB) $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB) $(ARCH_LIB)
+endif
 
 #ALL_UBOOT_LIBS = $(addprefix $(obj),$(__LIBS))
 #UBOOT_LIBS = $(ALL_UBOOT_LIBS)
@@ -135,7 +151,7 @@ $(FDL1_COBJS):%.o:%.c
 $(FDL1_SOBJS):%.o:%.S
 	$(CC) $(AFLAGS) -I $(FDL1_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 $(FDL2_COBJS):%.o:%.c
-	$(CC) $(CFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
+	$(CC) $(CFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -I $(EMMC_PATH) -c -o $@ $<
 $(FDL2_SOBJS):%.o:%.S
 	$(CC) $(AFLAGS) -I $(FDL2_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 endif

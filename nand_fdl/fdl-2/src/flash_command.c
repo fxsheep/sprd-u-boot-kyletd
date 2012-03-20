@@ -33,6 +33,20 @@ typedef struct _DL_FILE_STATUS
     unsigned long   recv_size;
 } DL_FILE_STATUS, *PDL_FILE_STATUS;
 
+char *Dl_Op_Type_Name[] = {
+"StartData  ",
+"Download   ",
+"EndData    ",
+"EraseFlash ",
+"ReadFlash  "
+};
+
+char *Dl_Op_Status_Name[] = {
+"Success ",
+"Fail    "
+};
+
+
 static unsigned long g_checksum;
 static unsigned long g_sram_addr;
 static int read_nv_flag = 0;

@@ -22,6 +22,9 @@
 #include <common.h>
 #include <nand.h>
 #include <asm/io.h>
+#ifdef CONFIG_EMMC_BOOT
+#include "../drivers/mmc/card_sdio.h"
+#endif
 
 #define CONFIG_SYS_NAND_READ_DELAY \
 	{ volatile int dummy; int i; for (i=0; i<10000; i++) dummy = i; }
@@ -250,6 +253,46 @@ void board_init_f (ulong bootflag)
 }
 #endif
 
+#ifdef CONFIG_EMMC_BOOT
+void nand_boot(void)
+{
+	int ret;
+                   int i,j;
+	__attribute__((noreturn)) void (*uboot)(void);
+#if 0
+	unsigned int i = 0;
+	for(i=0xffffffff;i>0;)
+	  i--;
+#endif
+	/*
+	 * Init board specific nand support
+	 */
+#ifdef SPRD_EVM_TAG_ON
+#if 0
+	unsigned long int * ptr = (unsigned long int*)SPRD_EVM_ADDR_START-8;
+	int ijk = 0;
+	for(ijk =0;ijk<28;ijk++){
+		*(ptr++)=0x55555555;
+	}
+#endif
+	SPRD_EVM_TAG(1);
+#endif
+
+	if(TRUE == Emmc_Init()){                           
+                      Emmc_Read(PARTITION_BOOT2, 0, CONFIG_SYS_EMMC_U_BOOT_SECTOR_NUM, (uint8 *)CONFIG_SYS_NAND_U_BOOT_DST);    
+        }   
+
+	/*
+	 * Jump to U-Boot image
+	 */
+#ifdef SPRD_EVM_TAG_ON
+	SPRD_EVM_TAG(3);
+#endif
+	uboot = (void *)CONFIG_SYS_NAND_U_BOOT_START;
+	(*uboot)();
+}
+
+#else
 /*
  * The main entry for NAND booting. It's necessary that SDRAM is already
  * configured and available since this code loads the main U-Boot image
@@ -320,3 +363,4 @@ void nand_boot(void)
 	uboot = (void *)CONFIG_SYS_NAND_U_BOOT_START;
 	(*uboot)();
 }
+#endif

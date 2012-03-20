@@ -93,7 +93,10 @@ static int is_pmbr_valid(legacy_mbr * mbr);
 
 static int is_gpt_valid(block_dev_desc_t * dev_desc, unsigned long long lba,
 				gpt_header * pgpt_head, gpt_entry ** pgpt_pte);
-
+#ifdef CONFIG_EMMC_BOOT
+static int format_gpt_valid(block_dev_desc_t * dev_desc, unsigned long long lba,
+				gpt_header * pgpt_head, gpt_entry ** pgpt_pte);
+#endif
 static gpt_entry *alloc_read_gpt_entries(block_dev_desc_t * dev_desc,
 				gpt_header * pgpt_head);
 
@@ -342,6 +345,123 @@ static int is_gpt_valid(block_dev_desc_t * dev_desc, unsigned long long lba,
 	/* We're done, all's well */
 	return 1;
 }
+
+#ifdef CONFIG_EMMC_BOOT
+/**
+ * format_gpt_valid() - tests one GPT header and PTEs for validity
+ *
+ * lba is the logical block address of the GPT header to test
+ * gpt is a GPT header ptr, filled on return.
+ * ptes is a PTEs ptr, filled on return.
+ *
+ * Description: returns 1 if valid,  0 on error.
+ * If valid, returns pointers to PTEs.
+ */
+static int format_gpt_valid(block_dev_desc_t * dev_desc, unsigned long long lba,
+			gpt_header * pgpt_head, gpt_entry ** pgpt_pte)
+{
+	unsigned char crc32_backup[4] = { 0 };
+	unsigned long calc_crc32;
+	unsigned long long lastlba;
+	int idx;
+
+	if (!dev_desc || !pgpt_head) {
+		printf("%s: Invalid Argument(s)\n", __FUNCTION__);
+		return 0;
+	}
+	
+	memset(pgpt_head, 0, sizeof(gpt_header));
+
+	/* set GPT Header from device */
+	for (idx = 0; idx < 8; idx ++) {
+		pgpt_head->signature[idx] = (GPT_HEADER_SIGNATURE >> (8 * idx)) & 0xff;
+		printf("signature[%d] = 0x%02x\n", idx, pgpt_head->signature[idx]);
+	}
+
+	if (dev_desc->block_write(dev_desc->dev, lba, 1, pgpt_head) != 1) {
+		printf("*** ERROR: Can't write GPT header ***\n");
+		return 0;
+	}
+#if 1
+	//richardfeng mask
+	/* Check the GPT header signature */
+	if (le64_to_int(pgpt_head->signature) != GPT_HEADER_SIGNATURE) {
+		printf("GUID Partition Table Header signature is wrong:"
+			"0x%llX != 0x%llX\n",
+			(unsigned long long)le64_to_int(pgpt_head->signature),
+			(unsigned long long)GPT_HEADER_SIGNATURE);
+		return 0;
+	}
+
+	/* Check the GUID Partition Table CRC */
+	memcpy(crc32_backup, pgpt_head->header_crc32, sizeof(crc32_backup));
+	memset(pgpt_head->header_crc32, 0, sizeof(pgpt_head->header_crc32));
+
+	calc_crc32 = efi_crc32((const unsigned char *)pgpt_head,
+		le32_to_int(pgpt_head->header_size));
+
+	memcpy(pgpt_head->header_crc32, crc32_backup, sizeof(crc32_backup));
+
+	if (calc_crc32 != le32_to_int(crc32_backup)) {
+		printf("GUID Partition Table Header CRC is wrong:"
+			"0x%08lX != 0x%08lX\n",
+			le32_to_int(crc32_backup), calc_crc32);
+		return 0;
+	}
+
+	/* Check that the my_lba entry points to the LBA that contains the GPT */
+	if (le64_to_int(pgpt_head->my_lba) != lba) {
+		printf("GPT: my_lba incorrect: %llX != %llX\n",
+			(unsigned long long)le64_to_int(pgpt_head->my_lba),
+			(unsigned long long)lba);
+		return 0;
+	}
+
+	/* Check the first_usable_lba and last_usable_lba are within the disk. */
+	lastlba = (unsigned long long)dev_desc->lba;
+	if (le64_to_int(pgpt_head->first_usable_lba) > lastlba) {
+		printf("GPT: first_usable_lba incorrect: %llX > %llX\n",
+			le64_to_int(pgpt_head->first_usable_lba), lastlba);
+		return 0;
+	}
+	if (le64_to_int(pgpt_head->last_usable_lba) > lastlba) {
+		printf("GPT: last_usable_lba incorrect: %llX > %llX\n",
+			le64_to_int(pgpt_head->last_usable_lba), lastlba);
+		return 0;
+	}
+
+	debug("GPT: first_usable_lba: %llX last_usable_lba %llX last lba %llX\n",
+		le64_to_int(pgpt_head->first_usable_lba),
+		le64_to_int(pgpt_head->last_usable_lba), lastlba);
+
+	/* Read and allocate Partition Table Entries */
+	*pgpt_pte = alloc_read_gpt_entries(dev_desc, pgpt_head);
+	if (*pgpt_pte == NULL) {
+		printf("GPT: Failed to allocate memory for PTE\n");
+		return 0;
+	}
+
+	/* Check the GUID Partition Table Entry Array CRC */
+	calc_crc32 = efi_crc32((const unsigned char *)*pgpt_pte,
+		le32_to_int(pgpt_head->num_partition_entries) *
+		le32_to_int(pgpt_head->sizeof_partition_entry));
+
+	if (calc_crc32 != le32_to_int(pgpt_head->partition_entry_array_crc32)) {
+		printf("GUID Partition Table Entry Array CRC is wrong:"
+			"0x%08lX != 0x%08lX\n",
+			le32_to_int(pgpt_head->partition_entry_array_crc32),
+			calc_crc32);
+
+		if (*pgpt_pte != NULL) {
+			free(*pgpt_pte);
+		}
+		return 0;
+	}
+#endif
+	/* We're done, all's well */
+	return 1;
+}
+#endif
 
 /**
  * alloc_read_gpt_entries(): reads partition entries from disk

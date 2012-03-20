@@ -33,6 +33,7 @@ COBJS-$(CONFIG_DOS_PARTITION)   += part_dos.o
 COBJS-$(CONFIG_ISO_PARTITION)   += part_iso.o
 COBJS-$(CONFIG_AMIGA_PARTITION) += part_amiga.o
 COBJS-$(CONFIG_EFI_PARTITION)   += part_efi.o
+COBJS-$(CONFIG_UEFI_PARTITION)   += part_uefi.o part_cfg.o
 
 COBJS	:= $(COBJS-y)
 SRCS	:= $(COBJS:.o=.c)

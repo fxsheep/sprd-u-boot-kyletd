@@ -13,6 +13,14 @@
 #include <boot_mode.h>
 #include <malloc.h>
 
+#ifdef CONFIG_EMMC_BOOT
+#include "../disk/part_uefi.h"
+#include "../drivers/mmc/card_sdio.h"
+#include "asm/arch/sci_types.h"
+#include <ext_common.h>
+#include <ext4fs.h>
+#endif
+
 unsigned char raw_header[8192];
 static int flash_page_size = 0;
 
@@ -236,8 +244,510 @@ static int start_linux()
 	return 0;
 }
 
+#ifdef CONFIG_EMMC_BOOT
+#define EMMC_SECTOR_SIZE 512
+#define KERNL_PAGE_SIZE 2048
 
-//if not to boot native linux, cmdline=NULL, kerne_pname=boot, backlight_set=on.
+int ext4_read_file(EFI_PARTITION_INDEX part, const char *filename, char *buf, int len)
+{
+	char *interface = "mmc";
+	int filelen;
+	if (ext4fs_mount(interface, 1, part) == -1) {
+		goto fail;
+	}
+
+	filelen = ext4fs_open(filename);
+	if (filelen < 0) {
+		goto fail;
+	}
+	if(filelen == len)
+	{
+		if (ext4fs_read(buf, filelen) != filelen) {
+			goto fail;
+		}
+	}
+	else
+		goto fail;
+	ext4fs_close();
+	return 0;
+fail:
+	ext4fs_close();
+	return 1;
+}
+
+
+int ext4_write_file(EFI_PARTITION_INDEX part, const char *filename, char *buf, int len)
+{
+	char *interface = "mmc";
+	int filelen;
+	if (ext4fs_mount(interface, 1, part) == -1) {
+		goto fail;
+	}
+
+	
+	if (ext4fs_write(filename, buf, len) == -1){
+		goto fail;
+	}
+	ext4fs_close();
+	return 0;
+fail:
+	ext4fs_close();
+	return 1;	
+}
+
+
+void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
+{
+    boot_img_hdr *hdr = (void *)raw_header;
+	block_dev_desc_t *p_block_dev = NULL;    
+	struct mtd_info *nand;
+	struct mtd_device *dev;
+	struct part_info *part;
+	u8 pnum;
+	int ret;
+	size_t size;
+	loff_t off = 0;
+	char *fixnvpoint = "/fixnv";
+	char *fixnvfilename = "/fixnv/fixnv.bin";
+	char *fixnvfilename2 = "/fixnv/fixnvchange.bin";
+	char *backupfixnvpoint = "/backupfixnv";
+	char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
+	char *backupfixnvfilename2 = "/backupfixnv/fixnvchange.bin";
+	char *runtimenvpoint = "/runtimenv";
+	char *runtimenvfilename = "/runtimenv/runtimenv.bin";
+	char *runtimenvfilename2 = "/runtimenv/runtimenvchange.bin";
+	char *productinfopoint = "/productinfo";
+	char *productinfofilename = "/productinfo/productinfo.bin";
+	char *productinfofilename2 = "/productinfo/productinfochange.bin";
+	int fixnv_right, backupfixnv_right;
+	nand_erase_options_t opts;
+    	char * mtdpart_def = NULL;
+	disk_partition_t info;
+	int filelen;
+	ulong part_length;
+        #ifdef CONFIG_SC8810
+     	MMU_Init(CONFIG_MMU_TABLE_ADDR);
+	#endif
+	p_block_dev = get_dev("mmc", 1);
+	if(NULL == p_block_dev){
+		return;
+	}
+	
+	
+#ifdef CONFIG_SPLASH_SCREEN
+#define SPLASH_PART "boot_logo"
+	//read boot image header
+	size = 1<<19;
+	uint8 * bmp_img = malloc(size);
+	if(!bmp_img){
+	    printf("not enough memory for splash image\n");
+	    return;
+	}
+	if (!get_partition_info(p_block_dev, PARTITION_LOGO, &info)) {
+		if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, size/EMMC_SECTOR_SIZE, bmp_img)){
+			printf("function: %s nand read error\n", __FUNCTION__);
+			return;
+		}
+	} 
+	else{
+		return;
+	}
+	
+    extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
+    extern void lcd_display(void);
+    extern void set_backlight(uint32_t value);
+    if(backlight_set == BACKLIGHT_ON){
+	    extern void *lcd_base;
+	    extern void Dcache_CleanRegion(unsigned int addr, unsigned int length);
+
+	    lcd_display_bitmap((ulong)bmp_img, 0, 0);
+#ifdef CONFIG_SC8810
+	    Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
+#endif
+	    lcd_display();
+	    set_backlight(255);
+    }
+#endif
+    set_vibrator(0);
+
+#if !(BOOT_NATIVE_LINUX)
+#if 1
+	/* recovery damaged fixnv or backupfixnv */
+	fixnv_right = 0;
+	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+	if(0 == ext4_read_file(PARTITION_FIX_NV, fixnvfilename, (char *)FIXNV_ADR, FIXNV_SIZE + 4)){
+		if (1 == nv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+			fixnv_right = 1;//right
+	}
+
+	backupfixnv_right = 0;
+	memset((unsigned char *)RUNTIMENV_ADR, 0xff, FIXNV_SIZE + 4);
+	if(0 == ext4_read_file(PARTITION_BACK_NV, backupfixnvfilename, (char *)RUNTIMENV_ADR, FIXNV_SIZE + 4)){
+		if (1 == nv_is_correct_endflag((unsigned char *)RUNTIMENV_ADR, FIXNV_SIZE))
+			backupfixnv_right = 1;//right
+	}
+	//printf("fixnv_right = %d  backupfixnv_right = %d\n", fixnv_right, backupfixnv_right);
+	if ((fixnv_right == 1) && (backupfixnv_right == 0)) {
+		printf("fixnv is right, but backupfixnv is wrong, so erase and recovery backupfixnv\n");
+		ext4_write_file(PARTITION_BACK_NV, backupfixnvfilename, (char *)FIXNV_ADR, (FIXNV_SIZE + 4));
+	} else if ((fixnv_right == 0) && (backupfixnv_right == 1)) {
+		printf("backupfixnv is right, but fixnv is wrong, so erase and recovery fixnv\n");
+		////////////////////////////////
+		ext4_write_file(PARTITION_FIX_NV, fixnvfilename, (char *)RUNTIMENV_ADR, (FIXNV_SIZE + 4));
+	} else if ((fixnv_right == 0) && (backupfixnv_right == 0)) {
+		printf("\n\nfixnv and backupfixnv are all wrong.\n\n");
+	}
+	///////////////////////////////////////////////////////////////////////
+	/* FIXNV_PART */
+	printf("Reading fixnv to 0x%08x\n", FIXNV_ADR);
+	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+	/* fixnv */
+	if(ext4_read_file(PARTITION_BACK_NV, backupfixnvfilename, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+		if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+			if(ext4_read_file(PARTITION_BACK_NV, backupfixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+				if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					/*#########################*/
+					/* file is wrong */
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv */
+					if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+							/* read fixnv backup */
+							if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+								if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+									memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+							}
+							/* read fixnv backup */
+						}
+					} else {
+						/* read fixnv backup */
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						/* read fixnv backup */
+						if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+							if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+								memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						}
+					}
+					/*#########################*/
+				}
+			} else {
+					/*#########################*/
+					/* file is wrong */
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv */
+					if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+							/* read fixnv backup */
+							if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+								if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+									memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+							}
+							/* read fixnv backup */
+						}
+					} else {
+						/* read fixnv backup */
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						/* read fixnv backup */
+						if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+							if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+								memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						}
+					}
+					/*#########################*/
+				}
+			//////////////////////
+		} else {
+			/* file is right */
+		}
+	}else {
+		memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+		if(ext4_read_file(PARTITION_BACK_NV, backupfixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+			if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+				/*#########################*/
+				/* file is wrong */
+				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+				/* read fixnv */
+				if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						/* read fixnv backup */
+						if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+							if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+								memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						}
+						/* read fixnv backup */
+					}
+				} else {
+					/* read fixnv backup */
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv backup */
+					if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					}
+				}
+				/*#########################*/
+			}
+		} else {
+				/*#########################*/
+				/* file is wrong */
+				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+				/* read fixnv */
+				if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+					if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+						memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						/* read fixnv backup */
+						if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+							if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+								memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+						}
+						/* read fixnv backup */
+					}
+				} else {
+					/* read fixnv backup */
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					/* read fixnv backup */
+					if(ext4_read_file(PARTITION_FIX_NV, fixnvfilename2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0){
+						if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+							memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + 4);
+					}
+				}
+				/*#########################*/
+			}
+		//////////////////////
+	}
+	//array_value((unsigned char *)FIXNV_ADR, FIXNV_SIZE);
+
+	///////////////////////////////////////////////////////////////////////
+	/* PRODUCTINFO_PART */
+	printf("Reading productinfo to 0x%08x\n", PRODUCTINFO_ADR);
+	if(ext4_read_file(PARTITION_PROD_INFO, productinfofilename, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
+		if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
+			memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+			if(ext4_read_file(PARTITION_PROD_INFO, productinfofilename2, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
+				if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
+					memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+				}
+			}
+		}
+	} else {
+		memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+		if(ext4_read_file(PARTITION_PROD_INFO, productinfofilename2, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
+			if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
+				memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
+			}
+		}
+	}
+	//array_value((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE);
+	eng_phasechecktest((unsigned char *)PRODUCTINFO_ADR, SP09_MAX_PHASE_BUFF_SIZE);
+	///////////////////////////////////////////////////////////////////////
+
+	///////////////////////////////////////////////////////////////////////
+	/* RUNTIMEVN_PART */
+	printf("Reading runtimenv to 0x%08x\n", RUNTIMENV_ADR);
+	/* runtimenv */
+	if(ext4_read_file(PARTITION_RUNTIME_NV, runtimenvfilename, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0){
+		if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+			////////////////
+			/* file isn't right and read backup file */
+			memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+			if(ext4_read_file(PARTITION_RUNTIME_NV, runtimenvfilename2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0){
+				if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+					/* file isn't right */
+					memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+				}
+			}
+			////////////////
+		}
+	} else {
+		/* file don't exist and read backup file */
+		memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+		if(ext4_read_file(PARTITION_RUNTIME_NV, runtimenvfilename2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0){
+			if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+				/* file isn't right */
+				memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+			}
+		}
+	}
+	//array_value((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE);
+	////////////////////////////////////////////////////////////////
+#endif	
+	/* DSP_PART */
+	printf("Reading dsp to 0x%08x\n", DSP_ADR);
+
+	if (!get_partition_info(p_block_dev, PARTITION_DSP, &info)) {
+		 if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, DSP_SIZE/512+1, (uint8*)DSP_ADR)){
+			printf("dsp nand read error \n");
+			return;
+		}
+	} 
+	else{
+		return;
+	}
+                 
+#endif
+	////////////////////////////////////////////////////////////////
+	/* KERNEL_PART */
+	printf("Reading kernel to 0x%08x\n", KERNEL_ADR);
+
+	if (!get_partition_info(p_block_dev, PARTITION_KERNEL, &info)) {
+		 if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, 4, (uint8*)(uint8*)hdr)){
+			printf("kernel nand read error \n");
+			return;
+		}
+	} 
+	else{
+		return;
+	}
+
+	if(memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)){
+		printf("bad boot image header, give up read!!!!\n");
+                                      return;
+	}
+	else
+	{
+	                  uint32 noffsetsector = 4;
+		//read kernel image
+		size = (hdr->kernel_size+(KERNL_PAGE_SIZE - 1)) & (~(KERNL_PAGE_SIZE - 1));
+		if(size <=0){
+			printf("kernel image should not be zero\n");
+			return;
+		}
+                                     if(TRUE !=  Emmc_Read(PARTITION_USER, info.start+noffsetsector, size/EMMC_SECTOR_SIZE, (uint8*)KERNEL_ADR)){
+			printf("kernel nand read error\n");
+			return;
+		}
+                                     noffsetsector += size/512;
+		noffsetsector = (noffsetsector+3)/4;
+		noffsetsector = noffsetsector*4;
+		//read ramdisk image
+		size = (hdr->ramdisk_size+(KERNL_PAGE_SIZE - 1)) & (~(KERNL_PAGE_SIZE - 1));
+		if(size<0){
+			printf("ramdisk size error\n");
+			return;
+		}
+                                     if(TRUE !=  Emmc_Read(PARTITION_USER, info.start+noffsetsector, size/EMMC_SECTOR_SIZE, (uint8*)RAMDISK_ADR))
+		if(ret != 0){
+			printf("ramdisk nand read error %d\n", ret);
+			return;
+		}
+	}
+
+#if !(BOOT_NATIVE_LINUX)
+	////////////////////////////////////////////////////////////////
+	/* MODEM_PART */
+	printf("Reading modem to 0x%08x\n", MODEM_ADR);
+
+	size = (MODEM_SIZE +(EMMC_SECTOR_SIZE - 1)) & (~(EMMC_SECTOR_SIZE - 1));
+	if(size <= 0) {
+		printf("modem image should not be zero\n");
+		return;
+	}
+	if (!get_partition_info(p_block_dev, PARTITION_MODEM, &info)) {
+		 if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, size/EMMC_SECTOR_SIZE, (uint8*)MODEM_ADR)){
+			printf("modem nand read error \n");
+			return;
+		}
+	} 
+	else{
+		return;
+	}
+	 
+
+	//array_value((unsigned char *)MODEM_ADR, MODEM_SIZE);
+
+	////////////////////////////////////////////////////////////////
+	/* VMJALUNA_PART */
+	printf("Reading vmjaluna to 0x%08x\n", VMJALUNA_ADR);
+
+	size = (VMJALUNA_SIZE +(EMMC_SECTOR_SIZE - 1)) & (~(EMMC_SECTOR_SIZE - 1));
+	if(size <= 0) {
+		printf("vmjuluna image should not be zero\n");
+		return;
+	}
+	if (!get_partition_info(p_block_dev, PARTITION_VM, &info)) {
+		 if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, size/EMMC_SECTOR_SIZE, (uint8*)VMJALUNA_ADR)){
+			printf("vmjaluna nand read error \n");
+			return;
+		}
+	} 
+	else{
+		return;
+	}
+#endif
+
+	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
+    //check caliberation mode
+    int str_len;
+    char * buf;
+    buf = malloc(1024);
+
+    sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
+    str_len = strlen(buf);
+    //mtdpart_def = get_mtdparts();
+    //sprintf(&buf[str_len], " %s", mtdpart_def);
+    if(cmdline && cmdline[0]){
+            str_len = strlen(buf);
+            sprintf(&buf[str_len], " %s", cmdline);
+    }
+	{
+		extern uint32_t load_lcd_id_to_kernel();
+		uint32_t lcd_id;
+
+		lcd_id = load_lcd_id_to_kernel();
+		//add lcd id
+		if(lcd_id) {
+			str_len = strlen(buf);
+			sprintf(&buf[str_len], " lcd_id=ID");
+			str_len = strlen(buf);
+			sprintf(&buf[str_len], "%x",lcd_id);
+			str_len = strlen(buf);
+			buf[str_len] = '\0';
+		}
+
+	}
+	{
+		char *factorymodepoint = "/productinfo";
+		char *factorymodefilename = "/productinfo/factorymode.file";
+		cmd_yaffs_mount(factorymodepoint);
+		ret = cmd_yaffs_ls_chk(factorymodefilename );
+		if (ret == -1) {
+			/* no factorymode.file found, nothing to do */
+		} else {
+			str_len = strlen(buf);
+			sprintf(&buf[str_len], " factory");
+		}
+		cmd_yaffs_umount(factorymodepoint);
+	}
+	str_len = strlen(buf);
+#ifdef RAM512M
+    sprintf(&buf[str_len], " ram=512M");
+#else
+    sprintf(&buf[str_len], " ram=256M");
+#endif
+    printf("pass cmdline: %s\n", buf);
+    //lcd_printf(" pass cmdline : %s\n",buf);
+    //lcd_display();
+    creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
+    void (*entry)(void) = (void*) VMJALUNA_ADR;
+#ifndef CONFIG_SC8810
+    MMU_InvalideICACHEALL();
+#endif
+#ifdef CONFIG_SC8810
+    MMU_DisableIDCM();
+#endif
+
+#if BOOT_NATIVE_LINUX
+	start_linux();
+#else
+	entry();
+#endif
+}
+
+#else
 void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 {
     boot_img_hdr *hdr = (void *)raw_header;
@@ -811,6 +1321,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	entry();
 #endif
 }
+#endif
 void normal_mode(void)
 {
 #ifdef CONFIG_SC8810

@@ -84,6 +84,7 @@ void hw_watchdog_reset(void)
 {
 }
 
+#ifndef CONFIG_EMMC_BOOT
 uint32 SCI_GetTickCount(void)
 {
 	volatile uint32 tmp_tick1;
@@ -100,3 +101,4 @@ uint32 SCI_GetTickCount(void)
 
 	return tmp_tick1;
 }
+#endif
