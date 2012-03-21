@@ -36,16 +36,12 @@ COBJS-$(CONFIG_OMAP_HSMMC) += omap_hsmmc.o
 COBJS-$(CONFIG_PXA_MMC) += pxa_mmc.o
 COBJS-$(CONFIG_S5P_MMC) += s5p_mmc.o
 
-ifdef CONFIG_EMMC_BOOT
-CONFIG_SUPPORT_EMMC = y
-
 COBJS-$(CONFIG_SP8810_MMC) += sp8810_mmc.o
-COBJS-$(CONFIG_SUPPORT_EMMC) += sdio_card_pal.o sdhost_phy.o card_sdio.o
+COBJS-$(CONFIG_EMMC_BOOT) += sdio_card_pal.o sdhost_phy.o card_sdio.o
 CFLAGS += -I $(TOPDIR)/arch/arm/include/asm/arch-sc8810
 HOSTCFLAGS += -I $(TOPDIR)/arch/arm/include/asm/arch-sc8810
 AFLAGS	+= -I $(TOPDIR)/include/asm/arch
 CFLAGS	+= -I $(TOPDIR)/include/asm/arch
-endif
 
 COBJS	:= $(COBJS-y)
 SRCS	:= $(COBJS:.o=.c)
