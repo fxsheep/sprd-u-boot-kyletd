@@ -680,7 +680,15 @@ void set_backlight(uint32_t value)
 	//__raw_bits_or((1<<15), 0x8A000384);
 	//__raw_bits_or((1<<15), 0x8A000388);
 	//__raw_bits_or((1<<15), 0x8A000380);
+#ifndef CONFIG_SP8810EA
 	LCD_SetBackLightBrightness(value);
+#else
+    __raw_writel(0x101, 0x8C0003e0);
+    __raw_bits_or((1<<5),  0x8B000008);
+    __raw_bits_or((1<<15), 0x8A000384);
+    __raw_bits_or((1<<15), 0x8A000388);
+    __raw_bits_or((1<<15), 0x8A000380);
+#endif
 
 #endif
 }
