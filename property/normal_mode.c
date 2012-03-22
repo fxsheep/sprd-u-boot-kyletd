@@ -718,7 +718,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			/* no factorymode.file found, nothing to do */
 		} else {
 			str_len = strlen(buf);
-			sprintf(&buf[str_len], " factory");
+			sprintf(&buf[str_len], " factory=1");
 		}
 		cmd_yaffs_umount(factorymodepoint);
 	}
@@ -1293,7 +1293,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			/* no factorymode.file found, nothing to do */
 		} else {
 			str_len = strlen(buf);
-			sprintf(&buf[str_len], " factory");
+			sprintf(&buf[str_len], " factory=1");
 		}
 		cmd_yaffs_umount(factorymodepoint);
 	}
