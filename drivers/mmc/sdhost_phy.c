@@ -2388,75 +2388,9 @@ PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
 /*****************************************************************************/
 PUBLIC void SDHOST_Slot_select (SDHOST_SLOT_NO slot_NO)
 {
-    SCI_ASSERT (slot_NO < SDHOST_SLOT_MAX_NUM);/*assert verified*/
+	SCI_ASSERT (slot_NO < SDHOST_SLOT_MAX_NUM);/*assert verified*/
 
-#if defined(PLATFORM_SC8800G)
-
-    switch (slot_NO)
-    {
-        case SDHOST_SLOT_0:
-            {
-                * (volatile uint32 *) AHB_SDIO_CTL = (AHB_SDIO_CTRL_HOST0); //select master0
-            }
-            break;
-
-        case SDHOST_SLOT_1:
-            {
-                * (volatile uint32 *) AHB_SDIO_CTL = (AHB_SDIO_CTRL_HOST1); //select master1
-            }
-            break;
-
-        case SDHOST_SLOT_2:
-            {
-                * (volatile uint32 *) AHB_SDIO_CTL = (AHB_SDIO_CTRL_SLAVE); //select master0
-            }
-            break;
-
-        case SDHOST_SLOT_3:
-        case SDHOST_SLOT_4:
-        case SDHOST_SLOT_5:
-        case SDHOST_SLOT_6:
-        case SDHOST_SLOT_7:
-
-        default:
-            {
-                SCI_ASSERT (0); /*assert verified*/
-            }
-            break;
-    }
-
-#elif defined(PLATFORM_SC6800H)
-
-	switch(slot_NO)
-	{
-		case SDHOST_SLOT_0:
-		{
-            *(volatile uint32 *)AHB_CHN_SEL &= ~BIT_3; //select master0
-
-		}
-		break;
-
-		case SDHOST_SLOT_1:
-		{
-            *(volatile uint32 *)AHB_CHN_SEL |= BIT_3; //select master1
-		}
-		break;
-
-		case SDHOST_SLOT_2:      
-		case SDHOST_SLOT_3:
-		case SDHOST_SLOT_4:
-		case SDHOST_SLOT_5:
-		case SDHOST_SLOT_6:
-		case SDHOST_SLOT_7:
-
-		default:
-		{
-			SCI_ASSERT(0); /*assert verified*/
-		}
-		break;
-	}
-
-#endif
+	* (volatile uint32 *) AHB_SDIO_CTL = (AHB_SDIO_CTRL_SLOT0); //select master0
 }
 
 //===end===

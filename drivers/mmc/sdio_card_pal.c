@@ -478,7 +478,6 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_
 
 PUBLIC BOOLEAN SDIO_Card_Pal_SetClk (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_CLKTYPE_E clkType)
 {
-    // 此模块只提供给Card_sdio.c这个协议使用，协议代码本身已经保证该handle的有效性，因此在这里不做特别严的检查
     SDIO_CARD_PAL_ASSERT (	/*assert verified*/
         (SDIO_CARD_PAL_MAGICNUM == handle->MagicNum)
         && (TRUE == handle->flag)

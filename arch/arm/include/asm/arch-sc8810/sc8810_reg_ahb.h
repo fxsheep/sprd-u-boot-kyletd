@@ -100,8 +100,8 @@ extern   "C"
 
 #define AHB_SDIO_SOFT_RST BIT_12
 
-#define AHB_SDIO_CTRL_HOST0 0
-#define AHB_SDIO_CTRL_HOST1 1
+#define AHB_SDIO_CTRL_SLOT0 0
+#define AHB_SDIO_CTRL_SLOT1 1
 #define AHB_SDIO_CTRL_SLAVE 2
 
 

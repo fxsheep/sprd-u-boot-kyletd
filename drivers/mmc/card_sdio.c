@@ -2371,7 +2371,7 @@ PUBLIC BOOLEAN Emmc_Init()
 	uint32 ret = 0;
 	LDO_Init();
 	emmc_handle = CARD_SDIO_Open(CARD_SDIO_SLOT_1);
-	CARD_SDIO_PwrCtl(emmc_handle, FALSE);
+	//CARD_SDIO_PwrCtl(emmc_handle, FALSE);
 	CARD_SDIO_PwrCtl(emmc_handle, TRUE);
 	ret = CARD_SDIO_InitCard(emmc_handle, HIGH_SPEED_MODE);
 

@@ -1,6 +1,6 @@
 #include "../../../disk/part_uefi.h"
 
-PARTITION_CFG g_sprd_emmc_partition_cfg[]={
+PARTITION_CFG const g_sprd_emmc_partition_cfg[]={
 	{PARTITION_VM, 512, PARTITION_RAW},
 	{PARTITION_MODEM, 10*1024, PARTITION_RAW},
 	{PARTITION_DSP, 5*1024, PARTITION_RAW},

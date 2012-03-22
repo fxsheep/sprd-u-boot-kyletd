@@ -648,7 +648,7 @@ PUBLIC SDIO_CARD_PAL_HANDLE SDIO_Card_Pal_Open (SDIO_CARD_PAL_SLOT_E slotNo)
 {
     s_sdioCardPalHd[slotNo].sdio_port = (SDHOST_HANDLE) SDHOST_Register ( (SDHOST_SLOT_NO) slotNo,_irqCardProc);
     s_sdioCardPalHd[slotNo].sdio_No = slotNo;
-   * (volatile uint32 *) AHB_SDIO_CTL = (AHB_SDIO_CTRL_HOST1); //select master1	
+   * (volatile uint32 *) AHB_SDIO_CTL = (AHB_SDIO_CTRL_SLOT0); //select master1
     SDHOST_SD_clk_On(s_sdioCardPalHd[slotNo].sdio_port);
     return &s_sdioCardPalHd[slotNo];
 }
@@ -1595,7 +1595,7 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
 PUBLIC BOOLEAN SDIO_Card_Pal_SetClk (SDIO_CARD_PAL_HANDLE handle)
 {
 
-	* (volatile uint32 *) AHB_SDIO_CTL = (AHB_SDIO_CTRL_HOST1); //select master1
+	* (volatile uint32 *) AHB_SDIO_CTL = (AHB_SDIO_CTRL_SLOT0); //select master1
 	SDHOST_SD_Clk_Freq_Set (handle->sdio_port,25000000);
 	SDHOST_SD_clk_On (handle->sdio_port);
 
@@ -1999,7 +1999,7 @@ PUBLIC BOOLEAN Emmc_Init()
 	//emmc_handle = CARD_SDIO_Open(CARD_SDIO_SLOT_1);
 	emmc_handle = &cadport;
 	emmc_handle->sdioPalHd = SDIO_Card_Pal_Open(SDIO_CARD_PAL_SLOT_1);
-                	CARD_SDIO_PwrCtl(emmc_handle, FALSE);
+         //CARD_SDIO_PwrCtl(emmc_handle, FALSE);
 	CARD_SDIO_PwrCtl(emmc_handle, TRUE);
 	emmc_handle->BlockLen = 0;
 	emmc_handle->RCA = 1;
