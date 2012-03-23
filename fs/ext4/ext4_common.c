@@ -1377,7 +1377,7 @@ int ext4fs_filename_check(char *filename)
 		memcpy(l_name, (char *)(g_root_dir + offset + sizeof(struct ext2_dirent)), dir->namelen);
 	
 	printf("found = %d  offset = %d  inode = 0x%08x direntlen = %d  namelen = %d  l_name = %s g_filename = %s\n", found, offset, dir->inode, dir->direntlen, dir->namelen, l_name, g_filename);
-	while (dir->inode > 0) {
+	while (dir->inode > 0 && dir->direntlen > 0) {
 		if (strlen(ptr[depth - 2]) == dir->namelen) {
 			if (strncmp(ptr[depth - 2], l_name, dir->namelen) == 0)
 				return (offset);

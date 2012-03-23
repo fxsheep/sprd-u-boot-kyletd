@@ -117,6 +117,17 @@ unsigned long Dl_Erase_Address_Table[] = {
 };
 #endif
 
+#define MAX_PARTITION_REQ_FORMAT	5
+unsigned long g_partRequestFormat[MAX_PARTITION_REQ_FORMAT + 1] = {
+	PARTITION_FIX_NV,
+	PARTITION_BACK_NV,
+	PARTITION_RUNTIME_NV,
+	PARTITION_PROD_INFO,
+	PARTITION_CACHE	,
+	PARTITON_NULL
+};
+
+
 #define PARTITION_SPL_LOADER	MAX_PARTITION_INFO+0
 #define PARTITION_UBOOT		MAX_PARTITION_INFO+1
 static ADDR_TO_PART g_eMMC_Addr2Part_Table[] = {
@@ -304,9 +315,21 @@ int eMMCFormatParttion(EFI_PARTITION_INDEX part)
 #endif
 }
 
+int eMMCPreFormatRequestExt4FS(void)
+{
+	int i;
+	for(i=0; i<MAX_PARTITION_REQ_FORMAT; i++){
+		if(0 == g_partRequestFormat[i])
+			break;
+		if(!eMMCFormatParttion(g_partRequestFormat[i]))
+			return 0;
+	}
+	return 1;
+}
+
 int emmc_erase_partition(EFI_PARTITION_INDEX part, int fastEraseFlag)
 {
-	unsigned long i, count, len, offsector, base_sector;
+	unsigned long i, count, len,  base_sector;
 	uint8 curArea;
 	if(PARTITION_SPL_LOADER == part)
 		curArea = PARTITION_BOOT1;
@@ -388,7 +411,7 @@ int eMMCReadExt4ffs(EFI_PARTITION_INDEX part, const char *filename, unsigned int
 	}
 	if(filelen == len)
 	{
-		if (ext4fs_read(buf, filelen) != filelen) {
+		if (ext4fs_read((char*)buf, filelen) != filelen) {
 			goto fail;
 		}
 	}
@@ -409,7 +432,6 @@ int eMMCWriteExt4ffs(EFI_PARTITION_INDEX part, const char *filename, unsigned in
 {
 #ifndef NULL_EFI_AND_EXT4
 	char *interface = "mmc";
-	int filelen;
 	if (ext4fs_mount(interface, 1, part) == -1) {
 		goto fail;
 	}
@@ -519,7 +541,6 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 	unsigned long *data = (unsigned long *) (packet->packet_body.content);
 	unsigned long start_addr = *data;
 	unsigned long size = * (data + 1);
-	int           ret;
 #if defined(CHIP_ENDIAN_LITTLE)
 	start_addr = EndianConv_32 (start_addr);
 	size = EndianConv_32 (size);
@@ -617,7 +638,7 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 	g_status.unsave_recv_size   = 0;
 #ifdef EMMC_UNDATA_WRITE
 	g_sram_addr = (unsigned long)g_eMMCBuf;
-#endif	
+#endif
 	g_prevstatus = EMMC_SUCCESS;
 	//        set_dl_op_val(start_addr, size, STARTDATA, SUCCESS, 1);
 	FDL_SendAckPacket (BSL_REP_ACK);
@@ -626,8 +647,10 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 
 int FDL2_eMMC_DataMidst (PACKET_T *packet, void *arg)
 {
-	unsigned long size, lastSize, nSectorCount, nSectorOffset;
-
+	unsigned long size, lastSize, nSectorCount;
+#ifndef EMMC_UNDATA_WRITE
+	unsigned long nSectorOffset;
+#endif
 	/* The previous download step failed. */
 	if ((EMMC_SUCCESS != g_prevstatus) || (g_dl_eMMCStatus.isLastPakFlag))
 	{
@@ -745,7 +768,7 @@ int FDL2_eMMC_DataMidst (PACKET_T *packet, void *arg)
 
 int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 {
-	unsigned long pos, ret, fix_nv_checksum, nSectorCount;
+	unsigned long  fix_nv_checksum;
 	char *fixnvfilename = "/fixnv/fixnv.bin";
 	char *backupfixnvfilename =  "/backupfixnv/fixnv.bin";
 	char *productinfofilename = "/productinfo/productinfo.bin";
@@ -836,7 +859,6 @@ int FDL2_eMMC_Read (PACKET_T *packet, void *arg)
     	unsigned long addr = *data;
     	unsigned long size = * (data + 1);
     	unsigned long off = * (data + 2);
-	int  nv_check_flag;
     	int           ret = EMMC_SUCCESS;
 	char *fixnvfilename = "/fixnv/fixnv.bin";
 	char *backupfixnvfilename =  "/backupfixnv/fixnv.bin";
@@ -1042,7 +1064,7 @@ int FDL2_eMMC_Erase (PACKET_T *packet, void *arg)
 		{
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);			
 			return 0;
-		}		
+		}
 		ret = NAND_SUCCESS;
 	} else {
 		g_dl_eMMCStatus.curUserPartition = addr2part(addr);
@@ -1051,20 +1073,22 @@ int FDL2_eMMC_Erase (PACKET_T *packet, void *arg)
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);			
 			return 0;
 		}
-/*		
+#if 1
 		if(PARTITION_RUNTIME_NV == g_dl_eMMCStatus.curUserPartition){
 			if(!eMMCFormatParttion(PARTITION_RUNTIME_NV)){
 				SEND_ERROR_RSP (BSL_WRITE_ERROR);			
 				return 0;
-			}				
+			}
 		}
+
 		if(PARTITION_CACHE == g_dl_eMMCStatus.curUserPartition){
 			if(!eMMCFormatParttion(PARTITION_CACHE)){
 				SEND_ERROR_RSP (BSL_WRITE_ERROR);			
 				return 0;
 			}
 		}
-*/
+
+#endif
 		ret = NAND_SUCCESS;
 	}
 
@@ -1076,7 +1100,15 @@ int FDL2_eMMC_Erase (PACKET_T *packet, void *arg)
 int FDL2_eMMC_Repartition (PACKET_T *pakcet, void *arg)
 {
 #ifndef NULL_EFI_AND_EXT4
-	if(write_uefi_parition_table(g_sprd_emmc_partition_cfg)){
+	int i;
+	for(i=0; i<3; i++){
+		write_uefi_parition_table(g_sprd_emmc_partition_cfg);
+		if(!FDL_Check_Partition_Table())
+			continue;
+		if(eMMCPreFormatRequestExt4FS())
+			break;
+	}
+	if(i < 3){
 		FDL2_eMMC_SendRep (EMMC_SUCCESS);
 		return 1;
 	}else{
