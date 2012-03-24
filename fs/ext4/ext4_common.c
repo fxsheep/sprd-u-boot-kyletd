@@ -1385,6 +1385,8 @@ int ext4fs_filename_check(char *filename)
 
 		found ++;
 		offset += dir->direntlen;
+		if(offset > sizeof(g_root_dir))
+			break;
 		dir = (struct ext2_dirent *)(g_root_dir + offset);
 		memset(l_name, 0, sizeof(l_name));
 		if (dir->namelen > 0)
