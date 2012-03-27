@@ -40,6 +40,8 @@ ifdef CONFIG_CMD_EXT4_WRITE
 COBJS-y += make_ext4fs_main.o
 endif
 
+COBJS-$(CONFIG_EXT4_SPARSE_DOWNLOAD) += simg2img.o sparse_crc32.o
+
 SRCS	:= $(AOBJS:.o=.S) $(COBJS-y:.o=.c)
 OBJS	:= $(addprefix $(obj),$(AOBJS) $(COBJS-y))
 

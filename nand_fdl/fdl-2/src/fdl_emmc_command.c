@@ -52,8 +52,11 @@ static int read_prod_info_flag = 0;
 
 #define EMMC_UNDATA_WRITE
 #ifdef EMMC_UNDATA_WRITE
+#ifdef CONFIG_EXT4_SPARSE_DOWNLOAD
+#define EMMC_BUF_SIZE	(220*1024*1024)
+#else
 #define EMMC_BUF_SIZE	(2*1024*1024)
-//#define EMMC_BUF_SIZE		(64*1024)
+#endif
 #else
 #define EMMC_BUF_SIZE		(64*1024)
 #endif
@@ -61,7 +64,11 @@ static int read_prod_info_flag = 0;
 #define EMMC_PROD_INFO_SIZE	(3 * 1024)
 //#define TRANS_CODE_SIZE		(12 * 1024) /* dloadtools optimization value */
 
+#ifndef CONFIG_EXT4_SPARSE_DOWNLOAD
 __align(32) unsigned char g_eMMCBuf[EMMC_BUF_SIZE + 4];
+#else
+unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
+#endif
 unsigned char g_fix_nv_buf[EMMC_FIXNV_SIZE + 4];
 unsigned char g_fixbucknv_buf[EMMC_FIXNV_SIZE + 4];
 unsigned char g_prod_info_buf[EMMC_PROD_INFO_SIZE + 4];
@@ -728,7 +735,17 @@ int FDL2_eMMC_DataMidst (PACKET_T *packet, void *arg)
 					if(g_status.total_recv_size < SPL_CHECKSUM_LEN)
 						nSectorCount = SPL_CHECKSUM_LEN/EFI_SECTOR_SIZE;				
 					splFillCheckData((unsigned int *) g_eMMCBuf, (int)g_status.total_recv_size);
-				}			
+				}	
+				#ifdef CONFIG_EXT4_SPARSE_DOWNLOAD
+				if(g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM || g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT)
+				{
+					if(write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, g_eMMCBuf) != 0){
+						g_status.unsave_recv_size = 0;
+						SEND_ERROR_RSP (BSL_WRITE_ERROR); /*lint !e527*/
+						 return 0;
+					}
+				}
+				#else
 				if(!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,  nSectorCount, (unsigned char *) g_eMMCBuf))
 				 {
 					g_status.unsave_recv_size = 0;
@@ -736,6 +753,7 @@ int FDL2_eMMC_DataMidst (PACKET_T *packet, void *arg)
 					SEND_ERROR_RSP (BSL_WRITE_ERROR); /*lint !e527*/
 					 return 0;
 				}
+				#endif
 				g_status.unsave_recv_size = 0;	 
 			}
 		}else g_status.unsave_recv_size += size;		

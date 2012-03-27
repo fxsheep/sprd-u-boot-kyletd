@@ -42,7 +42,7 @@
 #include <asm/byteorder.h>
 #include "ext4_common.h"
 
-#define EXT4_PATTERN_ADR		0x02000000
+#define EXT4_PATTERN_ADR		0x01000000
 
 int ext4fs_symlinknest;
 block_dev_desc_t *ext4_dev_desc = NULL;
