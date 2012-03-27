@@ -76,7 +76,7 @@ static int32_t hx8369_init(struct lcd_spec *self)
 	send_data(0x01);
 
 	send_cmd(0xB4);  // SET Display 480x800
-	send_data(0x01);
+	send_data(0x00);
 	send_data(0x18);
 	send_data(0x80);
 	send_data(0x06);
