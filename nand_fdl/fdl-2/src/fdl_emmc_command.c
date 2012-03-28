@@ -744,14 +744,17 @@ int FDL2_eMMC_DataMidst (PACKET_T *packet, void *arg)
 						SEND_ERROR_RSP (BSL_WRITE_ERROR); /*lint !e527*/
 						 return 0;
 					}
-				}
-				#else
-				if(!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,  nSectorCount, (unsigned char *) g_eMMCBuf))
-				 {
-					g_status.unsave_recv_size = 0;
-					//The fixnv checksum is error.
-					SEND_ERROR_RSP (BSL_WRITE_ERROR); /*lint !e527*/
-					 return 0;
+				}else
+				{
+				#endif
+					if(!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,  nSectorCount, (unsigned char *) g_eMMCBuf))
+					 {
+						g_status.unsave_recv_size = 0;
+						//The fixnv checksum is error.
+						SEND_ERROR_RSP (BSL_WRITE_ERROR); /*lint !e527*/
+						 return 0;
+					}
+				#ifdef CONFIG_EXT4_SPARSE_DOWNLOAD
 				}
 				#endif
 				g_status.unsave_recv_size = 0;	 
