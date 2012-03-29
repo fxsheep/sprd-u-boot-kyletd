@@ -54,25 +54,25 @@
 typedef struct
 {
 	unsigned int partition_index;
-	unsigned int partition_size;
+	unsigned int partition_type;
 	char *partition_str;
 } eMMC_Parttion;
 
 eMMC_Parttion const _sprd_emmc_partition[]={
-	{PARTITION_VM, 512, "vmjaluna"},
-	{PARTITION_MODEM, 10*1024, "modem"},
-	{PARTITION_DSP, 5*1024, "dsp"},
-	{PARTITION_FIX_NV, 3840, "fixnv"},
-	{PARTITION_BACK_NV, 3840, "backnv"},
-	{PARTITION_RUNTIME_NV, 3840, "runtimenv"},
-	{PARTITION_PROD_INFO, 3840, "prod_info"},
-	{PARTITION_KERNEL, 10*1024, "boot"},
-	{PARTITION_SYSTEM, 250*1024, "system"},
-	{PARTITION_LOGO, 1*1024, "boot_logo"},
-	{PARTITION_USER_DAT, MAX_SIZE_FLAG, "userdata"},
-	{PARTITION_CACHE, 20*1024, "cache"},
-	{PARTITION_BOOT1, 512, "params"},
-	{PARTITION_BOOT2, 512, "2ndbl"},
+	{PARTITION_VM, PARTITION_USER, "vmjaluna"},
+	{PARTITION_MODEM, PARTITION_USER, "modem"},
+	{PARTITION_DSP, PARTITION_USER, "dsp"},
+	{PARTITION_FIX_NV, PARTITION_USER, "fixnv"},
+	{PARTITION_BACK_NV, PARTITION_USER, "backnv"},
+	{PARTITION_RUNTIME_NV, PARTITION_USER, "runtimenv"},
+	{PARTITION_PROD_INFO, PARTITION_USER, "prod_info"},
+	{PARTITION_KERNEL, PARTITION_USER, "boot"},
+	{PARTITION_SYSTEM, PARTITION_USER, "system"},
+	{PARTITION_LOGO, PARTITION_USER, "boot_logo"},
+	{PARTITION_USER_DAT, PARTITION_USER, "userdata"},
+	{PARTITION_CACHE, PARTITION_USER, "cache"},
+	{0, PARTITION_BOOT1, "params"},
+	{0, PARTITION_BOOT2, "2ndbl"},
 	{0,0,0}
 };
 #endif
@@ -430,7 +430,7 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 			nblocknum = size/512 + 1;
 		else
 			nblocknum = size/512;
-		if(!Emmc_Write(_sprd_emmc_partition[pnum].partition_index, 0,  nblocknum, data)){
+		if(!Emmc_Write(_sprd_emmc_partition[pnum].partition_type, 0,  nblocknum, data)){
 			fastboot_fail("eMMC WRITE_ERROR!");
 			return;
 		}
@@ -452,7 +452,7 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 			nblocknum = size/512 + 1;
 		else
 			nblocknum = size/512;
-		if(!Emmc_Write(PARTITION_USER, info.start,  nblocknum, data)){
+		if(!Emmc_Write(_sprd_emmc_partition[pnum].partition_type, info.start,  nblocknum, data)){
 			fastboot_fail("eMMC WRITE_ERROR!");
 			return;
 		}
