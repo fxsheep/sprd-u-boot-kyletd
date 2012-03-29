@@ -43,6 +43,40 @@
 #include <android_bootimg.h>
 #include <boot_mode.h>
 
+
+#ifdef CONFIG_EXT4_SPARSE_DOWNLOAD
+#include "../disk/part_uefi.h"
+#include "../drivers/mmc/card_sdio.h"
+#include "asm/arch/sci_types.h"
+#include <ext_common.h>
+#include <ext4fs.h>
+
+typedef struct
+{
+	unsigned int partition_index;
+	unsigned int partition_size;
+	char *partition_str;
+} eMMC_Parttion;
+
+eMMC_Parttion const _sprd_emmc_partition[]={
+	{PARTITION_VM, 512, "vmjaluna"},
+	{PARTITION_MODEM, 10*1024, "modem"},
+	{PARTITION_DSP, 5*1024, "dsp"},
+	{PARTITION_FIX_NV, 3840, "fixnv"},
+	{PARTITION_BACK_NV, 3840, "backnv"},
+	{PARTITION_RUNTIME_NV, 3840, "runtimenv"},
+	{PARTITION_PROD_INFO, 3840, "prod_info"},
+	{PARTITION_KERNEL, 10*1024, "boot"},
+	{PARTITION_SYSTEM, 250*1024, "system"},
+	{PARTITION_LOGO, 1*1024, "boot_logo"},
+	{PARTITION_USER_DAT, MAX_SIZE_FLAG, "userdata"},
+	{PARTITION_CACHE, 20*1024, "cache"},
+	{PARTITION_BOOT1, 512, "params"},
+	{PARTITION_BOOT2, 512, "2ndbl"},
+	{0,0,0}
+};
+#endif
+
 typedef struct {
     unsigned char colParity;
     unsigned lineParity;
@@ -352,6 +386,81 @@ static void cmd_download(const char *arg, void *data, unsigned sz)
 	//dump_log(download_base, len);
 }
 
+#ifdef CONFIG_EXT4_SPARSE_DOWNLOAD
+void cmd_flash(const char *arg, void *data, unsigned sz)
+{
+	size_t size = 0;
+	u8 pnum = 0;
+	unsigned int nblocknum;
+	int pos;
+
+	data = download_base;
+	size = sz;
+	//Seek partition form _sprd_emmc_partition table
+	for (pos = 0; pos < (sizeof(_sprd_emmc_partition) / sizeof(eMMC_Parttion)); pos++){
+		if (!strcmp(_sprd_emmc_partition[pos].partition_str, arg))
+			break;
+		pnum++;
+	}
+	printf("Flash emmc partition:%s check:%s-%d\n", _sprd_emmc_partition[pos].partition_str, arg, pnum);
+	if (pnum >= sizeof(_sprd_emmc_partition) / sizeof(eMMC_Parttion)){
+		fastboot_fail("unknown partition name");
+		return;
+	}
+	//Check boot&recovery img's magic
+	if (!strcmp(_sprd_emmc_partition[pnum].partition_str, "boot")
+		 ||!strcmp(_sprd_emmc_partition[pnum].partition_str, "recovery")) {
+		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
+			fastboot_fail("image is not a boot image");
+			return;
+		}
+	}
+
+	if (_sprd_emmc_partition[pnum].partition_index== PARTITION_SYSTEM
+		||_sprd_emmc_partition[pnum].partition_index == PARTITION_USER_DAT){
+		//Flash system&userdata - RAW ext4 img with sprase
+		if (write_simg2emmc("mmc", 1, _sprd_emmc_partition[pnum].partition_index, data) != 0){
+			fastboot_fail("eMMC WRITE_ERROR!");
+			return;
+		}
+	}else if (!strcmp(_sprd_emmc_partition[pnum].partition_str, "params")
+			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "2ndbl")){
+		//Flash u-boot&spl in BOOT area
+		if(size%512)
+			nblocknum = size/512 + 1;
+		else
+			nblocknum = size/512;
+		if(!Emmc_Write(_sprd_emmc_partition[pnum].partition_index, 0,  nblocknum, data)){
+			fastboot_fail("eMMC WRITE_ERROR!");
+			return;
+		}
+	}else{
+		//Flash other partitions - RAW img without sprase or filesystem
+		block_dev_desc_t *pdev;
+		disk_partition_t info;
+
+		pdev = get_dev("mmc", 1);
+		if (pdev == NULL) {
+			fastboot_fail("Block device not supported!");
+			return;
+		}
+		if (get_partition_info(pdev, _sprd_emmc_partition[pnum].partition_index, &info)){
+			fastboot_fail("eMMC get partition ERROR!");
+			return;
+		}
+		if(size%512)
+			nblocknum = size/512 + 1;
+		else
+			nblocknum = size/512;
+		if(!Emmc_Write(PARTITION_USER, info.start,  nblocknum, data)){
+			fastboot_fail("eMMC WRITE_ERROR!");
+			return;
+		}
+	}
+
+	fastboot_okay("");
+}
+#else
 void cmd_flash(const char *arg, void *data, unsigned sz)
 {
 	struct mtd_info *nand;
@@ -448,7 +557,7 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 	else
 		fastboot_fail("flash error");
 }
-
+#endif
 void cmd_erase(const char *arg, void *data, unsigned sz)
 {
 	struct mtd_info *nand;

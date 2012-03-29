@@ -28,6 +28,7 @@ void fastboot_mode(void)
 	const char *cmdline;
 	loff_t off = 0;
 
+#ifndef CONFIG_EXT4_SPARSE_DOWNLOAD
 	ret = mtdparts_init();
 	if (ret != 0){
 		printf("mtdparts init error %d\n", ret);
@@ -70,6 +71,12 @@ void fastboot_mode(void)
     //setenv("splashimage", img_addr);
 
 #endif
+#else
+    lcd_printf("   fastboot mode");
+    lcd_display();
+    //set_backlight(255);
+#endif
+
 
 #ifdef CONFIG_CMD_FASTBOOT
 	dwc_otg_driver_init();
