@@ -74,7 +74,7 @@ void fastboot_mode(void)
 #else
     lcd_printf("   fastboot mode");
     lcd_display();
-    //set_backlight(255);
+    set_backlight(255);
 #endif
 
 

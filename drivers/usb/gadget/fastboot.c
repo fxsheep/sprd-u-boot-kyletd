@@ -51,6 +51,12 @@
 #include <ext_common.h>
 #include <ext4fs.h>
 
+#define MAGIC_DATA	0xAA55A5A5
+#define SPL_CHECKSUM_LEN	0x6000
+#define CHECKSUM_START_OFFSET	0x28
+#define MAGIC_DATA_SAVE_OFFSET	(0x20/4)
+#define CHECKSUM_SAVE_OFFSET	(0x24/4)
+
 typedef struct
 {
 	unsigned int partition_index;
@@ -387,6 +393,35 @@ static void cmd_download(const char *arg, void *data, unsigned sz)
 }
 
 #ifdef CONFIG_EXT4_SPARSE_DOWNLOAD
+unsigned short fastboot_eMMCCheckSum(const unsigned int *src, int len)
+{
+	unsigned int   sum = 0;
+	unsigned short *src_short_ptr = PNULL;
+
+	while (len > 3){
+		sum += *src++;
+		len -= 4;
+	}
+	src_short_ptr = (unsigned short *) src;
+	if (0 != (len&0x2)){
+		sum += * (src_short_ptr);
+		src_short_ptr++;
+	}
+	if (0 != (len&0x1)){
+		sum += * ( (unsigned char *) (src_short_ptr));
+	}
+	sum  = (sum >> 16) + (sum & 0x0FFFF);
+	sum += (sum >> 16);
+
+	return (unsigned short) (~sum);
+}
+
+void fastboot_splFillCheckData(unsigned int * splBuf,  int len)
+{
+	*(splBuf + MAGIC_DATA_SAVE_OFFSET) = MAGIC_DATA;
+	*(splBuf + CHECKSUM_SAVE_OFFSET) = (unsigned int)fastboot_eMMCCheckSum((unsigned int *)&splBuf[CHECKSUM_START_OFFSET/4], SPL_CHECKSUM_LEN - CHECKSUM_START_OFFSET);
+}
+
 void cmd_flash(const char *arg, void *data, unsigned sz)
 {
 	size_t size = 0;
@@ -430,6 +465,10 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 			nblocknum = size/512 + 1;
 		else
 			nblocknum = size/512;
+		if(!strcmp(_sprd_emmc_partition[pnum].partition_str, "params")){
+			fastboot_splFillCheckData(data, size);
+			nblocknum = SPL_CHECKSUM_LEN/512;
+		}
 		if(!Emmc_Write(_sprd_emmc_partition[pnum].partition_type, 0,  nblocknum, data)){
 			fastboot_fail("eMMC WRITE_ERROR!");
 			return;
