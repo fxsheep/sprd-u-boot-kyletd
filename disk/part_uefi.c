@@ -349,6 +349,7 @@ unsigned int read_uefi_partition_table(PARTITION_TABLE *p_partition_table)
 unsigned int write_uefi_parition_table(PARTITION_CFG *p_partition_cfg)
 {
 	//mount devices
+	all_used_size = 0;
 	emmc_part_device_init();
 
 	//write pmbr

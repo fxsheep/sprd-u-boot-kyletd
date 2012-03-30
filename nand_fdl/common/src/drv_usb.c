@@ -570,11 +570,38 @@ static __inline void usb_handler (void)
 //  Author:        jiayong.yang
 //  Note:
 /*****************************************************************************/
-
+#define USB_SEND_MAX_TIME 1000
 PUBLIC int USB_EPxSendData (char ep_id ,unsigned int *pBuf,    int len)
 {
-    usb_start_transfer ( (USB_EP_NUM_E) ep_id, USB_EP_DIR_IN, len, TRUE, (uint32 *) pBuf);
-    return 0;
+	volatile USB_DIEPTSIZ_U *dieptsiz_ptr = (USB_DIEPTSIZ_U*)USB_DIEPTSIZ(ep_id);
+	uint32 old_tick, new_tick;
+	uint32 split_len = 0;
+	if(len == 0)
+		return 0;
+	if((len % 64) == 0){
+		split_len = 32;
+		usb_start_transfer ( (USB_EP_NUM_E) ep_id, USB_EP_DIR_IN, len - split_len, TRUE, (uint32 *) pBuf);
+		old_tick = new_tick = SCI_GetTickCount();
+		while(dieptsiz_ptr->dwValue){
+			new_tick = SCI_GetTickCount();
+			if(new_tick - old_tick > USB_SEND_MAX_TIME){
+				return 1;
+			}
+			dieptsiz_ptr = (USB_DIEPTSIZ_U*)USB_DIEPTSIZ(ep_id);
+		}
+		usb_start_transfer ( (USB_EP_NUM_E) ep_id, USB_EP_DIR_IN, split_len, TRUE, (uint32 *) ((uint32)pBuf + len - split_len));
+	}else{
+		usb_start_transfer ( (USB_EP_NUM_E) ep_id, USB_EP_DIR_IN, len, TRUE, (uint32 *) pBuf);
+	}
+	old_tick = new_tick = SCI_GetTickCount();
+	while(dieptsiz_ptr->dwValue){
+		new_tick = SCI_GetTickCount();
+		if(new_tick - old_tick > USB_SEND_MAX_TIME){
+			return 1;
+		}
+		dieptsiz_ptr = (USB_DIEPTSIZ_U*)USB_DIEPTSIZ(ep_id);
+	}
+	return 0;
 }
 
 /*****************************************************************************/

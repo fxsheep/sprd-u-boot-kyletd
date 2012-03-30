@@ -130,7 +130,20 @@ int process_skip_chunk(T_Emmc_Handle *p_handle, u32 blocks, u32 blk_sz, u32 *crc
 	 */
 	u64 len = (u64)blocks * blk_sz;
 	p_handle->offset += len/EMMC_BLOCK_SIZE;
-
+	#if 0
+	int chunk;
+	int ret;
+	memset(copybuf, 0x0, COPY_BUF_SIZE);
+	while (len) {
+		chunk = (len > COPY_BUF_SIZE) ? COPY_BUF_SIZE : len;
+		ret = write_all(p_handle, copybuf, chunk);
+		if (ret != chunk) {
+			printf("write returned an error copying a raw chunk\n");
+			return -1;
+		}
+		len -= chunk;
+	}
+	#endif
 	return blocks;
 }
 

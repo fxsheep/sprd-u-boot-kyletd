@@ -592,14 +592,17 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	////////////////////////////////////////////////////////////////
 	/* KERNEL_PART */
 	printf("Reading kernel to 0x%08x\n", KERNEL_ADR);
-
-	if (!get_partition_info(p_block_dev, PARTITION_KERNEL, &info)) {
-		 if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, 4, (uint8*)(uint8*)hdr)){
-			printf("kernel nand read error \n");
-			return;
-		}
-	} 
-	else{
+	if(memcmp(kernel_pname, RECOVERY_PART, strlen(RECOVERY_PART))){
+		printf("Reading bootimg to 0x%08x\n", KERNEL_ADR);
+		if(get_partition_info(p_block_dev, PARTITION_KERNEL, &info) != 0)
+			return ;
+	}else{
+		printf("Reading recoverimg to 0x%08x\n", KERNEL_ADR);
+		if(get_partition_info(p_block_dev, PARTITION_RECOVERY, &info) != 0)
+			return ;
+	}
+	 if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, 4, (uint8*)(uint8*)hdr)){
+		printf("kernel nand read error \n");
 		return;
 	}
 
@@ -620,7 +623,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			printf("kernel nand read error\n");
 			return;
 		}
-                                     noffsetsector += size/512;
+		noffsetsector += size/512;
 		noffsetsector = (noffsetsector+3)/4;
 		noffsetsector = noffsetsector*4;
 		//read ramdisk image

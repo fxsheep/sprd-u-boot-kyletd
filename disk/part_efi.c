@@ -489,7 +489,11 @@ static gpt_entry *alloc_read_gpt_entries(block_dev_desc_t * dev_desc,
 	debug("%s: count = %lu * %lu = %u\n", __FUNCTION__,
 		le32_to_int(pgpt_head->num_partition_entries),
 		le32_to_int(pgpt_head->sizeof_partition_entry), count);
-
+	if(count % GPT_BLOCK_SIZE){
+		size_t ntemp;
+		ntemp = count/GPT_BLOCK_SIZE +1;
+		count = ntemp * GPT_BLOCK_SIZE;
+	}
 	/* Allocate memory for PTE, remember to FREE */
 	if (count != 0) {
 		pte = malloc(count);
