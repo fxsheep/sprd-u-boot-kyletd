@@ -11,6 +11,15 @@
 #include <environment.h>
 #include <jffs2/jffs2.h>
 
+#ifdef CONFIG_EMMC_BOOT
+#include "../disk/part_uefi.h"
+#include "../drivers/mmc/card_sdio.h"
+#include "asm/arch/sci_types.h"
+#include <ext_common.h>
+#include <ext4fs.h>
+#define EMMC_SECTOR_SIZE 512
+#endif
+
 extern int dwc_otg_driver_init(void);
 extern int usb_fastboot_initialize(void);
 
@@ -69,12 +78,43 @@ void fastboot_mode(void)
     //char img_addr[9];
     //sprintf(img_addr, "%x\n", bmp_img);
     //setenv("splashimage", img_addr);
-
-#endif
 #else
+    //read boot image header
+    block_dev_desc_t *p_block_dev = NULL;
+    disk_partition_t info;
+    vibrator_hw_init();
+    set_vibrator(1);
+
+    p_block_dev = get_dev("mmc", 1);
+    if(NULL == p_block_dev){
+        return;
+    }
+
+    size = 1<<19;
+    char * bmp_img = malloc(size);
+    if(!bmp_img){
+        printf("not enough memory for splash image\n");
+        return;
+    }
+    if (!get_partition_info(p_block_dev, PARTITION_LOGO, &info)) {
+        if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, size/EMMC_SECTOR_SIZE, bmp_img)){
+            printf("function: %s nand read error\n", __FUNCTION__);
+            return;
+        }
+    }
+
+    extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
+    extern void lcd_display(void);
+    extern void set_backlight(uint32_t value);
+    extern void *lcd_base;
+    extern void Dcache_CleanRegion(unsigned int addr, unsigned int length);
+
+    lcd_display_bitmap((ulong)bmp_img, 0, 0);
     lcd_printf("   fastboot mode");
     lcd_display();
     set_backlight(255);
+    set_vibrator(0);
+#endif
 #endif
 
 
