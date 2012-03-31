@@ -161,8 +161,12 @@ int get_partition_info_efi(block_dev_desc_t * dev_desc, int part,
 	/* This function validates AND fills in the GPT header and PTE */
 	if (is_gpt_valid(dev_desc, GPT_PRIMARY_PARTITION_TABLE_LBA,
 			&(gpt_head), pgpt_pte) != 1) {
-		printf("%s: *** ERROR: Invalid GPT ***\n", __FUNCTION__);
-		return -1;
+		printf("%s: *** ERROR: Invalid Main GPT ***\n", __FUNCTION__);
+		if(is_gpt_valid(dev_desc, dev_desc->lba -1, &(gpt_head), pgpt_pte) != 1){
+			printf("%s: *** ERROR: Invalid alternate GPT ***\n", __FUNCTION__);
+			return -1;
+
+		}
 	}
 
 	/* The ulong casting limits the maximum disk size to 2 TB */
@@ -256,7 +260,7 @@ static int is_gpt_valid(block_dev_desc_t * dev_desc, unsigned long long lba,
 	unsigned char crc32_backup[4] = { 0 };
 	unsigned long calc_crc32;
 	unsigned long long lastlba;
-
+	printf("Enter is_gpt_valid %d \n", lba);
 	if (!dev_desc || !pgpt_head) {
 		printf("%s: Invalid Argument(s)\n", __FUNCTION__);
 		return 0;

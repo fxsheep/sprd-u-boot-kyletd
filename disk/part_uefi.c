@@ -225,7 +225,7 @@ unsigned int _gen_gpt_entry(int part_index , gpt_entry *g_entry,PARTITION_CFG *p
 	//judge if user data partition
 	if( MAX_SIZE_FLAG == p_partition_cfg[part_index].partition_size)
 	{
-		_cur_lba_num = _cur_lba_num + (emmc_part_device.total_sector-2-MAX_PARTITION_INFO/4-all_used_size*2);
+		_cur_lba_num = _cur_lba_num + (emmc_part_device.total_sector-2-MAX_PARTITION_INFO/4-MAX_PARTITION_INFO/4-1-all_used_size*2);
 		*(unsigned long long int*)g_entry->ending_lba = _cur_lba_num-1;
 	}else
 	{
@@ -282,7 +282,7 @@ unsigned int _gen_gpt(gpt_header *g_header,PARTITION_CFG *p_partition_cfg)
 	
 	*(unsigned long long int*)g_header->first_usable_lba = PED_CPU_TO_LE64 (MAX_PARTITION_INFO/4 + 2);
 	
-	*(unsigned long long int*)g_header->last_usable_lba = PED_CPU_TO_LE64 (emmc_part_device.total_sector-2-MAX_PARTITION_INFO/4);	
+	*(unsigned long long int*)g_header->last_usable_lba = PED_CPU_TO_LE64 (emmc_part_device.total_sector-2-MAX_PARTITION_INFO/4);
 
 	g_header->disk_guid = _gen_guid(0);
 
@@ -314,14 +314,34 @@ unsigned int _gen_gpt(gpt_header *g_header,PARTITION_CFG *p_partition_cfg)
 	return 1;
 }
 
+unsigned int _gen_backup_gpt(gpt_header *g_header,PARTITION_CFG *p_partition_cfg)
+{
+	unsigned long crc = 0;
+	*(unsigned long long int*)g_header->my_lba = PED_CPU_TO_LE64 (emmc_part_device.total_sector-1);
+	*(unsigned long long int*)g_header->alternate_lba = PED_CPU_TO_LE64 (1);
+	*(unsigned long long int*)g_header->partition_entry_lba = PED_CPU_TO_LE64 (emmc_part_device.total_sector-1-MAX_PARTITION_INFO/4);
+	*(unsigned long int*)g_header->header_crc32 = 0;
+	crc = uefi_crc32(g_header,le32_to_int(g_header->header_size));
+	*(unsigned long int*)g_header->header_crc32 = PED_CPU_TO_LE32(crc);
+}
+
 unsigned int _write_gpt(gpt_header *g_header)
 {
 	//write gpt entry
-	
 	emmc_part_device._device_io->_write(1,1,(unsigned char*)g_header);
-
-	//write gpt header	
+	//write gpt header
 	emmc_part_device._device_io->_write(2,MAX_PARTITION_INFO/4,(unsigned char*)&g_gpt_entry_block);
+
+	return 1;
+}
+
+unsigned int _write_backup_gpt(gpt_header *g_header)
+{
+	//write gpt entry
+
+	emmc_part_device._device_io->_write((emmc_part_device.total_sector-1),1,(unsigned char*)g_header);
+	//write gpt header
+	emmc_part_device._device_io->_write((emmc_part_device.total_sector-1-MAX_PARTITION_INFO/4),MAX_PARTITION_INFO/4,(unsigned char*)&g_gpt_entry_block);
 
 	return 1;
 }
@@ -363,7 +383,8 @@ unsigned int write_uefi_parition_table(PARTITION_CFG *p_partition_cfg)
 	_write_gpt(&gpt_head);
 
 	//backup
-
+	_gen_backup_gpt(&gpt_head,p_partition_cfg);
+	_write_backup_gpt(&gpt_head);
 	return 1;
 }
 
