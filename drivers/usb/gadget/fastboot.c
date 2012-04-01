@@ -81,6 +81,9 @@ eMMC_Parttion const _sprd_emmc_partition[]={
 	{0, PARTITION_BOOT2, "2ndbl"},
 	{0,0,0}
 };
+
+#define EMMC_FIXNV_SIZE		(64 * 1024)
+#define EMMC_PROD_INFO_SIZE	(3 * 1024)
 #endif
 
 typedef struct {
@@ -416,6 +419,51 @@ unsigned short fastboot_eMMCCheckSum(const unsigned int *src, int len)
 	return (unsigned short) (~sum);
 }
 
+void _add_4s(unsigned char *data, unsigned char add_word, int base_size){
+	data[base_size + 0] = data[base_size + 1] = add_word;
+	data[base_size + 2] = data[base_size + 3] = add_word;
+}
+
+int fastboot_flashExt4Parttion(EFI_PARTITION_INDEX part, void *data, size_t sz){
+	unsigned long  fix_nv_checksum;
+	unsigned long len;
+	char *interface = "mmc";
+	char *filename = "";
+	char *fixnvfilename = "/fixnv/fixnv.bin";
+	char *backupfixnvfilename =  "/backupfixnv/fixnv.bin";
+	char *productinfofilename = "/productinfo/productinfo.bin";
+	//Format eMMC with Ext4
+	if(!ext4fs_format(interface, 1, part))
+		return 0;
+	//Mount Ext4 partition
+	if (!ext4fs_mount(interface, 1, part))
+		goto fail;
+	//Set write para.
+	if (part == PARTITION_FIX_NV){
+		filename = fixnvfilename;
+		len = EMMC_FIXNV_SIZE + 4;
+		_add_4s(data, 0x5a, EMMC_FIXNV_SIZE);
+	}
+	if (part == PARTITION_BACK_NV){
+		filename = backupfixnvfilename;
+		len = EMMC_FIXNV_SIZE + 4;
+		_add_4s(data, 0x5a, EMMC_FIXNV_SIZE);
+	}
+	if (part == PARTITION_PROD_INFO){
+		filename = productinfofilename;
+		len = EMMC_PROD_INFO_SIZE + 4;
+		_add_4s(data, 0x5a, EMMC_PROD_INFO_SIZE);
+	}
+	//Write to eMMC with Ext4
+	if (!ext4fs_write(filename, data, len))
+		goto fail;
+	ext4fs_close();
+	return 1;
+fail:
+	ext4fs_close();
+	return 0;
+}
+
 void fastboot_splFillCheckData(unsigned int * splBuf,  int len)
 {
 	*(splBuf + MAGIC_DATA_SAVE_OFFSET) = MAGIC_DATA;
@@ -471,6 +519,13 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 		}
 		if(!Emmc_Write(_sprd_emmc_partition[pnum].partition_type, 0,  nblocknum, data)){
 			fastboot_fail("eMMC WRITE_ERROR!");
+			return;
+		}
+	}else if (!strcmp(_sprd_emmc_partition[pnum].partition_str, "fixnv")
+			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "backnv")
+			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "prod_info")){
+		if(!fastboot_flashExt4Parttion(_sprd_emmc_partition[pnum].partition_index, data, size)){
+			fastboot_fail("eMMC EXT4 WRITE_ERROR!");
 			return;
 		}
 	}else{

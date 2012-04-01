@@ -42,7 +42,7 @@
 #include <asm/byteorder.h>
 #include "ext4_common.h"
 
-#define EXT4_PATTERN_ADR		0x01000000
+#define EXT4_PATTERN_ADR		0x01700000
 
 int ext4fs_symlinknest;
 block_dev_desc_t *ext4_dev_desc = NULL;
@@ -1097,7 +1097,7 @@ int ext4fs_format(char *interface, int dev, int part)
 	make_ext4fs_main(ext4_base, (info.size * info.blksz));
 	//for (block_no = 0; block_no < info.size; block_no ++) 
 	{
-		printf("format %02d %\n", (block_no * 100) / info.size);
+		printf("format %d %\n", (block_no * 100) / info.size);
 		ext4fs_initialize_partition(ext4_base, info.start, info.size);
 	}
 
