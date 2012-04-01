@@ -29,15 +29,15 @@ extern   "C"
 {
 #endif
 
-#define ANA_WDG_LOAD_TIMEOUT_NUM    (10000)
+#define ANA_WDG_LOAD_TIMEOUT_NUM    (0xfffff)
 #define ANA_WDG_CLR_INT_TIMEOUT_NUM (10000)
 
 #define WDG_LOAD_TIMER_VALUE(value) \
     do{\
         uint32   cnt          =  0;\
-        ANA_REG_SET( WDG_LOAD_HIGH, (uint16)(((value) >> 16 ) & 0xffff));\
-        ANA_REG_SET( WDG_LOAD_LOW , (uint16)((value)  & 0xffff) );\
         while((ANA_REG_GET(WDG_INT_RAW) & WDG_LD_BUSY_BIT) && ( cnt < ANA_WDG_LOAD_TIMEOUT_NUM )) cnt++;\
+        ANA_REG_SET( WDG_LOAD_HIGH, (uint16)(((value) >> 16 ) & 0xffff));\
+        ANA_REG_SET( WDG_LOAD_LOW , (uint16)((value)  & 0xffff) );\        
     }while(0)
 
 #define CLEAR_WDG_INT(msk) \
@@ -139,5 +139,4 @@ PUBLIC void WDG_ClockOn(void)
 #endif
 
 /*  End Of File */
-
 
