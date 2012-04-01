@@ -148,10 +148,12 @@ static ADDR_TO_PART g_eMMC_Addr2Part_Table[] = {
 	{0x8000000b, PARTITION_SYSTEM}, 
 	{0x8000000c, PARTITION_USER_DAT}, 
 	{0x8000000d, PARTITION_CACHE}, 
+	{0x8000000e, PARTITION_MISC}, 
 	{0x8000000f,  PARTITION_LOGO},
+	{0x80000010,  PARTITION_FASTBOOT_LOGO},
 	{0x90000001, PARTITION_FIX_NV}, 
+	{0x90000002, PARTITION_PROD_INFO},
 	{0x90000003, PARTITION_RUNTIME_NV}, 
-//	{0x90000002, PARTITION_PHASE_CHECK},
 	{0xffffffff, 0xffffffff}
 };
 
@@ -373,8 +375,8 @@ int emmc_erase_partition(EFI_PARTITION_INDEX part, int fastEraseFlag)
 
 int emmc_erase_allflash(void)
 {
-	int i, count;
-	
+	int i;
+	uint32 count;
 	memset(g_eMMCBuf, 0xff, ERASE_SECTOR_SIZE*EFI_SECTOR_SIZE);		
 
 	for(i=0; i<MAX_PARTITION_INFO; i++){
@@ -385,7 +387,9 @@ int emmc_erase_allflash(void)
 	}
 	if(!Emmc_Write(PARTITION_USER, 0,  ERASE_SECTOR_SIZE, (unsigned char *) g_eMMCBuf))
 		 return 0;
-	
+	count = Emmc_GetCapacity(PARTITION_USER);
+	if(!Emmc_Write(PARTITION_USER, count -1,  1, (unsigned char *) g_eMMCBuf))
+		 return 0;
 	count = Emmc_GetCapacity(PARTITION_BOOT1);
 	count = count/ERASE_SECTOR_SIZE;
 	for(i=0; i<count; i++){	
@@ -1109,6 +1113,12 @@ int FDL2_eMMC_Erase (PACKET_T *packet, void *arg)
 				return 0;
 			}
 		}
+		/*if(PARTITION_MISC == g_dl_eMMCStatus.curUserPartition){
+			if(!eMMCFormatParttion(PARTITION_MISC)){
+				SEND_ERROR_RSP (BSL_WRITE_ERROR);
+				return 0;
+			}
+		}*/
 
 #endif
 		ret = NAND_SUCCESS;
