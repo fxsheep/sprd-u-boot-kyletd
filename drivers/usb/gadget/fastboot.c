@@ -554,6 +554,36 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 
 	fastboot_okay("");
 }
+void cmd_erase(const char *arg, void *data, unsigned sz)
+{
+	u8 pnum = 0;
+	unsigned int nblocknum;
+	int pos;
+
+	//Seek partition form _sprd_emmc_partition table
+	for (pos = 0; pos < (sizeof(_sprd_emmc_partition) / sizeof(eMMC_Parttion)); pos++){
+		if (!strcmp(_sprd_emmc_partition[pos].partition_str, arg))
+			break;
+		pnum++;
+	}
+	printf("Flash emmc partition:%s check:%s-%d\n", _sprd_emmc_partition[pos].partition_str, arg, pnum);
+	if (pnum >= sizeof(_sprd_emmc_partition) / sizeof(eMMC_Parttion)){
+		fastboot_fail("unknown partition name");
+		return;
+	}
+	if (!strcmp(_sprd_emmc_partition[pnum].partition_str, "fixnv")
+			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "backnv")
+			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "prod_info")){
+		if(!ext4fs_format("mmc", 1, _sprd_emmc_partition[pnum].partition_index)){
+			fastboot_fail("eMMC EXT4 FORMAT_ERROR!");
+			return;
+		}
+	}else{
+		fastboot_fail("This partition can not be erased, please just download it.");
+	}
+	fastboot_okay("");
+}
+
 #else
 void cmd_flash(const char *arg, void *data, unsigned sz)
 {
@@ -651,7 +681,7 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 	else
 		fastboot_fail("flash error");
 }
-#endif
+
 void cmd_erase(const char *arg, void *data, unsigned sz)
 {
 	struct mtd_info *nand;
@@ -695,6 +725,7 @@ void cmd_erase(const char *arg, void *data, unsigned sz)
     else
       fastboot_okay("");
 }
+#endif
 
 extern void udc_power_off(void);
 
