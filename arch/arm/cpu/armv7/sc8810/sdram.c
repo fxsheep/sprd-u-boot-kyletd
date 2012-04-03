@@ -1544,8 +1544,12 @@ void ddr_init()
 	//set EMC dll
 	REG32(0x20000170) = 0x0011080;
 	for(i = 0; i < 1000; i++);	
-
+#ifndef CONFIG_BOARD_788
 	REG32(0x2000010C) = 0x8040;
+#else
+	REG32(0x2000010C) = 0x804A;
+	
+#endif
 	REG32(0x20000110) = 0x8020;
 	REG32(0x20000114) = 0x8020;
 	REG32(0x20000118) = 0x8020;

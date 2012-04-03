@@ -282,7 +282,7 @@
 #define CONSOLE_COLOR_CYAN 0x001f
 #endif
 #endif // CONFIG_LCD
-
+#define CONFIG_BOARD_788
 #define CALIBRATE_ENUM_MS 15000
 #define CALIBRATE_IO_MS 10000
 
