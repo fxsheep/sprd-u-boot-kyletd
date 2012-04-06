@@ -38,6 +38,7 @@
 #define DSP_RST                 (AHB_REG_BASE + 0x8C)
 #define AHB_ENDIAN_EN           (AHB_REG_BASE + 0x90)
 #define USB_PHY_CTRL            (AHB_REG_BASE + 0xA0)
+#define USB_SPR_REG             (AHB_REG_BASE + 0xC0)
 
 #define CHIP_ID                 (AHB_REG_BASE + 0x1FC)
 

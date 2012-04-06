@@ -589,11 +589,22 @@ static void udc_disable(void)
 
 void udc_power_on(void)
 {
-	__raw_bits_or(BIT_8, USB_PHY_CTRL);
-	__raw_bits_or(BIT_17, USB_PHY_CTRL);
-	__raw_bits_and(~BIT_16, USB_PHY_CTRL);
-	__raw_bits_and(~(BIT_13 | BIT_12), USB_PHY_CTRL);
-	__raw_bits_or(BIT_15 | BIT_14, USB_PHY_CTRL);
+        if(readl(CHIP_ID) == 0x88100001){
+                /*SMIC chip id == 0x88100001*/
+        	__raw_bits_or(BIT_9, USB_PHY_CTRL);
+		__raw_bits_and(~(BIT_15 | BIT_14), USB_PHY_CTRL);
+		__raw_bits_or(BIT_13 | BIT_12, USB_PHY_CTRL);
+                writel(0x28,USB_SPR_REG);
+	}else{
+		/*
+		 * config usb phy controller
+		 */
+		__raw_bits_or(BIT_8, USB_PHY_CTRL);
+		__raw_bits_or(BIT_17, USB_PHY_CTRL);
+		__raw_bits_and(~BIT_16, USB_PHY_CTRL);
+		__raw_bits_and(~(BIT_13 | BIT_12), USB_PHY_CTRL);
+		__raw_bits_or(BIT_15 | BIT_14, USB_PHY_CTRL);
+	}
 
 	__raw_bits_and(~BIT_1, AHB_CTL3);
 	__raw_bits_and(~BIT_2, AHB_CTL3);
