@@ -122,7 +122,6 @@ unsigned long Dl_Erase_Address_Table[] = {
 0x8000000d,
 0x8000000e	/* the last ddress must be the last erase partition logical address in factorydownload tool */
 };
-#endif
 
 #define MAX_PARTITION_REQ_FORMAT	5
 unsigned long g_partRequestFormat[MAX_PARTITION_REQ_FORMAT + 1] = {
@@ -133,6 +132,7 @@ unsigned long g_partRequestFormat[MAX_PARTITION_REQ_FORMAT + 1] = {
 	PARTITION_CACHE	,
 	PARTITON_NULL
 };
+#endif
 
 
 #define PARTITION_SPL_LOADER	MAX_PARTITION_INFO+0
@@ -268,30 +268,12 @@ unsigned long efi_GetPartSize(unsigned long Partition)
 		return 16*1024*1024;
 #endif
 }
-
+//#define DEBUG_READBACK_ENABLE	1
 int FDL_Check_Partition_Table(void)
 {
 #ifndef NULL_EFI_AND_EXT4
-	#if 0
-	block_dev_desc_t *dev_desc = NULL;
-	disk_partition_t info;
-	int i;
-
-	dev_desc = get_dev("mmc", 1);	//From cmd_ext2.c line175
-	if (dev_desc==NULL) {
-		return 0;
-	}
-	for(i=0; i<MAX_PARTITION_INFO; i++){
-		if(g_sprd_emmc_partition_cfg[i].partition_index == 0)
-			break;
-		if(MAX_SIZE_FLAG == g_sprd_emmc_partition_cfg[i].partition_size)
-			continue;
-		if (get_partition_info (dev_desc, g_sprd_emmc_partition_cfg[i].partition_index, &info)) {
-			return 0;
-		}
-		if(2 * g_sprd_emmc_partition_cfg[i].partition_size !=  info.size)
-			return 0;
-	}
+	#ifdef DEBUG_READBACK_ENABLE
+	uefi_get_part_info();
 	return 1;
 	#else
 	int i;
@@ -328,12 +310,23 @@ int eMMCFormatParttion(EFI_PARTITION_INDEX part)
 int eMMCPreFormatRequestExt4FS(void)
 {
 	int i;
+#if 0
 	for(i=0; i<MAX_PARTITION_REQ_FORMAT; i++){
 		if(0 == g_partRequestFormat[i])
 			break;
 		if(!eMMCFormatParttion(g_partRequestFormat[i]))
 			return 0;
 	}
+#else
+	for(i=0; i<MAX_PARTITION_INFO; i++){
+		if(PARTITON_NULL == g_sprd_emmc_partition_cfg[i].partition_index)
+			break;
+		if(PARTITION_EXT4 != g_sprd_emmc_partition_cfg[i].partition_attr)
+			continue;
+		if(!eMMCFormatParttion(g_sprd_emmc_partition_cfg[i].partition_index))
+			return 0;
+	}
+#endif
 	return 1;
 }
 
@@ -901,6 +894,35 @@ int FDL2_eMMC_Read (PACKET_T *packet, void *arg)
 		return 0;
 	}
 
+#ifdef DEBUG_READBACK_ENABLE
+if(addr & 0x0020){
+	addr -= 0x0020;
+	g_dl_eMMCStatus.curUserPartition = addr2part(addr);
+	g_dl_eMMCStatus.curEMMCArea = PARTITION_USER;
+
+	if(addr & 0x001f){
+		g_dl_eMMCStatus.part_total_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
+		g_dl_eMMCStatus.base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
+	}else{
+		g_dl_eMMCStatus.part_total_size = 0x80000;
+		g_dl_eMMCStatus.base_sector = 0;
+	}
+
+	if(0 == (size%EFI_SECTOR_SIZE)){
+		 nSectorCount = size/EFI_SECTOR_SIZE;
+	}
+	else{
+		 nSectorCount = size/EFI_SECTOR_SIZE + 1;
+	}
+	nSectorOffset = off/EFI_SECTOR_SIZE;
+	if(Emmc_Read(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector + nSectorOffset,	nSectorCount, (unsigned char *) (packet->packet_body.content)))
+	{
+		ret = EMMC_SUCCESS;
+	}else{
+		ret = EMMC_SYSTEM_ERROR;
+	}
+}else{
+#endif
 	g_dl_eMMCStatus.curUserPartition = addr2part(addr);
     	if (PARTITION_FIX_NV == g_dl_eMMCStatus.curUserPartition){
 //	if(packet->packet_body.size == 12){
@@ -1047,6 +1069,9 @@ int FDL2_eMMC_Read (PACKET_T *packet, void *arg)
 			ret = EMMC_SYSTEM_ERROR;
 		}
 	}
+#ifdef DEBUG_READBACK_ENABLE
+}
+#endif
 	
 /*
     	if (packet->packet_body.size > 8)
