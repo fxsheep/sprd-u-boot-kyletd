@@ -270,6 +270,7 @@
 #define FB_DOWNLOAD_BUF_SIZE (200*1024*1024)
 
 #define CONFIG_MODEM_CALIBERATE
+#define CONFIG_MODEM_CALI_UART  /* calibration both support uart usb*/
 /*
 #define CONFIG_UPDATE_TFTP
 #define CONFIG_FIT

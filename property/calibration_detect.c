@@ -34,7 +34,7 @@ extern int usb_is_port_open(void);
 extern void udc_power_on(void);
 extern void udc_power_off(void);
 
-#ifdef CONFIG_MACH_CORI  // use UART Calibration
+#ifdef CONFIG_MODEM_CALI_UART  // calibration both support uart usb
 
 #define mdelay(_ms) udelay(_ms*1000)
 
