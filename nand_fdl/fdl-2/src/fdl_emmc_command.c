@@ -1099,6 +1099,42 @@ if(addr & 0x0020){
 	return ret;
 }
 
+int emmc_erase_ext4_partition(EFI_PARTITION_INDEX part, int fastEraseFlag)
+{
+	unsigned long i, count, len,  base_sector;
+	uint8 curArea;
+	if(PARTITION_SPL_LOADER == part)
+		curArea = PARTITION_BOOT1;
+	else if(PARTITION_UBOOT == part)
+		curArea = PARTITION_BOOT2;
+	else if (part >= MAX_PARTITION_INFO)
+		return 0;
+	else curArea = PARTITION_USER;
+	
+	len = efi_GetPartSize(part);
+	len = len/EFI_SECTOR_SIZE;
+	base_sector = efi_GetPartBaseSec(part);
+
+	if(fastEraseFlag){
+		memset(g_eMMCBuf, 0x0, ERASE_SECTOR_SIZE*EFI_SECTOR_SIZE);		
+		if(!Emmc_Write(curArea, base_sector,  ERASE_SECTOR_SIZE, (unsigned char *) g_eMMCBuf))
+			 return 0;
+	}else{
+		count = len/(EMMC_BUF_SIZE/EFI_SECTOR_SIZE);
+		memset(g_eMMCBuf, 0x0, EMMC_BUF_SIZE);
+		for(i=0; i<count; i++){
+			if(!Emmc_Write(curArea, base_sector + i * EMMC_BUF_SIZE/EFI_SECTOR_SIZE,  EMMC_BUF_SIZE/EFI_SECTOR_SIZE, (unsigned char *) g_eMMCBuf))
+				 return 0;
+		}
+		count = len%(EMMC_BUF_SIZE/EFI_SECTOR_SIZE);		
+		if(count){
+			if(!Emmc_Write(curArea, base_sector + i * EMMC_BUF_SIZE/EFI_SECTOR_SIZE,  count, (unsigned char *) g_eMMCBuf))
+				 return 0;			
+		}	
+	}
+	return 1;
+}
+
 int FDL2_eMMC_Erase (PACKET_T *packet, void *arg)
 {
 	unsigned long *data = (unsigned long *) (packet->packet_body.content);
@@ -1119,12 +1155,20 @@ int FDL2_eMMC_Erase (PACKET_T *packet, void *arg)
 		ret = NAND_SUCCESS;
 	} else {
 		g_dl_eMMCStatus.curUserPartition = addr2part(addr);
-		if(!emmc_erase_partition(g_dl_eMMCStatus.curUserPartition, 0))
-		{
+		if (PARTITION_CACHE == g_dl_eMMCStatus.curUserPartition) {
+			if (!emmc_erase_ext4_partition(g_dl_eMMCStatus.curUserPartition, 0)) {
+				SEND_ERROR_RSP (BSL_WRITE_ERROR);			
+				return 0;
+			}
+			if(!eMMCFormatParttion(PARTITION_CACHE)){
+				SEND_ERROR_RSP (BSL_WRITE_ERROR);			
+				return 0;
+			}
+		} else if (!emmc_erase_partition(g_dl_eMMCStatus.curUserPartition, 0)) {
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);			
 			return 0;
 		}
-#if 1
+
 		if(PARTITION_RUNTIME_NV == g_dl_eMMCStatus.curUserPartition){
 			if(!eMMCFormatParttion(PARTITION_RUNTIME_NV)){
 				SEND_ERROR_RSP (BSL_WRITE_ERROR);			
@@ -1132,20 +1176,6 @@ int FDL2_eMMC_Erase (PACKET_T *packet, void *arg)
 			}
 		}
 
-		if(PARTITION_CACHE == g_dl_eMMCStatus.curUserPartition){
-			if(!eMMCFormatParttion(PARTITION_CACHE)){
-				SEND_ERROR_RSP (BSL_WRITE_ERROR);			
-				return 0;
-			}
-		}
-		/*if(PARTITION_MISC == g_dl_eMMCStatus.curUserPartition){
-			if(!eMMCFormatParttion(PARTITION_MISC)){
-				SEND_ERROR_RSP (BSL_WRITE_ERROR);
-				return 0;
-			}
-		}*/
-
-#endif
 		ret = NAND_SUCCESS;
 	}
 

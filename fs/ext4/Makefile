@@ -42,6 +42,11 @@ endif
 
 COBJS-$(CONFIG_EXT4_SPARSE_DOWNLOAD) += simg2img.o sparse_crc32.o
 
+ifdef CONFIG_CMD_EXT4_WRITE
+COBJS-y +=  make_ext4fs.o allocate.o backed_block.o contents.o
+COBJS-y +=  extent.o ext4_utils.o indirect.o output_file.o sha1.o uuid.o
+endif
+
 SRCS	:= $(AOBJS:.o=.S) $(COBJS-y:.o=.c)
 OBJS	:= $(addprefix $(obj),$(AOBJS) $(COBJS-y))
 

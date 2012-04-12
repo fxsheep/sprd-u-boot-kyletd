@@ -14,5 +14,13 @@
  * limitations under the License.
  */
 
-u32 sparse_crc32(u32 crc, const void *buf, size_t size);
+#ifndef _MAKE_EXT4FS_H_
+#define _MAKE_EXT4FS_H_
 
+#include "ext4_utils.h"
+
+void reset_ext4fs_info();
+int make_ext4fs(const char *filename, const char *directory,
+                char *mountpoint, int android, int gzip, int sparse, unsigned long partstart, unsigned long blocksize);
+
+#endif

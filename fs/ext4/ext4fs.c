@@ -1088,17 +1088,14 @@ int ext4fs_format(char *interface, int dev, int part)
 		goto fail;
 	}
 
-	/*if (get_partition_info(ext4_dev_desc, part, &info) == -1) {
-		printf("get partition info failed\n");
-		goto fail;
-	}*/
 	printf("info.start = %d  info.size = %d  info.blksz = %d\n", info.start, info.size, info.blksz);
-
-	make_ext4fs_main(ext4_base, (info.size * info.blksz));
-	//for (block_no = 0; block_no < info.size; block_no ++) 
-	{
-		printf("format %d %\n", (block_no * 100) / info.size);
+	if ((info.size * info.blksz) == (3840 * 1024)) {
+		printf("fixnv/backupfixnv/runtimenv/productinfo partition, format...\n");
+		make_ext4fs_main_pattern(ext4_base, (info.size * info.blksz));
 		ext4fs_initialize_partition(ext4_base, info.start, info.size);
+	} else {
+		printf("cache partition, format...\n");
+		make_ext4fs_main(&info);
 	}
 
 	return info.size;

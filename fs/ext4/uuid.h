@@ -14,5 +14,11 @@
  * limitations under the License.
  */
 
-u32 sparse_crc32(u32 crc, const void *buf, size_t size);
+#ifndef _UUID_H_
+#define _UUID_H_
 
+#include "ext4_utils.h"
+
+void generate_uuid(const char *namespace, const char *name, u8 result[16]);
+
+#endif

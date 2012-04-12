@@ -14,5 +14,16 @@
  * limitations under the License.
  */
 
-u32 sparse_crc32(u32 crc, const void *buf, size_t size);
+#ifndef _INDIRECT_H_
+#define _INDIRECT_H_
 
+#include "allocate.h"
+
+void inode_allocate_indirect(struct ext4_inode *inode, unsigned long len);
+u8 *inode_allocate_data_indirect(struct ext4_inode *inode, unsigned long len,
+	unsigned long backing_len);
+void inode_attach_resize(struct ext4_inode *inode,
+		struct block_allocation *alloc);
+void free_indirect_blocks();
+
+#endif

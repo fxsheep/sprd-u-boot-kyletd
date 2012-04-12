@@ -14,27 +14,24 @@
  * limitations under the License.
  */
 
-#define _GNU_SOURCE
-
-#include <dirent.h>
-#include <libgen.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
+#include <linux/stat.h>
+#include "ext4.h"
 #include "make_ext4fs.h"
 #include "output_file.h"
 #include "ext4_utils.h"
 #include "allocate.h"
 #include "contents.h"
 #include "uuid.h"
+#include "dirent.h"
+
+#define ANDROID		(1)
+#define EXIT_FAILURE 	(1)
+#define EXIT_SUCCESS 	(0)
 
 #ifdef ANDROID
 #include "android_filesystem_config.h"
 #endif
+
 
 /* TODO: Not implemented:
    Allocating blocks in the same block group as the file inode
@@ -83,29 +80,33 @@ static u32 build_directory_structure(const char *full_path, const char *dir_path
 	u32 entry_inode;
 	u32 dirs = 0;
 
-	entries = scandir(full_path, &namelist, filter_dot, (void*)alphasort);
+	/* richardfeng : return 0 when dir_path is not any file */
+	//entries = scandir(full_path, &namelist, filter_dot, (void*)alphasort);
+	entries = 0;
+
 	if (entries < 0) {
-		error_errno("scandir");
+		printf("scandir failed : %s %d\n", __FUNCTION__, __LINE__);
 		return EXT4_ALLOCATE_FAILED;
 	}
+	
+	//printf("full_path = %s  dir_path = %s  dir_inode = 0x%08x  android = %d  entries = %d\n", full_path, dir_path, dir_inode, android, entries);
 
 	dentries = calloc(entries, sizeof(struct dentry));
 	if (dentries == NULL)
-		critical_error_errno("malloc");
-
+		printf("\n\ncalloc failed : %s %d\n\n", __FUNCTION__, __LINE__);
 	for (i = 0; i < entries; i++) {
 		dentries[i].filename = strdup(namelist[i]->d_name);
 		if (dentries[i].filename == NULL)
-			critical_error_errno("strdup");
+			printf("strdup");
 
-		asprintf(&dentries[i].path, "%s/%s", dir_path, namelist[i]->d_name);
-		asprintf(&dentries[i].full_path, "%s/%s", full_path, namelist[i]->d_name);
+		sprintf(&dentries[i].path, "%s/%s", dir_path, namelist[i]->d_name);
+		sprintf(&dentries[i].full_path, "%s/%s", full_path, namelist[i]->d_name);
 
 		free(namelist[i]);
 
-		ret = lstat(dentries[i].full_path, &stat);
+		ret = 10/*richard feng lstat(dentries[i].full_path, &stat)*/;
 		if (ret < 0) {
-			error_errno("lstat");
+			printf("lstat");
 			i--;
 			entries--;
 			continue;
@@ -125,7 +126,7 @@ static u32 build_directory_structure(const char *full_path, const char *dir_path
 			dentries[i].uid = stat.st_uid;
 			dentries[i].gid = stat.st_gid;
 #else
-			error("can't set android permissions - built without android support");
+			printf("can't set android permissions - built without android support");
 #endif
 		}
 
@@ -147,15 +148,15 @@ static u32 build_directory_structure(const char *full_path, const char *dir_path
 			dentries[i].link = calloc(info.block_size, 1);
 			readlink(dentries[i].full_path, dentries[i].link, info.block_size - 1);
 		} else {
-			error("unknown file type on %s", dentries[i].path);
+			printf("unknown file type on %s", dentries[i].path);
 			i--;
 			entries--;
 		}
 	}
+
 	free(namelist);
 
 	inode = make_directory(dir_inode, entries, dentries, dirs);
-
 	for (i = 0; i < entries; i++) {
 		if (dentries[i].file_type == EXT4_FT_REG_FILE) {
 			entry_inode = make_file(dentries[i].full_path, dentries[i].size);
@@ -165,7 +166,7 @@ static u32 build_directory_structure(const char *full_path, const char *dir_path
 		} else if (dentries[i].file_type == EXT4_FT_SYMLINK) {
 			entry_inode = make_link(dentries[i].full_path, dentries[i].link);
 		} else {
-			error("unknown file type on %s", dentries[i].path);
+			printf("unknown file type on %s", dentries[i].path);
 			entry_inode = 0;
 		}
 		*dentries[i].inode = entry_inode;
@@ -174,7 +175,7 @@ static u32 build_directory_structure(const char *full_path, const char *dir_path
 			dentries[i].uid, dentries[i].gid,
 			dentries[i].mtime);
 		if (ret)
-			error("failed to set permissions on %s\n", dentries[i].path);
+			printf("failed to set permissions on %s\n", dentries[i].path);
 
 		free(dentries[i].path);
 		free(dentries[i].full_path);
@@ -203,9 +204,6 @@ static u32 compute_journal_blocks()
 
 static u32 compute_blocks_per_group()
 {
-#if 0
-	return info.block_size * 8;
-#else
 	u32 ret;
 	u32 max_blocks_per_group = info.block_size * 8;
 	u32 block_count = info.len / info.block_size;
@@ -216,7 +214,6 @@ static u32 compute_blocks_per_group()
 		ret = max_blocks_per_group;
 
 	return ret;
-#endif
 }
 
 static u32 compute_inodes()
@@ -240,7 +237,7 @@ void reset_ext4fs_info() {
 }
 
 int make_ext4fs(const char *filename, const char *directory,
-                char *mountpoint, int android, int gzip, int sparse)
+                char *mountpoint, int android, int gzip, int sparse, unsigned long partstart, unsigned long blocksize)
 {
         u32 root_inode_num;
         u16 root_mode;
@@ -249,7 +246,7 @@ int make_ext4fs(const char *filename, const char *directory,
 		info.len = get_file_size(filename);
 
 	if (info.len <= 0) {
-		fprintf(stderr, "Need size of filesystem\n");
+		printf("Need size of filesystem\n");
                 return EXIT_FAILURE;
 	}
 
@@ -258,7 +255,7 @@ int make_ext4fs(const char *filename, const char *directory,
 
 	if (info.journal_blocks == 0)
 		info.journal_blocks = compute_journal_blocks();
-	printf("info.journal_blocks = 0x%08x\n", info.journal_blocks);
+
 	if (info.no_journal == 0)
 		info.feat_compat = EXT4_FEATURE_COMPAT_HAS_JOURNAL;
 	else
@@ -266,10 +263,10 @@ int make_ext4fs(const char *filename, const char *directory,
 
 	if (info.blocks_per_group <= 0)
 		info.blocks_per_group = compute_blocks_per_group();
-	printf("info.blocks_per_group = 0x%08x\n", info.blocks_per_group);
+
 	if (info.inodes <= 0)
 		info.inodes = compute_inodes();
-	printf("info.inodes = 0x%08x\n", info.inodes);
+
 	if (info.inode_size <= 0)
 		info.inode_size = 256;
 
@@ -277,7 +274,6 @@ int make_ext4fs(const char *filename, const char *directory,
 		info.label = "";
 
 	info.inodes_per_group = compute_inodes_per_group();
-	printf("inodes_per_group = 0x%08x\n", info.inodes_per_group);
 	info.feat_compat |=
 			EXT4_FEATURE_COMPAT_RESIZE_INODE;
 
@@ -290,8 +286,6 @@ int make_ext4fs(const char *filename, const char *directory,
 			EXT4_FEATURE_INCOMPAT_FILETYPE;
 
 	//printf("len = 0x%16Lx  block_size = %d, blocks_per_group = %d, inodes_per_group = %d, inode_size = %d, inodes = %d, journal_blocks = %d, feat_ro_compat = %d, feat_compat = %d, feat_incompat = %d, label = %s, no_journal = %d\n", info.len, info.block_size, info.blocks_per_group, info.inodes_per_group, info.inode_size, info.inodes, info.journal_blocks, info.feat_ro_compat, info.feat_compat, info.feat_incompat, info.label, info.no_journal);
-	
-
 
 	printf("Creating filesystem with parameters:\n");
 	printf("    Size: %llu\n", info.len);
@@ -309,18 +303,14 @@ int make_ext4fs(const char *filename, const char *directory,
 	printf("    Reserved block group size: %d\n", aux_info.bg_desc_reserve_blocks);
 
 	block_allocator_init();
-
 	ext4_fill_in_sb();
-
 	if (reserve_inodes(0, 10) == EXT4_ALLOCATE_FAILED)
-		error("failed to reserve first 10 inodes");
-
+		printf("failed to reserve first 10 inodes");
 	if (info.feat_compat & EXT4_FEATURE_COMPAT_HAS_JOURNAL)
 		ext4_create_journal_inode();
-
 	if (info.feat_compat & EXT4_FEATURE_COMPAT_RESIZE_INODE)
 		ext4_create_resize_inode();
-
+	printf("directory = %s\n", directory);
 	if (directory)
 		root_inode_num = build_directory_structure(directory, mountpoint, 0, android);
 	else
@@ -328,16 +318,14 @@ int make_ext4fs(const char *filename, const char *directory,
 
 	root_mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 	inode_set_permissions(root_inode_num, root_mode, 0, 0, 0);
-
 	ext4_update_free();
-
 	printf("Created filesystem with %d/%d inodes and %d/%d blocks\n",
 			aux_info.sb->s_inodes_count - aux_info.sb->s_free_inodes_count,
 			aux_info.sb->s_inodes_count,
 			aux_info.sb->s_blocks_count_lo - aux_info.sb->s_free_blocks_count_lo,
 			aux_info.sb->s_blocks_count_lo);
 
-	write_ext4_image(filename, gzip, sparse);
+	write_ext4_image(filename, gzip, sparse, partstart, blocksize);
 
 	return 0;
 }
