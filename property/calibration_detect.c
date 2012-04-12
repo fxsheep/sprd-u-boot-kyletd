@@ -578,5 +578,5 @@ void calibration_detect(int key)
 #endif
 }
 
-#endif // CONFIG_MACH_CORI
+#endif // CONFIG_MODEM_CALI_UART
 
