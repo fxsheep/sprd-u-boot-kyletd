@@ -712,6 +712,12 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		}
 
 	}
+#ifdef CONFIG_MACH_CORI   //temply for test fixme
+	{
+		str_len = strlen(buf);
+		sprintf(&buf[str_len], " factory=1");
+	}
+#endif
 	{
 		char *factorymodepoint = "/productinfo";
 		char *factorymodefilename = "/productinfo/factorymode.file";
