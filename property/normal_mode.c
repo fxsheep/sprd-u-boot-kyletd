@@ -49,7 +49,7 @@ static int flash_page_size = 0;
 #define PRODUCTINFO_ADR		0x00490000
 #define RUNTIMENV_ADR		0x004a0000
 #define MODEM_ADR		0x00500000
-#define RAMDISK_ADR 		0x04c00000
+#define RAMDISK_ADR 		0x05500000
 
 #if BOOT_NATIVE_LINUX
 //pls make sure uboot running area
@@ -1270,9 +1270,11 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
     buf = malloc(1024);
 
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
+#if !(BOOT_NATIVE_LINUX)
     str_len = strlen(buf);
     mtdpart_def = get_mtdparts();
     sprintf(&buf[str_len], " %s", mtdpart_def);
+#endif
     if(cmdline && cmdline[0]){
             str_len = strlen(buf);
             sprintf(&buf[str_len], " %s", cmdline);
