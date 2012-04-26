@@ -19,6 +19,7 @@
 #include "ext4_extents.h"
 #include "backed_block.h"
 #include "extent.h"
+#include "malloc.h"
 
 /* Creates data buffers for the first backing_len bytes of a block allocation
    and queues them to be written */
