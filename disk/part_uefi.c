@@ -370,6 +370,7 @@ unsigned int write_uefi_parition_table(PARTITION_CFG *p_partition_cfg)
 {
 	//mount devices
 	all_used_size = 0;
+	memset(&gpt_head, 0x0, GPT_BLOCK_SIZE);
 	emmc_part_device_init();
 
 	//write pmbr
