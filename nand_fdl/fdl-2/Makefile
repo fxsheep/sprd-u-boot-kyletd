@@ -39,7 +39,6 @@ EMMC_PATH = $(TOPDIR)/drivers/mmc
 
 ifdef CONFIG_EMMC_BOOT
 UEFI_LIB = $(OBJTREE)/disk/libdisk.o
-EXT4_LIB = $(OBJTREE)/fs/ext4/libext4fs.o $(OBJTREE)/common/cmd_ext4.o
 EMMC_LIB = $(OBJTREE)/drivers/mmc/libmmc.o $(OBJTREE)/arch/arm/cpu/armv7/sc8810/ldo.o
 endif
 
