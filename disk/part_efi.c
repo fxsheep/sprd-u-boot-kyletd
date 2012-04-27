@@ -260,7 +260,7 @@ static int is_gpt_valid(block_dev_desc_t * dev_desc, unsigned long long lba,
 	unsigned char crc32_backup[4] = { 0 };
 	unsigned long calc_crc32;
 	unsigned long long lastlba;
-	printf("Enter is_gpt_valid %d \n", lba);
+	printf("Enter is_gpt_valid 0x%16Lx \n", lba);
 	if (!dev_desc || !pgpt_head) {
 		printf("%s: Invalid Argument(s)\n", __FUNCTION__);
 		return 0;

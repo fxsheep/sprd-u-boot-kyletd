@@ -83,8 +83,7 @@ int main(void)
 			extern PARTITION_CFG g_sprd_emmc_partition_cfg[];
 			extern int mmc_legacy_init(int dev);
 			mmc_legacy_init(1);
-			if(!FDL_Check_Partition_Table()){
-//				write_uefi_parition_table(g_sprd_emmc_partition_cfg);
+			if (!FDL_Check_Partition_Table()) {
 				FDL_SendAckPacket (convert_err (NAND_INCOMPATIBLE_PART));
 			}
 			err = EMMC_SUCCESS;

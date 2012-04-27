@@ -23,7 +23,6 @@
 #
 
 subdirs-$(CONFIG_CMD_CRAMFS) := cramfs
-subdirs-$(CONFIG_CMD_EXT4) += ext4
 subdirs-$(CONFIG_CMD_EXT2) += ext2
 subdirs-$(CONFIG_CMD_FAT) += fat
 subdirs-$(CONFIG_CMD_FDOS) += fdos

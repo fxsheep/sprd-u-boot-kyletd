@@ -68,10 +68,10 @@ eMMC_Parttion const _sprd_emmc_partition[]={
 	{PARTITION_VM, PARTITION_USER, "vmjaluna"},
 	{PARTITION_MODEM, PARTITION_USER, "modem"},
 	{PARTITION_DSP, PARTITION_USER, "dsp"},
-	{PARTITION_FIX_NV, PARTITION_USER, "fixnv"},
-	{PARTITION_BACK_NV, PARTITION_USER, "backnv"},
-	{PARTITION_RUNTIME_NV, PARTITION_USER, "runtimenv"},
-	{PARTITION_PROD_INFO, PARTITION_USER, "prod_info"},
+	{PARTITION_FIX_NV1, PARTITION_USER, "fixnv"},
+	{PARTITION_FIX_NV2, PARTITION_USER, "backnv"},
+	{PARTITION_RUNTIME_NV1, PARTITION_USER, "runtimenv"},
+	{PARTITION_PROD_INFO1, PARTITION_USER, "prod_info"},
 	{PARTITION_KERNEL, PARTITION_USER, "boot"},
 	{PARTITION_RECOVERY, PARTITION_USER, "recovery"},
 	{PARTITION_SYSTEM, PARTITION_USER, "system"},
@@ -425,7 +425,7 @@ void _add_4s(unsigned char *data, unsigned char add_word, int base_size){
 	data[base_size + 2] = data[base_size + 3] = add_word;
 }
 
-int fastboot_flashExt4Parttion(EFI_PARTITION_INDEX part, void *data, size_t sz){
+int fastboot_flashNVParttion(EFI_PARTITION_INDEX part, void *data, size_t sz){
 	unsigned long  fix_nv_checksum;
 	unsigned long len;
 	char *interface = "mmc";
@@ -433,36 +433,23 @@ int fastboot_flashExt4Parttion(EFI_PARTITION_INDEX part, void *data, size_t sz){
 	char *fixnvfilename = "/fixnv/fixnv.bin";
 	char *backupfixnvfilename =  "/backupfixnv/fixnv.bin";
 	char *productinfofilename = "/productinfo/productinfo.bin";
-	//Format eMMC with Ext4
-	if(!ext4fs_format(interface, 1, part))
-		return 0;
-	//Mount Ext4 partition
-	if (!ext4fs_mount(interface, 1, part))
-		goto fail;
+
 	//Set write para.
-	if (part == PARTITION_FIX_NV){
+	if (part == PARTITION_FIX_NV1){
 		filename = fixnvfilename;
 		len = EMMC_FIXNV_SIZE + 4;
 		_add_4s(data, 0x5a, EMMC_FIXNV_SIZE);
 	}
-	if (part == PARTITION_BACK_NV){
-		filename = backupfixnvfilename;
-		len = EMMC_FIXNV_SIZE + 4;
-		_add_4s(data, 0x5a, EMMC_FIXNV_SIZE);
-	}
-	if (part == PARTITION_PROD_INFO){
+	if (part == PARTITION_PROD_INFO1){
 		filename = productinfofilename;
 		len = EMMC_PROD_INFO_SIZE + 4;
 		_add_4s(data, 0x5a, EMMC_PROD_INFO_SIZE);
 	}
-	//Write to eMMC with Ext4
-	if (!ext4fs_write(filename, data, len))
-		goto fail;
-	ext4fs_close();
-	return 1;
-fail:
-	ext4fs_close();
-	return 0;
+	//Write to eMMC
+
+
+	return 1; /* success */
+	//return 0; /* fail */
 }
 
 void fastboot_splFillCheckData(unsigned int * splBuf,  int len)
@@ -525,8 +512,8 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 	}else if (!strcmp(_sprd_emmc_partition[pnum].partition_str, "fixnv")
 			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "backnv")
 			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "prod_info")){
-		if(!fastboot_flashExt4Parttion(_sprd_emmc_partition[pnum].partition_index, data, size)){
-			fastboot_fail("eMMC EXT4 WRITE_ERROR!");
+		if(!fastboot_flashNVParttion(_sprd_emmc_partition[pnum].partition_index, data, size)){
+			fastboot_fail("eMMC NV WRITE_ERROR!");
 			return;
 		}
 	}else{
@@ -572,16 +559,7 @@ void cmd_erase(const char *arg, void *data, unsigned sz)
 		fastboot_fail("unknown partition name");
 		return;
 	}
-	if (!strcmp(_sprd_emmc_partition[pnum].partition_str, "fixnv")
-			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "backnv")
-			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "prod_info")){
-		if(!ext4fs_format("mmc", 1, _sprd_emmc_partition[pnum].partition_index)){
-			fastboot_fail("eMMC EXT4 FORMAT_ERROR!");
-			return;
-		}
-	}else{
-		fastboot_fail("This partition can not be erased, please just download it.");
-	}
+	
 	fastboot_okay("");
 }
 
