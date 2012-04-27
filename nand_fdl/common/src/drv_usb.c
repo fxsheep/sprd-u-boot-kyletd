@@ -9,11 +9,11 @@
  **                         Dependencies                                      *
  **---------------------------------------------------------------------------*/
 
-#include "common.h"
-#include "usb200_fdl.h"
-#include "drv_usb20.h"
-#include "virtual_com.h"
-#include "packet.h"
+#include <asm/arch/common.h>
+#include <asm/arch/usb200_fdl.h>
+#include <asm/arch/drv_usb20.h>
+#include <asm/arch/virtual_com.h>
+#include <asm/arch/packet.h>
 
 #define FDL2_MODULE	1
 

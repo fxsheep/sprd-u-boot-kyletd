@@ -1,4 +1,4 @@
-#include "fdl_stdio.h"
+#include <asm/arch/fdl_stdio.h>
 
 void *FDL_memcpy (void *dst, const void *src, unsigned int count)
 {

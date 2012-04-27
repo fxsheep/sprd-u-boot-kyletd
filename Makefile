@@ -298,8 +298,6 @@ NAND_SPL = nand_spl
 U_BOOT_NAND = $(obj)u-boot-nand.bin
 endif
 
-NAND_FDL = fdl1 fdl2 test
-
 ifeq ($(CONFIG_ONENAND_U_BOOT),y)
 ONENAND_IPL = onenand_ipl
 U_BOOT_ONENAND = $(obj)u-boot-onenand.bin
@@ -423,8 +421,11 @@ $(NAND_SPL):	$(TIMESTAMP_FILE) $(VERSION_FILE) depend
 $(U_BOOT_NAND):	$(NAND_SPL) $(obj)u-boot.bin
 		cat $(obj)nand_spl/u-boot-spl-16k.bin $(obj)u-boot.bin > $(obj)u-boot-nand.bin
 
-$(NAND_FDL): 
-	$(MAKE) -C nand_fdl $@ 
+fdl2:
+	$(MAKE) -C nand_fdl/fdl-2 $@
+
+fdl1:
+	#$(MAKE) -C nand_fdl/fdl-1 $@
 
 $(ONENAND_IPL):	$(TIMESTAMP_FILE) $(VERSION_FILE) $(obj)include/autoconf.mk
 		$(MAKE) -C onenand_ipl/board/$(BOARDDIR) all
@@ -1214,53 +1215,66 @@ bigphone_config	: unconfig
 	@$(MKCONFIG) $@ arm arm926ejs bigphone spreadtrum sc8800x
 
 openphone_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs openphone spreadtrum sc8800g
 
 sp6810a_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs sp6810a spreadtrum sc8800g
 
 sp6810a-f4r2_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs sp6810a spreadtrum sc8800g
 
 sp6810a-f2r1_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs sp6810a spreadtrum sc8800g
 
 sp8805ga_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm arm926ejs sp8805ga spreadtrum sc8800g
 
 sc8810_openphone_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sc8810_openphone spreadtrum sc8810
 	
 native_openphone_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 native_openphone spreadtrum sc8810
 	
 sp8810_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sp8810 spreadtrum sc8810
 
 788_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 788 spreadtrum sc8810
 cori_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 cori spreadtrum sc8810
 	
 sp8810ea_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sp8810 spreadtrum sc8810
 
 sp8810_native_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sp8810 spreadtrum sc8810
 
 sp8810ea_native_config	: unconfig
+	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sp8810 spreadtrum sc8810
 #########################################################################

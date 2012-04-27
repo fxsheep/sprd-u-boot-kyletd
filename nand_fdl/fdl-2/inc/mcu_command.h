@@ -1,8 +1,8 @@
 #ifndef MCU_COMMAND_H
 #define MCU_COMMAND_H
 
-#include "cmd_def.h"
-#include "packet.h"
+#include <asm/arch/cmd_def.h>
+#include <asm/arch/packet.h>
 
 #ifdef __cplusplus
 extern "C" {

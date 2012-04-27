@@ -1,11 +1,11 @@
-#include "sci_types.h"
+#include <asm/arch/sci_types.h>
 #include "dload_op.h"
 #include "flash_command.h"
 #include "fdl_nand.h"
-#include "packet.h"
+#include <asm/arch/packet.h>
 #include "fdl_conf.h"
-#include "fdl_crc.h"
-#include "fdl_stdio.h"
+#include <asm/arch/fdl_crc.h>
+#include <asm/arch/fdl_stdio.h>
 #include "parsemtdparts.h"
 
 

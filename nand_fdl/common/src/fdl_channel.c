@@ -1,7 +1,7 @@
-#include "fdl_channel.h"
-#include "sci_types.h"
-#include "sio_drv.h"
-#include "usb_boot.h"
+#include <asm/arch/fdl_channel.h>
+#include <asm/arch/sci_types.h>
+#include <asm/arch/sio_drv.h>
+#include <asm/arch/usb_boot.h>
 
 #define BOOT_FLAG_USB                   (0x5A)
 #define BOOT_FLAG_UART1                 (0x6A)

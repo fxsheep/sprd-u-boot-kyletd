@@ -1,13 +1,13 @@
-#include "linux/string.h"
-#include "sci_types.h"
-#include "packet.h"
-#include "fdl_stdio.h"
+#include <linux/string.h>
+#include <asm/arch/sci_types.h>
+#include <asm/arch/packet.h>
+#include <asm/arch/fdl_stdio.h>
 #include "fdl_main.h"
-#include "fdl_crc.h"
-#include "sio_drv.h"
-#include "usb_boot.h"
-#include "virtual_com.h"
-#include "fdl_channel.h"
+#include <asm/arch/fdl_crc.h>
+#include <asm/arch/sio_drv.h>
+#include <asm/arch/usb_boot.h>
+#include <asm/arch/virtual_com.h>
+#include <asm/arch/fdl_channel.h>
 
 #define	MODIFY_REC_DATA	1
 

@@ -1,7 +1,7 @@
-#include "fdl_stdio.h"
-#include "fdl_crc.h"
-#include "cmd_def.h"
-#include "sci_types.h"
+#include <asm/arch/fdl_stdio.h>
+#include <asm/arch/fdl_crc.h>
+#include <asm/arch/cmd_def.h>
+#include <asm/arch/sci_types.h>
 
 #ifdef __cplusplus
 extern   "C"

@@ -1,13 +1,13 @@
 #include "mcu_command.h"
-#include "packet.h"
+#include <asm/arch/packet.h>
 #include "fdl_nand.h"
 #include <linux/string.h>
-#include "sci_types.h"
-#include "sc_reg.h"
+#include <asm/arch/sci_types.h>
+#include <asm/arch/sc_reg.h>
 
-#include "cmddef.h"
-#include "mocor_boot_mode.h"
-#include "chip.h"
+#include <asm/arch/cmddef.h>
+#include <asm/arch/mocor_boot_mode.h>
+#include <asm/arch/chip.h>
 
 typedef void (*BOOT_ENTRY) (void);
 

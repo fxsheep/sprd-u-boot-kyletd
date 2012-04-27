@@ -14,11 +14,11 @@
 /*----------------------------------------------------------------------------*
 **                        Dependencies                                        *
 **---------------------------------------------------------------------------*/
-#include "usb_boot.h"
-#include "drv_usb.h"
-#include "virtual_com.h"
-#include "fdl_crc.h"
-#include "fdl_channel.h"
+#include <asm/arch/usb_boot.h>
+#include <asm/arch/drv_usb.h>
+#include <asm/arch/virtual_com.h>
+#include <asm/arch/fdl_crc.h>
+#include <asm/arch/fdl_channel.h>
 /**---------------------------------------------------------------------------*
 **                        Compiler Flag                                       *
 **---------------------------------------------------------------------------*/

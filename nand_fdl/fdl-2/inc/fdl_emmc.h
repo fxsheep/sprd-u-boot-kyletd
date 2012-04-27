@@ -1,9 +1,9 @@
 #ifndef _FDL_EMMC_H
 #define _FDL_EMMC_H
 
-#include "fdl_stdio.h"
-#include "cmd_def.h"
-#include "packet.h"
+#include <asm/arch/fdl_stdio.h>
+#include <asm/arch/cmd_def.h>
+#include <asm/arch/packet.h>
 #ifdef CONFIG_EMMC_BOOT
 
 #include "../../../disk/part_uefi.h"

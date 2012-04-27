@@ -1,6 +1,6 @@
-#include "dl_engine.h"
-#include "packet.h"
-#include "fdl_stdio.h"
+#include <asm/arch/dl_engine.h>
+#include <asm/arch/packet.h>
+#include <asm/arch/fdl_stdio.h>
 #include <linux/string.h>
 
 typedef struct _DL_STATUS

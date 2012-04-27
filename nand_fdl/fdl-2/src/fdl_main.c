@@ -1,15 +1,15 @@
-#include "sci_types.h"
+#include <asm/arch/sci_types.h>
 #include "fdl_main.h"
-#include "cmd_def.h"
-#include "packet.h"
-#include "dl_engine.h"
+#include <asm/arch/cmd_def.h>
+#include <asm/arch/packet.h>
+#include <asm/arch/dl_engine.h>
 #include "fdl_nand.h"
-#include "sio_drv.h"
+#include <asm/arch/sio_drv.h>
 #include "flash_command.h"
 #include "mcu_command.h"
-#include "usb_boot.h"
-#include "dma_drv_fdl.h"
-#include "sc_reg.h"
+#include <asm/arch/usb_boot.h>
+#include <asm/arch/dma_drv_fdl.h>
+#include <asm/arch/sc_reg.h>
 #include "fdl_emmc.h"
 
 extern  const unsigned char FDL2_signature[][24];

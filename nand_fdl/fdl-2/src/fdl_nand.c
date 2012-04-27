@@ -10,7 +10,7 @@
 #include <linux/mtd/nand.h>
 #include <jffs2/jffs2.h>
 #include <parsemtdparts.h>
-#include <cmd_def.h>
+#include <asm/arch/cmd_def.h>
 struct mtd_info *_local_mtd = 0;
 
 /*#define FDL2_DEBUG 1

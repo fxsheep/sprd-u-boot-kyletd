@@ -1,9 +1,9 @@
 #ifndef FLASH_COMMAND_H
 #define FLASH_COMMAND_H
 
-#include "cmd_def.h"
+#include <asm/arch/cmd_def.h>
 #include "fdl_nand.h"
-#include "packet.h"
+#include <asm/arch/packet.h>
 
 static __inline DLSTATUS convert_err (int err)
 {

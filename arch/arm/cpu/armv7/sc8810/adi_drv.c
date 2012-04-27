@@ -25,6 +25,7 @@
 
 #include <asm/arch/regs_adi.h>
 #include <asm/arch/adi_hal_internal.h>
+#include <asm/proc/system.h>
 
 #define TIMEOUT_ADI	(300)//for 8810 fpga
 #define CHIP_REG_OR(reg_addr, value)    (*(volatile unsigned int *)(reg_addr) |= (unsigned int)(value))
