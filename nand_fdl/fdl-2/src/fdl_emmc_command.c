@@ -17,7 +17,6 @@
 #include <linux/mtd/nand.h>
 #include <jffs2/jffs2.h>
 #include <malloc.h>
-#include <ext_common.h>
 
 #define EFI_SECTOR_SIZE 	512
 #define ERASE_SECTOR_SIZE		(64*1024 / EFI_SECTOR_SIZE)
@@ -125,7 +124,6 @@ int uefi_get_part_info(void)
 	disk_partition_t info;
 	int i;
 
-	//printf("uefi_part_info_ok_flag = %d\n", uefi_part_info_ok_flag);
 	if(uefi_part_info_ok_flag)
 		return 1;
 
@@ -134,14 +132,11 @@ int uefi_get_part_info(void)
 		return 0;
 	}
 	for(i=0; i < MAX_PARTITION_INFO; i++){
-		//printf("partition num = %d  MAX_PARTITION_INFO = %d\n", i, MAX_PARTITION_INFO);
 		if(g_sprd_emmc_partition_cfg[i].partition_index == 0)
 			break;
 		if (get_partition_info (dev_desc, g_sprd_emmc_partition_cfg[i].partition_index, &info)) {
-			//printf("%s %d\n", __FUNCTION__, __LINE__);
 			return 0;
 		}
-		//printf("%s %d info.start = 0x%08x info.size = 0x%08x\n", __FUNCTION__, __LINE__, info.start, info.size);
 		if(info.size <= 0 )
 			return 0;
 		uefi_part_info[i].partition_index = g_sprd_emmc_partition_cfg[i].partition_index;
@@ -180,21 +175,17 @@ int FDL_Check_Partition_Table(void)
 {
 	int i;
 	uefi_part_info_ok_flag = 0;
-	//printf("%s %d\n", __FUNCTION__, __LINE__);
 	if(!uefi_get_part_info())
 		return 0;
-	//printf("%s %d\n", __FUNCTION__, __LINE__);
 	for(i=0; i < MAX_PARTITION_INFO; i++){
 		if(g_sprd_emmc_partition_cfg[i].partition_index == 0)
 			break;
 		if(MAX_SIZE_FLAG == g_sprd_emmc_partition_cfg[i].partition_size)
 			continue;
 		if(2 * g_sprd_emmc_partition_cfg[i].partition_size !=  uefi_part_info[i].partition_size) {
-			//printf("%s %d  i = %d\n", __FUNCTION__, __LINE__, i);
 			return 0;
 		}
 	}
-	//printf("%s %d\n", __FUNCTION__, __LINE__);
 	return 1;
 }
 
@@ -575,13 +566,11 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 {
 	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, part_size;
 	
-	//printf("%s %d  is_nv_flag = %d\n", __FUNCTION__, __LINE__, is_nv_flag);
 	if (is_nv_flag) {
 		fix_nv_checksum = Get_CheckSum((unsigned char *) g_eMMCBuf, g_status.total_recv_size);
 		fix_nv_checksum = EndianConv_32 (fix_nv_checksum);
 		g_eMMCBuf[EMMC_FIXNV_SIZE + 0] = g_eMMCBuf[EMMC_FIXNV_SIZE + 1] = 0x5a;
 		g_eMMCBuf[EMMC_FIXNV_SIZE + 2] = g_eMMCBuf[EMMC_FIXNV_SIZE + 3] = 0x5a;
-		//printf("fix_nv_checksum =  0x%08x  g_checksum = 0x%08x\n", fix_nv_checksum, g_checksum);
 	        if (fix_nv_checksum != g_checksum) {
 	        	SEND_ERROR_RSP(BSL_CHECKSUM_DIFF);
 			return 0;
@@ -591,27 +580,22 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 			nSectorCount = (EMMC_FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
 		else
 			nSectorCount = (EMMC_FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
-		//printf("1 base_sector = 0x%08x  nSectorCount = %d\n", g_dl_eMMCStatus.base_sector, nSectorCount);
 		memset(g_fix_nv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
 		memcpy(g_fix_nv_buf, g_eMMCBuf, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
 		emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition);
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,
 			nSectorCount, (unsigned char *)g_fix_nv_buf)) {
 			//The fixnv checksum is error.
-			//printf("%s %d\n", __FUNCTION__, __LINE__);
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);
 			return 0;
 		}
-		//printf("%s %d\n", __FUNCTION__, __LINE__);
 		memset(g_fixbucknv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
 		memcpy(g_fixbucknv_buf, g_eMMCBuf, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
 		nSectorBase = efi_GetPartBaseSec(PARTITION_FIX_NV2);
 		emmc_real_erase_partition(PARTITION_FIX_NV2);		
-		//printf("2 base_sector = 0x%08x  nSectorCount = %d\n", nSectorBase, nSectorCount);
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, nSectorBase, nSectorCount, 
 			(unsigned char *)g_fixbucknv_buf)) {
 			//The fixnv checksum is error.
-			//printf("%s %d\n", __FUNCTION__, __LINE__);
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);
 			return 0;
 		}
@@ -898,10 +882,9 @@ int FDL2_eMMC_Repartition (PACKET_T *pakcet, void *arg)
 	int i;
 	
 	for (i = 0; i < 3; i++) {
-		//printf("%s %d i = %d\n", __FUNCTION__, __LINE__, i);
 		write_uefi_parition_table(g_sprd_emmc_partition_cfg);
-		if (!FDL_Check_Partition_Table())
-			continue;
+		if (FDL_Check_Partition_Table())
+		    break;
 	}
 
 	if (i < 3) {
