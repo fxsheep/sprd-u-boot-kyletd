@@ -371,6 +371,7 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 	is_ProdInfo_flag = 0;
 	is_nv_flag = 0;
 	g_dl_eMMCStatus.curUserPartition = addr2part(start_addr);
+
 	if (PARTITION_FIX_NV1 == g_dl_eMMCStatus.curUserPartition) {
 		if (packet->packet_body.size > 8) {
 			g_dl_eMMCStatus.curEMMCArea = PARTITION_USER;
@@ -590,7 +591,7 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 			return 0;
 		}
 		memset(g_fixbucknv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
-		memcpy(g_fixbucknv_buf, g_eMMCBuf, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
+		memcpy(g_fixbucknv_buf, g_fix_nv_buf, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
 		nSectorBase = efi_GetPartBaseSec(PARTITION_FIX_NV2);
 		emmc_real_erase_partition(PARTITION_FIX_NV2);		
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, nSectorBase, nSectorCount, 
