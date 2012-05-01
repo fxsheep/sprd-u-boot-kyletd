@@ -69,9 +69,6 @@ eMMC_Parttion const _sprd_emmc_partition[]={
 	{PARTITION_MODEM, PARTITION_USER, "modem"},
 	{PARTITION_DSP, PARTITION_USER, "dsp"},
 	{PARTITION_FIX_NV1, PARTITION_USER, "fixnv"},
-	{PARTITION_FIX_NV2, PARTITION_USER, "backnv"},
-	{PARTITION_RUNTIME_NV1, PARTITION_USER, "runtimenv"},
-	{PARTITION_PROD_INFO1, PARTITION_USER, "prod_info"},
 	{PARTITION_KERNEL, PARTITION_USER, "boot"},
 	{PARTITION_RECOVERY, PARTITION_USER, "recovery"},
 	{PARTITION_SYSTEM, PARTITION_USER, "system"},
@@ -425,31 +422,35 @@ void _add_4s(unsigned char *data, unsigned char add_word, int base_size){
 	data[base_size + 2] = data[base_size + 3] = add_word;
 }
 
-int fastboot_flashNVParttion(EFI_PARTITION_INDEX part, void *data, size_t sz){
+int fastboot_flashNVParttion(EFI_PARTITION_INDEX part, void *data, size_t sz)
+{
 	unsigned long  fix_nv_checksum;
-	unsigned long len;
-	char *interface = "mmc";
-	char *filename = "";
-	char *fixnvfilename = "/fixnv/fixnv.bin";
-	char *backupfixnvfilename =  "/backupfixnv/fixnv.bin";
-	char *productinfofilename = "/productinfo/productinfo.bin";
+	unsigned long len, nblocknum;
+	block_dev_desc_t *pdev;
+	disk_partition_t info;
 
 	//Set write para.
-	if (part == PARTITION_FIX_NV1){
-		filename = fixnvfilename;
-		len = EMMC_FIXNV_SIZE + 4;
-		_add_4s(data, 0x5a, EMMC_FIXNV_SIZE);
-	}
-	if (part == PARTITION_PROD_INFO1){
-		filename = productinfofilename;
-		len = EMMC_PROD_INFO_SIZE + 4;
-		_add_4s(data, 0x5a, EMMC_PROD_INFO_SIZE);
-	}
-	//Write to eMMC
+	len = EMMC_FIXNV_SIZE + 4;
+	_add_4s(data, 0x5a, EMMC_FIXNV_SIZE);
 
+	//Write to eMMC
+	pdev = get_dev("mmc", 1);
+	if (pdev == NULL) {
+		fastboot_fail("Block device not supported!");
+		return;
+	}
+	if (get_partition_info(pdev, part, &info)){
+		fastboot_fail("eMMC get partition ERROR!");
+		return;
+	}
+	if (sz % 512)
+		nblocknum = sz / 512 + 1;
+	else
+		nblocknum = sz / 512;
+	if (!Emmc_Write(PARTITION_USER, info.start,  nblocknum, data))
+		return 0;
 
 	return 1; /* success */
-	//return 0; /* fail */
 }
 
 void fastboot_splFillCheckData(unsigned int * splBuf,  int len)
@@ -487,8 +488,9 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 		}
 	}
 
-	if (_sprd_emmc_partition[pnum].partition_index== PARTITION_SYSTEM
-		||_sprd_emmc_partition[pnum].partition_index == PARTITION_USER_DAT){
+	if ((_sprd_emmc_partition[pnum].partition_index== PARTITION_SYSTEM) \
+		|| (_sprd_emmc_partition[pnum].partition_index == PARTITION_USER_DAT) \
+		|| (_sprd_emmc_partition[pnum].partition_index == PARTITION_CACHE)){
 		//Flash system&userdata - RAW ext4 img with sprase
 		if (write_simg2emmc("mmc", 1, _sprd_emmc_partition[pnum].partition_index, data) != 0){
 			fastboot_fail("eMMC WRITE_ERROR!");
@@ -509,10 +511,8 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 			fastboot_fail("eMMC WRITE_ERROR!");
 			return;
 		}
-	}else if (!strcmp(_sprd_emmc_partition[pnum].partition_str, "fixnv")
-			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "backnv")
-			||!strcmp(_sprd_emmc_partition[pnum].partition_str, "prod_info")){
-		if(!fastboot_flashNVParttion(_sprd_emmc_partition[pnum].partition_index, data, size)){
+	}else if (!strcmp(_sprd_emmc_partition[pnum].partition_str, "fixnv")) {
+		if (!fastboot_flashNVParttion(_sprd_emmc_partition[pnum].partition_index, data, size)) {
 			fastboot_fail("eMMC NV WRITE_ERROR!");
 			return;
 		}
