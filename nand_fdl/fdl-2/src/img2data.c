@@ -1,6 +1,7 @@
 /*
  *   gcc img2data.c -o img2data
- *   ./img2data productinfo.img
+ *   make_ext4fs -s -l 5M -a productinfo /home/apuser/productinfo.img
+ *   ./img2data /home/apuser/productinfo.img ../inc/phasecheck.h
  */
 
 #include <sys/types.h>
@@ -20,17 +21,20 @@ char gbuffer[BUFFER_LEN];
 
 int main(int argc, char **argv)
 {
-        const char *filename;
+        const char *filename, *outname;
 	int fd;
+	FILE *fp;
 	struct stat stat_buf;	
 	int total, ii, recv, valdata;
+	unsigned long offset;
 
-	if (argc != 2) {
-		printf("example : check_ext4fs_data abc.img\n");
+	if (argc != 3) {
+		printf("example : ./img2data /home/apuser/productinfo.img ../inc/myphasecheck.h\n");
 		return 0;
 	}
 
         filename = argv[1];
+	outname = argv[2];
 	memset(&stat_buf, 0, sizeof(struct stat));
 	if (access(filename, 0) == 0)
 		stat(filename, &stat_buf);
@@ -41,10 +45,22 @@ int main(int argc, char **argv)
 
 	fd = open(filename, O_RDWR);
 	if (fd < 0)
-		printf("open file : %s error\n", filename);
-	total = stat_buf.st_size;
-	//printf("%s length is %d KB\n", filename, total / 1024);
+		printf("open input file : %s error\n", filename);
+	fp = fopen(outname, "w");
+	if (fp == NULL) {
+		close(fd);
+		printf("open output file : %s error\n", filename);
+		return 0;
+	}
 
+	/* output header */
+	fprintf(fp, "\nstruct ext4_off_data {\n");
+	fprintf(fp, "      unsigned long off;\n");
+	fprintf(fp, "      unsigned char data;\n");
+	fprintf(fp, "};\n\n");
+	fprintf(fp, "struct ext4_off_data ext4_pattern[] = {\n");
+
+	total = stat_buf.st_size;
 	recv = 0;
 	valdata = 0;
 	while (total > 0) {
@@ -52,15 +68,21 @@ int main(int argc, char **argv)
 		read(fd, gbuffer, BUFFER_LEN);
 		for (ii = 0; ii < BUFFER_LEN; ii ++) {
 			if (gbuffer[ii] != 0) {
-				printf("{0x%08x, 0x%02x},", (recv + ii), (gbuffer[ii] & 0xff));
+				//printf("{0x%08x, 0x%02x},", (recv + ii), (gbuffer[ii] & 0xff));
+				fprintf(fp, "{0x%08x, 0x%02x},", (recv + ii), (gbuffer[ii] & 0xff));
 				valdata ++;
 			}
 		}
 		total -= BUFFER_LEN;
 		recv += BUFFER_LEN;
 	}
-	printf("\nvaldata = %d\n", valdata);
+	
+	offset = ftell(fp);
+	//printf("\nvaldata = %d  offset = %ld\n", valdata, offset);
+	fseek(fp, offset - 1,SEEK_SET);
+	fprintf(fp, "\n};\n\n");
 	close(fd);
+	fclose(fp);
 	
         return 1;
 }
