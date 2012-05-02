@@ -13,6 +13,7 @@
 #include "asm/arch/sci_types.h"
 #include "asm/arch/nand_controller.h"
 #include <linux/mtd/mtd.h>
+#include <linux/crc32b.h>
 #include <nand.h>
 #include <linux/mtd/nand.h>
 #include <jffs2/jffs2.h>
@@ -313,6 +314,30 @@ int eMMC_nv_is_correct(unsigned char *array, unsigned long size)
 		return -1;
 }
 
+int eMMC_prodinfo_is_correct(unsigned char *array, unsigned long size)
+{
+	unsigned long crc;
+
+	crc = crc32b(0xffffffff, array, size + 4);
+	
+	if ((array[EMMC_PROD_INFO_SIZE + 7] == (crc & 0xff)) \
+		&& (array[EMMC_PROD_INFO_SIZE + 6] == ((crc & (0xff << 8)) >> 8)) \
+		&& (array[EMMC_PROD_INFO_SIZE + 5] == ((crc & (0xff << 16)) >> 16)) \
+		&& (array[EMMC_PROD_INFO_SIZE + 4] == ((crc & (0xff << 24)) >> 24))) {
+		
+		if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) \
+			&& (array[size + 3] == 0x5a)) {
+			array[size] = 0xff; array[size + 1] = 0xff;
+			array[size + 2] = 0xff; array[size + 3] = 0xff;
+			array[size + 4] = 0xff; array[size + 5] = 0xff;
+			array[size + 6] = 0xff; array[size + 7] = 0xff;	
+			return 1;
+		} else
+			return -1;
+	} else
+		return -1;
+}
+
 #define MAGIC_DATA	0xAA55A5A5
 #define SPL_CHECKSUM_LEN	0x6000
 #define CHECKSUM_START_OFFSET	0x28
@@ -565,7 +590,7 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 
 int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 {
-	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, part_size;
+	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, part_size, crc;
 	
 	if (is_nv_flag) {
 		fix_nv_checksum = Get_CheckSum((unsigned char *) g_eMMCBuf, g_status.total_recv_size);
@@ -605,13 +630,20 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 		g_eMMCBuf[EMMC_PROD_INFO_SIZE + 0] = g_eMMCBuf[EMMC_PROD_INFO_SIZE + 1] = 0x5a;
 		g_eMMCBuf[EMMC_PROD_INFO_SIZE + 2] = g_eMMCBuf[EMMC_PROD_INFO_SIZE + 3] = 0x5a;
 
-		if (0 == ((EMMC_PROD_INFO_SIZE + 4) % EFI_SECTOR_SIZE))
-			nSectorCount = (EMMC_PROD_INFO_SIZE + 4) / EFI_SECTOR_SIZE;
+		if (0 == ((EMMC_PROD_INFO_SIZE + 8) % EFI_SECTOR_SIZE))
+			nSectorCount = (EMMC_PROD_INFO_SIZE + 8) / EFI_SECTOR_SIZE;
 		else
-			nSectorCount = (EMMC_PROD_INFO_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+			nSectorCount = (EMMC_PROD_INFO_SIZE + 8) / EFI_SECTOR_SIZE + 1;
 
 		memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
 		memcpy(g_prod_info_buf, g_eMMCBuf, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
+		/* crc32 */
+		crc = crc32b(0xffffffff, g_prod_info_buf, EMMC_PROD_INFO_SIZE + 4);
+		g_prod_info_buf[EMMC_PROD_INFO_SIZE + 7] = crc & 0xff;
+		g_prod_info_buf[EMMC_PROD_INFO_SIZE + 6] = (crc & (0xff << 8)) >> 8;
+		g_prod_info_buf[EMMC_PROD_INFO_SIZE + 5] = (crc & (0xff << 16)) >> 16;
+		g_prod_info_buf[EMMC_PROD_INFO_SIZE + 4] = (crc & (0xff << 24)) >> 24;
+
 		emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition);
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,
 			nSectorCount, (unsigned char *)g_prod_info_buf)) {
@@ -780,17 +812,17 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 	} else if (is_ProdInfo_flag) {
 		if (read_prod_info_flag == 0) {
 			memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
-			if (0 == ((EMMC_PROD_INFO_SIZE + 4) % EFI_SECTOR_SIZE))
-			 	nSectorCount = (EMMC_PROD_INFO_SIZE + 4) / EFI_SECTOR_SIZE;
+			if (0 == ((EMMC_PROD_INFO_SIZE + 8) % EFI_SECTOR_SIZE))
+			 	nSectorCount = (EMMC_PROD_INFO_SIZE + 8) / EFI_SECTOR_SIZE;
 			else
-			 	nSectorCount = (EMMC_PROD_INFO_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+			 	nSectorCount = (EMMC_PROD_INFO_SIZE + 8) / EFI_SECTOR_SIZE + 1;
 			nSectorOffset = off / EFI_SECTOR_SIZE;
 			if (!Emmc_Read(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector + nSectorOffset,  					nSectorCount, (unsigned char *)g_prod_info_buf)) {
 				memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
 				read_prod_info_flag = 0;
 			}
 
-			if (!eMMC_nv_is_correct(g_prod_info_buf, EMMC_PROD_INFO_SIZE)) {
+			if (!eMMC_prodinfo_is_correct(g_prod_info_buf, EMMC_PROD_INFO_SIZE)) {
 				memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
 				read_prod_info_flag = 0;
 			} else
@@ -803,7 +835,7 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 					SEND_ERROR_RSP(BSL_WRITE_ERROR);				
 					return 0;
 				}
-				if (!eMMC_nv_is_correct(g_prod_info_buf, EMMC_PROD_INFO_SIZE)) {
+				if (!eMMC_prodinfo_is_correct(g_prod_info_buf, EMMC_PROD_INFO_SIZE)) {
 					SEND_ERROR_RSP (BSL_EEROR_CHECKSUM);				
 					return 0;
 				}

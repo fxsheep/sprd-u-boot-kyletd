@@ -5,6 +5,7 @@
 #include <linux/string.h>
 #include <android_bootimg.h>
 #include <linux/mtd/mtd.h>
+#include <linux/crc32b.h>
 #include <linux/mtd/nand.h>
 #include <nand.h>
 #include <android_boot.h>
@@ -283,6 +284,39 @@ int nv_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, c
 	return ret;
 }
 
+int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, char *buf, int len)
+{
+	disk_partition_t info;
+	unsigned long size = (len +(EMMC_SECTOR_SIZE - 1)) & (~(EMMC_SECTOR_SIZE - 1));
+	int ret = 0; /* success */
+	unsigned long crc;
+
+	if (!get_partition_info(p_block_dev, part, &info)) {
+		if (TRUE !=  Emmc_Read(PARTITION_USER, info.start, size / EMMC_SECTOR_SIZE, (uint8*)buf)) {
+			printf("emmc image read error \n");
+			ret = 1; /* fail */
+		}
+	} else
+		ret = 1;
+
+	if (ret == 1)
+		return ret;
+
+	crc = crc32b(0xffffffff, buf, len - 4);
+
+	if ((buf[PRODUCTINFO_SIZE + 7] == (crc & 0xff)) \
+		&& (buf[PRODUCTINFO_SIZE + 6] == ((crc & (0xff << 8)) >> 8)) \
+		&& (buf[PRODUCTINFO_SIZE + 5] == ((crc & (0xff << 16)) >> 16)) \
+		&& (buf[PRODUCTINFO_SIZE + 4] == ((crc & (0xff << 24)) >> 24))) {
+			buf[PRODUCTINFO_SIZE + 7] = 0xff;
+			buf[PRODUCTINFO_SIZE + 6] = 0xff;
+			buf[PRODUCTINFO_SIZE + 5] = 0xff;
+			buf[PRODUCTINFO_SIZE + 4] = 0xff;
+	} else
+		ret = 1;
+
+	return ret;
+}
 
 int nv_write_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, char *buf, int len)
 {
@@ -433,22 +467,22 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	/* PRODUCTINFO_PART */
 	printf("Reading productinfo to 0x%08x\n", PRODUCTINFO_ADR);
 	memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE);
-	if(nv_read_partition(p_block_dev, PARTITION_PROD_INFO1, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
+	if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 8) == 0){
 		if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
 			memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
-			if(nv_read_partition(p_block_dev, PARTITION_PROD_INFO1, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
-				if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
-					memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
-				}
-			}
+			if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO2, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 8) == 0){
+				if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE))
+					memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
+			} else
+				memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
 		}
 	} else {
 		memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
-		if(nv_read_partition(p_block_dev, PARTITION_PROD_INFO1, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
-			if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
-				memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + 4);
-			}
-		}
+		if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 8) == 0) {
+			if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE))
+				memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
+		} else
+			memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
 	}
 	//array_value((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE);
 	eng_phasechecktest((unsigned char *)PRODUCTINFO_ADR, SP09_MAX_PHASE_BUFF_SIZE);

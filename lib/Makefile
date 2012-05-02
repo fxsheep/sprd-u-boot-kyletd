@@ -34,6 +34,7 @@ COBJS-$(CONFIG_BZIP2) += bzlib_huffman.o
 COBJS-$(CONFIG_USB_TTY) += circbuf.o
 COBJS-y += crc16.o
 COBJS-y += crc32.o
+COBJS-y += crc32b.o
 COBJS-y += ctype.o
 COBJS-y += display_options.o
 COBJS-y += div64.o
