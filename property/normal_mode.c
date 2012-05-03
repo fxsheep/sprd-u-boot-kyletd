@@ -654,26 +654,22 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			str_len = strlen(buf);
 			buf[str_len] = '\0';
 		}
-
 	}
 
-	{
 #if 0
-		char *factorymodepoint = "/productinfo";
-		char *factorymodefilename = "/productinfo/factorymode.file";
-		cmd_yaffs_mount(factorymodepoint);
-		ret = cmd_yaffs_ls_chk(factorymodefilename );
+	char *factorymodepoint = "/productinfo";
+	char *factorymodefilename = "/productinfo/factorymode.file";
+	cmd_yaffs_mount(factorymodepoint);
+	ret = cmd_yaffs_ls_chk(factorymodefilename );
+	cmd_yaffs_umount(factorymodepoint);
 #else
-		ret = 1;
+	ret = 1;
 #endif
-		if (ret == -1) {
-			/* no factorymode.file found, nothing to do */
-		} else {
-			str_len = strlen(buf);
-			sprintf(&buf[str_len], " factory=1");
-		}
-		//cmd_yaffs_umount(factorymodepoint);
+	if (ret == 1) {
+		str_len = strlen(buf);
+		sprintf(&buf[str_len], " factory=1");
 	}
+
 	str_len = strlen(buf);
 #ifdef RAM512M
     sprintf(&buf[str_len], " ram=512M");

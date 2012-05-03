@@ -98,6 +98,7 @@ static ADDR_TO_PART g_eMMC_Addr2Part_Table[] = {
 	{0x80000010, PARTITION_FASTBOOT_LOGO},
 	{0x90000001, PARTITION_FIX_NV1}, 
 	{0x90000002, PARTITION_PROD_INFO1},
+	{0x90005555, PARTITION_PROD_INFO3},
 	{0x90000003, PARTITION_RUNTIME_NV1}, 
 	{0xffffffff, 0xffffffff}
 };
@@ -590,7 +591,7 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 
 int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 {
-	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, part_size, crc;
+	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, crc;
 	
 	if (is_nv_flag) {
 		fix_nv_checksum = Get_CheckSum((unsigned char *) g_eMMCBuf, g_status.total_recv_size);
@@ -655,14 +656,6 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 		emmc_real_erase_partition(PARTITION_PROD_INFO2);
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, nSectorBase, nSectorCount, 
 			(unsigned char *)g_prod_info_buf)) {
-			SEND_ERROR_RSP (BSL_WRITE_ERROR);
-			return 0;
-		}
-
-		emmc_real_erase_partition(PARTITION_PROD_INFO3);
-		part_size = efi_GetPartSize(PARTITION_PROD_INFO3);
-		make_ext4fs_main(g_eMMCBuf, part_size);
-		if (write_simg2emmc("mmc", 1, PARTITION_PROD_INFO3, g_eMMCBuf) != 0) {
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);
 			return 0;
 		}
@@ -877,6 +870,7 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 	unsigned long addr = *data;
 	unsigned long size = * (data + 1);
 	int           ret = EMMC_SUCCESS;
+	unsigned long part_size;
 
 	addr = EndianConv_32 (addr);
 	size = EndianConv_32 (size);
@@ -898,6 +892,15 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 		if (g_dl_eMMCStatus.curUserPartition == PARTITION_RUNTIME_NV1) {
 			if (!emmc_real_erase_partition(PARTITION_RUNTIME_NV2)) {
 				SEND_ERROR_RSP (BSL_WRITE_ERROR);			
+				return 0;
+			}
+		}
+
+		if (g_dl_eMMCStatus.curUserPartition == PARTITION_PROD_INFO3) {
+			part_size = efi_GetPartSize(PARTITION_PROD_INFO3);
+			make_ext4fs_main(g_eMMCBuf, part_size);
+			if (write_simg2emmc("mmc", 1, PARTITION_PROD_INFO3, g_eMMCBuf) != 0) {
+				SEND_ERROR_RSP (BSL_WRITE_ERROR);
 				return 0;
 			}
 		}
