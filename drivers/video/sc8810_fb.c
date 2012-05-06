@@ -101,6 +101,15 @@ static struct lcd_cfg lcd_panel[] = {
         .panel = &lcd_panel_ili9341s,
         },
 };
+#elif defined CONFIG_MACH_AMAZING
+extern struct lcd_spec lcd_panel_ili9486;
+static struct lcd_cfg lcd_panel[] = {
+	[0]={
+		.lcd_id = 0x5BBC,
+		.panel = &lcd_panel_ili9486,
+	},
+};
+
 #else
 #ifdef CONFIG_LCD_788
 extern struct lcd_spec lcd_panel_hx8357;
@@ -668,6 +677,11 @@ void set_backlight(uint32_t value)
     __raw_bits_or((1<<10), 0x8A000384);
     __raw_bits_or((1<<10), 0x8A000388);
     __raw_bits_or((1<<10), 0x8A000380);
+#elif CONFIG_MACH_AMAZING
+    __raw_bits_or((1<<5),  0x8B000008);
+    __raw_bits_or((1<<10), 0x8A000384);
+    __raw_bits_or((1<<10), 0x8A000388);
+    __raw_bits_or((1<<10), 0x8A000380);
 #else
 	//if (gpio_request(143, "LCD_BL")) {
 	//	FB_PRINT("Failed ro request LCD_BL GPIO_%d \n",
@@ -758,6 +772,13 @@ static int sc8810fb_probe(void * lcdbase)
 	FB_PRINT("[%s]\n", __FUNCTION__);
 
 #ifdef CONFIG_MACH_CORI        
+    LDO_SetVoltLevel(LDO_LDO_SIM3, LDO_VOLT_LEVEL1);
+    LDO_TurnOnLDO(LDO_LDO_SIM3);
+    LDO_SetVoltLevel(LDO_LDO_VDD28, LDO_VOLT_LEVEL3);
+    LDO_TurnOnLDO(LDO_LDO_VDD28);
+#endif
+
+#ifdef CONFIG_MACH_AMAZING 
     LDO_SetVoltLevel(LDO_LDO_SIM3, LDO_VOLT_LEVEL1);
     LDO_TurnOnLDO(LDO_LDO_SIM3);
     LDO_SetVoltLevel(LDO_LDO_VDD28, LDO_VOLT_LEVEL3);
