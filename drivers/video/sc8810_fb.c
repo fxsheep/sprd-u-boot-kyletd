@@ -222,50 +222,41 @@ static int32_t panel_reset()
 {
 #ifndef CONFIG_MACH_CORI        
 	//panel reset
-	__raw_writel(0x1, LCM_RSTN);
-	mdelay(0x10);
-	__raw_writel(0x0, LCM_RSTN);
-	mdelay(0x10);
-	__raw_writel(0x1, LCM_RSTN);
-	mdelay(0x10);
+	__raw_writel(0, LCM_RSTN);
+	udelay(10);
+	__raw_writel(1, LCM_RSTN);
+	mdelay(10);
 #else
-	__raw_writel(0x1, LCM_RSTN);
+	__raw_writel(0, LCM_RSTN);
+	udelay(10);
+	__raw_writel(1, LCM_RSTN);
 	mdelay(0x80);
-	__raw_writel(0x0, LCM_RSTN);
-	mdelay(0x80);
-	__raw_writel(0x1, LCM_RSTN);
-	mdelay(0x80);
-#endif        
+#endif
 
 	return 0;
 }
 
 static void lcdc_mcu_init(void)
 {
-	//uint32_t reg_val = 0;
+	uint32_t reg_val = 0;
 
-	//panel reset
-	panel_reset();
+	/* LCDC module enable */
+	reg_val |= (1 << 0);
 
-	//LCDC module enable
-	__raw_bits_or(1<<0, LCDC_CTRL);
-
-	/*FMARK mode*/
-	__raw_bits_or(1<<1, LCDC_CTRL);
+	/* FMARK mode ： disable */
+	reg_val |= (1 << 1);
 
 	/*FMARK pol*/
-	__raw_bits_and(~(1<<2), LCDC_CTRL);
+
+	/* dithering enable ： the logo is in the rgb565 buffer */
+	reg_val |= (1 << 4);
+
+	__raw_writel(reg_val, LCDC_CTRL);
 
 	FB_PRINT("[%s] LCDC_CTRL: 0x%x\n", __FUNCTION__, __raw_readl(LCDC_CTRL));
 
-	/* set background*/
-	__raw_writel(0xffffff, LCDC_BG_COLOR);   //red
-
-	FB_PRINT("[%s] LCDC_BG_COLOR: 0x%x\n", __FUNCTION__, __raw_readl(LCDC_BG_COLOR));
-
-	/* dithering enable*/
-	//__raw_bits_or(1<<4, LCDC_CTRL);
-
+	/* set background */
+	__raw_writel(0xffffff, LCDC_BG_COLOR);
 }
 
 static uint32_t lcdc_calc_lcm_timing(struct timing_mcu *timing)
@@ -273,10 +264,10 @@ static uint32_t lcdc_calc_lcm_timing(struct timing_mcu *timing)
 	uint32_t ahb_clk;
 	uint32_t rcss, rlpw, rhpw, wcss, wlpw, whpw;
 
-	// for sc8810
+	/* can not get ahb clock rate; do later */
 	ahb_clk = 250; // 250 MHz
 
-	FB_PRINT("@fool2[%s] ahb_clk: 0x%x\n", __FUNCTION__, ahb_clk);
+	FB_PRINT("[%s] ahb_clk: 0x%x\n", __FUNCTION__, ahb_clk);
 
         /************************************************
 	* we assume : t = ? ns, AHB = ? MHz   so
@@ -315,7 +306,7 @@ static uint32_t lcdc_calc_lcm_timing(struct timing_mcu *timing)
 		whpw = MAX_LCDC_TIMING_VALUE ;
 	}
 
-	/*   LCDC_ChangePulseWidth() */
+	/* LCDC_ChangePulseWidth() */
 	return whpw | (wlpw << 4) | (wcss << 8)
                         | (rhpw << 16) |(rlpw << 20) | (rcss << 24);
 
@@ -378,7 +369,7 @@ static void real_refresh(struct sc8810fb_info *fb)
 
 	__raw_bits_or((1<<3), LCDC_CTRL); /* start refresh */
 	
-	while(__raw_readl(LCDC_IRQ_RAW) & (1<<0)); // wait util done
+	while(!(__raw_readl(LCDC_IRQ_RAW) & (1<<0))); /* wait util lcdc done */
 
 	__raw_bits_or((1<<0), LCDC_IRQ_CLR);
 
@@ -391,7 +382,7 @@ static void real_refresh(struct sc8810fb_info *fb)
 
 static void lcdc_lcm_configure(struct sc8810fb_info *fb)
 {
-	uint32_t reg_val = 0;;
+	uint32_t reg_val = 0;
 	/* CS0 bus mode [BIT0]: 8080/6800 */
 	switch (fb->panel->info.mcu->bus_mode) {
 	case LCD_BUS_8080:
@@ -427,14 +418,14 @@ static void lcdc_lcm_configure(struct sc8810fb_info *fb)
 	reg_val  |= (1 << 16);
 	__raw_writel(reg_val, LCM_CTRL);
 
-	FB_PRINT("@fool2[%s] LCM_CTRL: 0x%x\n", __FUNCTION__, __raw_readl(LCM_CTRL));
+	FB_PRINT("[%s] LCM_CTRL: 0x%x\n", __FUNCTION__, __raw_readl(LCM_CTRL));
 }
 
 #else
 
 static void lcdc_lcm_configure(struct sc8810fb_info *fb)
 {
-	uint32_t reg_val = 0;;
+	uint32_t reg_val = 0;
 	/* CS0 bus mode [BIT0]: 8080/6800 */
 	switch (fb->panel->info.mcu->bus_mode) {
 	case LCD_BUS_8080:
@@ -468,12 +459,10 @@ static void lcdc_lcm_configure(struct sc8810fb_info *fb)
 	}
 	__raw_writel(reg_val, LCM_CTRL);
 
-	FB_PRINT("@fool2[%s] LCM_CTRL: 0x%x\n", __FUNCTION__, __raw_readl(LCM_CTRL));
+	FB_PRINT("[%s] LCM_CTRL: 0x%x\n", __FUNCTION__, __raw_readl(LCM_CTRL));
 }
 
 #endif
-
-
 
 static inline int set_lcdsize(struct lcd_spec *panel)
 {
@@ -486,6 +475,7 @@ static inline int set_lcdsize(struct lcd_spec *panel)
 
 	return 0;
 }
+
 static inline int set_lcmrect( struct lcd_spec *panel)
 {
 	uint32_t reg_val;
@@ -504,11 +494,6 @@ static inline int set_lcmrect( struct lcd_spec *panel)
 int set_lcdc_layers(struct sc8810fb_info *fb)
 {
 	uint32_t reg_val = 0;
-	/******************* OSD1 layer setting **********************/
-	/* we assume that
-	 * 1. there's only one fbdev, and only block0 is used
-	 * 2. the pan operation is a sync one
-	 */
 
 	__raw_bits_and(~(1<<0),LCDC_IMG_CTRL);
 	__raw_bits_and(~(1<<0),LCDC_OSD2_CTRL);
@@ -529,15 +514,6 @@ int set_lcdc_layers(struct sc8810fb_info *fb)
 	reg_val |= (5 << 3); //RGB565
 	reg_val |= (2 << 7); //B2B3B0B1
 
-	/*data endian*/
-	//__raw_bits_or(1<<8,LCDC_OSD1_CTRL);  //little endian
-	//__raw_bits_and(~(1<<7),LCDC_OSD1_CTRL);
-
-	/*alpha endian*/
-	/*
-	__raw_bits_or(1<<10,LCDC_IMG_CTRL);
-	__raw_bits_and(~(1<<9),LCDC_IMG_CTRL);
-	*/
 	__raw_writel(reg_val, LCDC_OSD1_CTRL);
 
 	FB_PRINT("[%s] LCDC_OSD1_CTRL: 0x%x\n", __FUNCTION__, __raw_readl(LCDC_OSD1_CTRL));
@@ -546,7 +522,7 @@ int set_lcdc_layers(struct sc8810fb_info *fb)
 	reg_val = fb->smem_start;
 	__raw_writel(reg_val, LCDC_OSD1_BASE_ADDR);
 
-	//FB_PRINT("@fool2[%s] LCDC_OSD1_BASE_ADDR: 0x%x\n", __FUNCTION__, __raw_readl(LCDC_OSD1_BASE_ADDR));
+	//FB_PRINT("[%s] LCDC_OSD1_BASE_ADDR: 0x%x\n", __FUNCTION__, __raw_readl(LCDC_OSD1_BASE_ADDR));
 
 	/*OSD1 layer alpha value*/
 	__raw_writel(0xff, LCDC_OSD1_ALPHA);
@@ -584,21 +560,21 @@ int set_lcdc_layers(struct sc8810fb_info *fb)
 
 static void hw_early_init(struct sc8810fb_info *fb)
 {
-	//select LCD clock source
+	//select LCDC clock source
 	__raw_bits_and(~(1<<6), GR_PLL_SRC);    //pll_src=96M
 	__raw_bits_and(~(1<<7), GR_PLL_SRC);
 
-	//set LCD divdior
+	//set LCDC divdior
 	__raw_bits_and(~(1<<0), GR_GEN4);  //div=0
 	__raw_bits_and(~(1<<1), GR_GEN4);
 	__raw_bits_and(~(1<<2), GR_GEN4);
 
-	//enable LCD clock
-	__raw_bits_or(1<<3, AHB_CTL0);
+	//enable LCDC clock
+	__raw_bits_or((1<<3), AHB_CTL0);
 
-	//LCD soft reset
-	__raw_bits_or(1<<3, AHB_SOFT_RST);
-	mdelay(10);
+	//LCDC soft reset
+	__raw_bits_or((1<<3), AHB_SOFT_RST);
+	udelay(10);
 	__raw_bits_and(~(1<<3), AHB_SOFT_RST);
 
 	__raw_bits_and(~(1<<0), LCDC_IRQ_EN);
