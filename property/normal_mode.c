@@ -1248,7 +1248,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		cmd_yaffs_umount(factorymodepoint);
 	}
 	str_len = strlen(buf);
-#ifdef RAM512M
+#ifdef CONFIG_RAM512M
     sprintf(&buf[str_len], " ram=512M");
 #else
     sprintf(&buf[str_len], " ram=256M");

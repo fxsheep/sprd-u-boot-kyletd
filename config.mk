@@ -190,11 +190,6 @@ CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes
 endif
 
 CFLAGS += $(call cc-option,-fno-stack-protector)
-ifeq ($(ANDROID_3RDPARTY_RAM_SIZE), 512M)
-CFLAGS += -DRAM512M
-else
-CFLAGS += -DRAM256M
-endif
 
 ifeq ($(AUTOBOOT_FLAG), true)
 CFLAGS += -DCONFIG_AUTOBOOT

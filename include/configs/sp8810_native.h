@@ -57,6 +57,7 @@
 #define EXT_MEM_TYPE_DDR 1
 #endif
 
+#define CONFIG_RAM512M
 #define BB_DRAM_TYPE_256MB_32BIT
 #define  CONFIG_MTD_NAND_SC8810 1
 
