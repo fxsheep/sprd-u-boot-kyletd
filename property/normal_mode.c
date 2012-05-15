@@ -284,16 +284,29 @@ int nv_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, c
 	return ret;
 }
 
-int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, char *buf, int len)
+unsigned long char2u32(unsigned char *buf, int offset)
+{
+	unsigned long ret = 0;
+
+	ret = (buf[offset + 3] & 0xff) \
+		| ((buf[offset + 2] & 0xff) << 8) \
+		| ((buf[offset + 1] & 0xff) << 16) \
+		| ((buf[offset] & 0xff) << 24);
+	
+	return ret;
+}
+
+int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, int offset, char *buf, int len)
 {
 	disk_partition_t info;
 	unsigned long size = (len +(EMMC_SECTOR_SIZE - 1)) & (~(EMMC_SECTOR_SIZE - 1));
 	int ret = 0; /* success */
 	unsigned long crc;
+	unsigned long offset_block = offset / EMMC_SECTOR_SIZE;
 
 	if (!get_partition_info(p_block_dev, part, &info)) {
-		if (TRUE !=  Emmc_Read(PARTITION_USER, info.start, size / EMMC_SECTOR_SIZE, (uint8*)buf)) {
-			printf("emmc image read error \n");
+		if (TRUE !=  Emmc_Read(PARTITION_USER, info.start + offset_block, size / EMMC_SECTOR_SIZE, (uint8*)buf)) {
+			printf("emmc image read error : %d\n", offset);
 			ret = 1; /* fail */
 		}
 	} else
@@ -302,16 +315,32 @@ int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX p
 	if (ret == 1)
 		return ret;
 
-	crc = crc32b(0xffffffff, buf, len - 4);
-
-	if ((buf[PRODUCTINFO_SIZE + 7] == (crc & 0xff)) \
-		&& (buf[PRODUCTINFO_SIZE + 6] == ((crc & (0xff << 8)) >> 8)) \
-		&& (buf[PRODUCTINFO_SIZE + 5] == ((crc & (0xff << 16)) >> 16)) \
-		&& (buf[PRODUCTINFO_SIZE + 4] == ((crc & (0xff << 24)) >> 24))) {
-			buf[PRODUCTINFO_SIZE + 7] = 0xff;
-			buf[PRODUCTINFO_SIZE + 6] = 0xff;
-			buf[PRODUCTINFO_SIZE + 5] = 0xff;
-			buf[PRODUCTINFO_SIZE + 4] = 0xff;
+	crc = crc32b(0xffffffff, buf, len);
+	/* dump_all_buffer(buf, size); */
+	if (offset == 0) {
+		/* phasecheck */
+		if ((buf[PRODUCTINFO_SIZE + 7] == (crc & 0xff)) \
+			&& (buf[PRODUCTINFO_SIZE + 6] == ((crc & (0xff << 8)) >> 8)) \
+			&& (buf[PRODUCTINFO_SIZE + 5] == ((crc & (0xff << 16)) >> 16)) \
+			&& (buf[PRODUCTINFO_SIZE + 4] == ((crc & (0xff << 24)) >> 24))) {
+				buf[PRODUCTINFO_SIZE + 7] = 0xff;
+				buf[PRODUCTINFO_SIZE + 6] = 0xff;
+				buf[PRODUCTINFO_SIZE + 5] = 0xff;
+				buf[PRODUCTINFO_SIZE + 4] = 0xff;
+		} else
+			ret = 1;
+	} else if ((offset == 4096) || (offset == 8192)) {
+		/* factorymode or alarm mode */
+		if ((buf[PRODUCTINFO_SIZE + 11] == (crc & 0xff)) \
+			&& (buf[PRODUCTINFO_SIZE + 10] == ((crc & (0xff << 8)) >> 8)) \
+			&& (buf[PRODUCTINFO_SIZE + 9] == ((crc & (0xff << 16)) >> 16)) \
+			&& (buf[PRODUCTINFO_SIZE + 8] == ((crc & (0xff << 24)) >> 24))) {
+				buf[PRODUCTINFO_SIZE + 11] = 0xff;
+				buf[PRODUCTINFO_SIZE + 10] = 0xff;
+				buf[PRODUCTINFO_SIZE + 9] = 0xff;
+				buf[PRODUCTINFO_SIZE + 8] = 0xff;
+		} else
+			ret = 1;
 	} else
 		ret = 1;
 
@@ -334,31 +363,49 @@ int nv_write_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, 
 	return ret;
 }
 
-
-int eMMC_dump_array(unsigned char *array, unsigned long size)
+void dump_all_buffer(unsigned char *buf, unsigned long len)
 {
-	int count;
-#if 1
-	printf("\n111111111111111111111\n");
-	for (count = 0; count < 64; count ++) {
-		if ((count % 16) == 0)
+	unsigned long row, col;
+	unsigned int offset;
+	unsigned long total_row, remain_col;
+	unsigned long flag = 1;
+
+	total_row = len / 16;
+	remain_col = len - total_row * 16;
+	//printf("total_row = %d  remain_col = %d\n", total_row, remain_col);
+	offset = 0;
+	for (row = 0; row < total_row; row ++) {
+		/*flag = 0;
+		for (col = 0; col < 16; col ++)
+			if (buf[offset + col] != 0) {
+				flag = 1;
+				break;
+			}*/
+		if (flag == 1) {
+			printf("%08xh: ", offset);
+			for (col = 0; col < 16; col ++)
+				printf("%02x ", buf[offset + col]);
 			printf("\n");
-		printf("%02x ", array[count]);
+		}
+		offset += 16;
 	}
-	printf("\n-----------\n");
-	for (count = size - 64; count < size; count ++) {
-		if ((count % 16) == 0)
+
+	if (remain_col > 0) {
+		/*flag = 0;
+		for (col = 0; col < remain_col; col ++)
+			if (buf[offset + col] != 0) {
+				flag = 1;
+				break;
+			}*/
+		if (flag == 1) {
+			printf("%08xh: ", offset);
+			for (col = 0; col < remain_col; col ++)
+				printf("%02x ", buf[offset + col]);
 			printf("\n");
-		printf("%02x ", array[count]);
+		}
 	}
-	printf("\n22222222222222222222222222\n");
-#else
-	for (count = 0; count < size; count ++) {
-		if ((count % 16) == 0)
-			printf("\n");
-		printf("%02x ", array[count]);
-	}	
-#endif
+
+	printf("\n");
 }
 
 void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
@@ -432,15 +479,15 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		if (1 == nv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
 			fixnv_right = 1;//right
 	}
-	//eMMC_dump_array(FIXNV_ADR, FIXNV_SIZE + 8);
-	backupfixnv_right = 0;
+	
+    backupfixnv_right = 0;
 	memset((unsigned char *)RUNTIMENV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 	if(0 == nv_read_partition(p_block_dev, PARTITION_FIX_NV2, (char *)RUNTIMENV_ADR, FIXNV_SIZE + 4)){
 		if (1 == nv_is_correct_endflag((unsigned char *)RUNTIMENV_ADR, FIXNV_SIZE))
 			backupfixnv_right = 1;//right
 	}
-	//eMMC_dump_array(RUNTIMENV_ADR, FIXNV_SIZE + 8);
-	if ((fixnv_right == 1) && (backupfixnv_right == 0)) {
+	
+    if ((fixnv_right == 1) && (backupfixnv_right == 0)) {
 		printf("fixnv is right, but backupfixnv is wrong, so erase and recovery backupfixnv\n");
 		nv_erase_partition(p_block_dev, PARTITION_FIX_NV2);
 		nv_write_partition(p_block_dev, PARTITION_FIX_NV2, (char *)FIXNV_ADR, (FIXNV_SIZE + 4));
@@ -467,10 +514,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	/* PRODUCTINFO_PART */
 	printf("Reading productinfo to 0x%08x\n", PRODUCTINFO_ADR);
 	memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE);
-	if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 8) == 0){
+	if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, 0, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
 		if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
 			memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
-			if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO2, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 8) == 0){
+			if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO2, 0, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
 				if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE))
 					memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
 			} else
@@ -478,7 +525,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		}
 	} else {
 		memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
-		if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 8) == 0) {
+		if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, 0, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0) {
 			if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE))
 				memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
 		} else
@@ -486,16 +533,13 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	}
 	//array_value((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE);
 	eng_phasechecktest((unsigned char *)PRODUCTINFO_ADR, SP09_MAX_PHASE_BUFF_SIZE);
-	///////////////////////////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////////////////////////
 	/* RUNTIMEVN_PART */
 	printf("Reading runtimenv to 0x%08x\n", RUNTIMENV_ADR);
 	/* runtimenv */
 	memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
 	if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV1, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0) {
 		if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
-			////////////////
 			/* file isn't right and read backup file */
 			memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
 			if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV1, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0) {
@@ -504,7 +548,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 					memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
 				}
 			}
-			////////////////
 		}
 	} else {
 		/* file don't exist and read backup file */
@@ -517,7 +560,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		}
 	}
 	//array_value((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE);
-	////////////////////////////////////////////////////////////////
 #endif	
 	/* DSP_PART */
 	printf("Reading dsp to 0x%08x\n", DSP_ADR);
@@ -656,16 +698,40 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		}
 	}
 
-#if 0
-	char *factorymodepoint = "/productinfo";
-	char *factorymodefilename = "/productinfo/factorymode.file";
-	cmd_yaffs_mount(factorymodepoint);
-	ret = cmd_yaffs_ls_chk(factorymodefilename );
-	cmd_yaffs_umount(factorymodepoint);
-#else
-	ret = 1;
-#endif
+	ret = 0;
+	printf("Checking factorymode : ");
+
+	int factoryalarmret1, factoryalarmret2;
+	unsigned long factoryalarmcnt1, factoryalarmcnt2;
+	unsigned char factoryalarmarray1[PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE];
+	unsigned char factoryalarmarray2[PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE];
+	
+	memset((unsigned char *)factoryalarmarray1, 0xff, PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE);
+	factoryalarmret1 = prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, 4 * 1024, (char *)factoryalarmarray1, PRODUCTINFO_SIZE + 8);
+	memset((unsigned char *)factoryalarmarray2, 0xff, PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE);
+	factoryalarmret2 = prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO2, 4 * 1024, (char *)factoryalarmarray2, PRODUCTINFO_SIZE + 8);
+	
+	if ((factoryalarmret1 == 0) && (factoryalarmret2 == 0)) {
+		factoryalarmcnt1 = char2u32(factoryalarmarray1, 3 * 1024 + 4);
+		factoryalarmcnt2 = char2u32(factoryalarmarray2, 3 * 1024 + 4);
+		if (factoryalarmcnt2 >= factoryalarmcnt1) {
+			if (factoryalarmarray2[0] == 0x31)
+				ret = 1;
+		} else {
+			if (factoryalarmarray1[0] == 0x31)
+				ret = 1;
+		}
+	} else if ((factoryalarmret1 == 0) && (factoryalarmret2 == 1)) {
+		if (factoryalarmarray1[0] == 0x31)
+			ret = 1;
+	} else if ((factoryalarmret1 == 1) && (factoryalarmret2 == 0)) {
+		if (factoryalarmarray2[0] == 0x31)
+			ret = 1;
+	} else if ((factoryalarmret1 == 1) && (factoryalarmret2 == 1))
+		printf("0\n");
+
 	if (ret == 1) {
+		printf("1\n");
 		str_len = strlen(buf);
 		sprintf(&buf[str_len], " factory=1");
 	}
