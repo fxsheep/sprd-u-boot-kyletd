@@ -1576,7 +1576,7 @@ PUBLIC BOOLEAN CARD_SDIO_InitCard(CARD_SDIO_HANDLE cardHandle, CARD_SPEED_MODE s
 	}
      
 	SDIO_Card_Pal_SetClk(cardHandle->sdioPalHd,SDIO_CARD_PAL_25MHz);
-
+	__udelay (100*1000);
 	busWidth = CARD_WIDTH_4_BIT;
 	if(FALSE == _SetBusWidth(cardHandle,CARD_WIDTH_4_BIT))
 	{
