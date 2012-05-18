@@ -26,6 +26,7 @@ extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
 #define FIXNV_SIZE		(64 * 1024)
 #define PHASECHECK_SIZE		(3 * 1024)
 #define TRANS_CODE_SIZE		(12 * 1024) /* dloadtools optimization value */
+#define NAND_NOTUSED_ADDRESS	(0x9000000f)
 
 typedef struct _DL_FILE_STATUS
 {
@@ -225,8 +226,12 @@ unsigned long custom2log(unsigned long custom)
 {
 	unsigned long idx, log = 0xffffffff;
 
+	if (custom == NAND_NOTUSED_ADDRESS)
+		return custom;
+
 	if ((custom & 0xf0000000) == 0x80000000)
 		return custom;
+
 	for (idx = 0; custom2log_table[idx].custom != 0xffffffff; idx ++) {
 		if (custom2log_table[idx].custom == custom) {
 			log = custom2log_table[idx].log;
@@ -636,7 +641,11 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
 			//printf("big buffer is full. g_BigSize = %d\n", g_BigSize);
 			for (ii = 0; ii < g_BigSize; ii += code_yaffs_onewrite) {
 				//printf(".");
-				g_prevstatus = nand_write_fdl( (unsigned int) code_yaffs_onewrite, (unsigned char *) (g_BigBUF + ii));
+				if (strcmp(phy_partition.name, "cache") == 0)
+					g_prevstatus = NAND_SUCCESS;
+				else
+					g_prevstatus = nand_write_fdl((unsigned int)code_yaffs_onewrite, 
+						(unsigned char *)(g_BigBUF + ii));
 				if (NAND_SUCCESS != g_prevstatus) {
 					//printf("\n");
 					printf("big buffer write error.\n");				
@@ -648,7 +657,11 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
 			memset(g_BigBUF, 0xff, yaffs_buffer_size);
 		}
 #else
-        	g_prevstatus = nand_write_fdl( (unsigned int) size, (unsigned char *) (packet->packet_body.content));
+		if (strcmp(phy_partition.name, "cache") == 0)
+			g_prevstatus = NAND_SUCCESS;
+		else
+        		g_prevstatus = nand_write_fdl((unsigned int) size, 
+				(unsigned char *)(packet->packet_body.content));
 #endif
 	}
 
@@ -801,7 +814,11 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		while (ii < g_BigSize) {
 			realii = min(g_BigSize - ii, code_yaffs_onewrite);
 			//printf(".");
-			g_prevstatus = nand_write_fdl( (unsigned int) realii, (unsigned char *) (g_BigBUF + ii));
+			if (strcmp(phy_partition.name, "cache") == 0)
+				g_prevstatus = NAND_SUCCESS;
+			else
+				g_prevstatus = nand_write_fdl((unsigned int)realii, 
+					(unsigned char *)(g_BigBUF + ii));
 			if (NAND_SUCCESS != g_prevstatus) {
 				//printf("\n");
 				printf("big buffer write error.\n");				
@@ -893,13 +910,18 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 	} else {
 		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 		phy_partition.offset = custom2log(addr);
-		ret = log2phy_table(&phy_partition);
-		phy_partition_info(phy_partition, __LINE__);
-		if (NAND_SUCCESS == ret)
-			ret = nand_erase_partition(phy_partition.offset, phy_partition.size);
 
-		if (NAND_SUCCESS == ret)
-			set_dl_op_val(addr, size, ERASEFLASH, SUCCESS, 1);	
+		if (phy_partition.offset == NAND_NOTUSED_ADDRESS) {
+			ret = NAND_SUCCESS;
+		} else {
+			ret = log2phy_table(&phy_partition);
+			phy_partition_info(phy_partition, __LINE__);
+			if (NAND_SUCCESS == ret)
+				ret = nand_erase_partition(phy_partition.offset, phy_partition.size);
+
+			if (NAND_SUCCESS == ret)
+				set_dl_op_val(addr, size, ERASEFLASH, SUCCESS, 1);
+		}
 	}
 	
 	/*printf("Dl_Erase_Address.cnt = 0x%08x  Dl_Data_Address.cnt = 0x%08x\n", Dl_Erase_Address.cnt, Dl_Data_Address.cnt);
