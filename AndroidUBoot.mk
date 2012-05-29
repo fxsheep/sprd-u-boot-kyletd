@@ -6,6 +6,7 @@ UBOOT_BUILT_BIN := $(UBOOT_OUT)/u-boot.bin
 UBOOT_BUILT_FDL := $(UBOOT_OUT)/nand_fdl/fdl2.bin
 UBOOT_CONFIG := $(UBOOT_OUT)/include/config.h
 
+.PHONY: $(UBOOT_OUT)
 $(UBOOT_OUT):
 	@echo "Start U-Boot build"
 
