@@ -44,13 +44,11 @@ static int read_prod_info_flag = 0;
 
 
 #define EMMC_BUF_SIZE		(((216 * 1024 * 1024) / EFI_SECTOR_SIZE) * EFI_SECTOR_SIZE)
-#define EMMC_FIXNV_SIZE		(64 * 1024)
-#define EMMC_PROD_INFO_SIZE	(3 * 1024)
 
 unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
-unsigned char g_fix_nv_buf[EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE];
-unsigned char g_fixbucknv_buf[EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE];
-unsigned char g_prod_info_buf[EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE];
+unsigned char g_fix_nv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
+unsigned char g_fixbucknv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
+unsigned char g_prod_info_buf[PRODUCTINFO_SIZE + EFI_SECTOR_SIZE];
 
 typedef struct DL_FILE_STATUS_TAG
 {
@@ -320,10 +318,10 @@ int eMMC_prodinfo_is_correct(unsigned char *array, unsigned long size)
 
 	crc = crc32b(0xffffffff, array, size + 4);
 	
-	if ((array[EMMC_PROD_INFO_SIZE + 7] == (crc & 0xff)) \
-		&& (array[EMMC_PROD_INFO_SIZE + 6] == ((crc & (0xff << 8)) >> 8)) \
-		&& (array[EMMC_PROD_INFO_SIZE + 5] == ((crc & (0xff << 16)) >> 16)) \
-		&& (array[EMMC_PROD_INFO_SIZE + 4] == ((crc & (0xff << 24)) >> 24))) {
+	if ((array[PRODUCTINFO_SIZE + 7] == (crc & 0xff)) \
+		&& (array[PRODUCTINFO_SIZE + 6] == ((crc & (0xff << 8)) >> 8)) \
+		&& (array[PRODUCTINFO_SIZE + 5] == ((crc & (0xff << 16)) >> 16)) \
+		&& (array[PRODUCTINFO_SIZE + 4] == ((crc & (0xff << 24)) >> 24))) {
 		
 		if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) \
 			&& (array[size + 3] == 0x5a)) {
@@ -416,13 +414,13 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 			}
 
 			g_dl_eMMCStatus.part_total_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
-			if ((size > g_dl_eMMCStatus.part_total_size) || (size > EMMC_FIXNV_SIZE)) {
+			if ((size > g_dl_eMMCStatus.part_total_size) || (size > FIXNV_SIZE)) {
 				FDL2_eMMC_SendRep (EMMC_INVALID_SIZE);
 				return 0;
 			}
 			g_dl_eMMCStatus.base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
 			is_nv_flag = 1;
-			memset(g_eMMCBuf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
+			memset(g_eMMCBuf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
 			g_checksum = * (data+2);
 			g_sram_addr = (unsigned long)g_eMMCBuf;
 		} else {
@@ -442,13 +440,13 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 		}
 
 		g_dl_eMMCStatus.part_total_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
-		if ((size > g_dl_eMMCStatus.part_total_size) || (size > EMMC_FIXNV_SIZE)) {
+		if ((size > g_dl_eMMCStatus.part_total_size) || (size > FIXNV_SIZE)) {
 			FDL2_eMMC_SendRep (EMMC_INVALID_SIZE);
 			return 0;
 		}
 		g_dl_eMMCStatus.base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
 		emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition);
-		memset(g_eMMCBuf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
+		memset(g_eMMCBuf, 0xff, PRODUCTINFO_SIZE + EFI_SECTOR_SIZE);
 		g_sram_addr = (unsigned long)g_eMMCBuf;	
 		is_ProdInfo_flag = 1;
 	} else if (PARTITION_SPL_LOADER == g_dl_eMMCStatus.curUserPartition) {
@@ -734,19 +732,19 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 	if (is_nv_flag) {
 		fix_nv_checksum = Get_CheckSum((unsigned char *) g_eMMCBuf, g_status.total_recv_size);
 		fix_nv_checksum = EndianConv_32 (fix_nv_checksum);
-		g_eMMCBuf[EMMC_FIXNV_SIZE + 0] = g_eMMCBuf[EMMC_FIXNV_SIZE + 1] = 0x5a;
-		g_eMMCBuf[EMMC_FIXNV_SIZE + 2] = g_eMMCBuf[EMMC_FIXNV_SIZE + 3] = 0x5a;
+		g_eMMCBuf[FIXNV_SIZE + 0] = g_eMMCBuf[FIXNV_SIZE + 1] = 0x5a;
+		g_eMMCBuf[FIXNV_SIZE + 2] = g_eMMCBuf[FIXNV_SIZE + 3] = 0x5a;
 	        if (fix_nv_checksum != g_checksum) {
 	        	SEND_ERROR_RSP(BSL_CHECKSUM_DIFF);
 			return 0;
 	        }
 
-		if (0 == ((EMMC_FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
-			nSectorCount = (EMMC_FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
+		if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
+			nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
 		else
-			nSectorCount = (EMMC_FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
-		memset(g_fix_nv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
-		memcpy(g_fix_nv_buf, g_eMMCBuf, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
+			nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+		memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
+		memcpy(g_fix_nv_buf, g_eMMCBuf, FIXNV_SIZE + EFI_SECTOR_SIZE);
 		emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition);
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,
 			nSectorCount, (unsigned char *)g_fix_nv_buf)) {
@@ -754,8 +752,8 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);
 			return 0;
 		}
-		memset(g_fixbucknv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
-		memcpy(g_fixbucknv_buf, g_fix_nv_buf, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
+		memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
+		memcpy(g_fixbucknv_buf, g_fix_nv_buf, FIXNV_SIZE + EFI_SECTOR_SIZE);
 		nSectorBase = efi_GetPartBaseSec(PARTITION_FIX_NV2);
 		emmc_real_erase_partition(PARTITION_FIX_NV2);		
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, nSectorBase, nSectorCount, 
@@ -766,22 +764,22 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 		}
 	} else if (is_ProdInfo_flag) {
 		is_factorydownload_flag = 1;
-		g_eMMCBuf[EMMC_PROD_INFO_SIZE + 0] = g_eMMCBuf[EMMC_PROD_INFO_SIZE + 1] = 0x5a;
-		g_eMMCBuf[EMMC_PROD_INFO_SIZE + 2] = g_eMMCBuf[EMMC_PROD_INFO_SIZE + 3] = 0x5a;
+		g_eMMCBuf[PRODUCTINFO_SIZE + 0] = g_eMMCBuf[PRODUCTINFO_SIZE + 1] = 0x5a;
+		g_eMMCBuf[PRODUCTINFO_SIZE + 2] = g_eMMCBuf[PRODUCTINFO_SIZE + 3] = 0x5a;
 
-		if (0 == ((EMMC_PROD_INFO_SIZE + 8) % EFI_SECTOR_SIZE))
-			nSectorCount = (EMMC_PROD_INFO_SIZE + 8) / EFI_SECTOR_SIZE;
+		if (0 == ((PRODUCTINFO_SIZE + 8) % EFI_SECTOR_SIZE))
+			nSectorCount = (PRODUCTINFO_SIZE + 8) / EFI_SECTOR_SIZE;
 		else
-			nSectorCount = (EMMC_PROD_INFO_SIZE + 8) / EFI_SECTOR_SIZE + 1;
+			nSectorCount = (PRODUCTINFO_SIZE + 8) / EFI_SECTOR_SIZE + 1;
 
-		memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
-		memcpy(g_prod_info_buf, g_eMMCBuf, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
+		memset(g_prod_info_buf, 0xff, PRODUCTINFO_SIZE + EFI_SECTOR_SIZE);
+		memcpy(g_prod_info_buf, g_eMMCBuf, PRODUCTINFO_SIZE + EFI_SECTOR_SIZE);
 		/* crc32 */
-		crc = crc32b(0xffffffff, g_prod_info_buf, EMMC_PROD_INFO_SIZE + 4);
-		g_prod_info_buf[EMMC_PROD_INFO_SIZE + 7] = crc & 0xff;
-		g_prod_info_buf[EMMC_PROD_INFO_SIZE + 6] = (crc & (0xff << 8)) >> 8;
-		g_prod_info_buf[EMMC_PROD_INFO_SIZE + 5] = (crc & (0xff << 16)) >> 16;
-		g_prod_info_buf[EMMC_PROD_INFO_SIZE + 4] = (crc & (0xff << 24)) >> 24;
+		crc = crc32b(0xffffffff, g_prod_info_buf, PRODUCTINFO_SIZE + 4);
+		g_prod_info_buf[PRODUCTINFO_SIZE + 7] = crc & 0xff;
+		g_prod_info_buf[PRODUCTINFO_SIZE + 6] = (crc & (0xff << 8)) >> 8;
+		g_prod_info_buf[PRODUCTINFO_SIZE + 5] = (crc & (0xff << 16)) >> 16;
+		g_prod_info_buf[PRODUCTINFO_SIZE + 4] = (crc & (0xff << 24)) >> 24;
 
 		emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition);
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,
@@ -839,7 +837,7 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 		}
 
 		g_dl_eMMCStatus.part_total_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
-		if ((size > g_dl_eMMCStatus.part_total_size) || (size > EMMC_FIXNV_SIZE)){
+		if ((size > g_dl_eMMCStatus.part_total_size) || (size > FIXNV_SIZE)){
 			FDL2_eMMC_SendRep (EMMC_INVALID_SIZE);
 			return 0;
 		}
@@ -871,7 +869,7 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 		}
 
 		g_dl_eMMCStatus.part_total_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
-		if ((size > g_dl_eMMCStatus.part_total_size) || (size > EMMC_PROD_INFO_SIZE)) {
+		if ((size > g_dl_eMMCStatus.part_total_size) || (size > PRODUCTINFO_SIZE)) {
 			FDL2_eMMC_SendRep (EMMC_INVALID_SIZE);
 			return 0;
 		}
@@ -899,35 +897,35 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 
 	if (is_nv_flag) {
 		if (read_nv_flag == 0) {
-			memset(g_fix_nv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
-			if (0 == ((EMMC_FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
-			 	nSectorCount = (EMMC_FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
+			memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
+			if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
+			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
 			else
-			 	nSectorCount = (EMMC_FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
 			nSectorOffset = off / EFI_SECTOR_SIZE;
 			g_dl_eMMCStatus.base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
 			if (!Emmc_Read(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector + nSectorOffset,  					nSectorCount, (unsigned char *)g_fix_nv_buf)) {
-				memset(g_fix_nv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
+				memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
 			}
 			read_nv_flag = 1;
 			read_nv_check = 0;
-			if (eMMC_nv_is_correct(g_fix_nv_buf, EMMC_FIXNV_SIZE))
+			if (eMMC_nv_is_correct(g_fix_nv_buf, FIXNV_SIZE))
 				read_nv_check = FIX_NV_IS_OK;				
 		}
 
 		if (read_bkupnv_flag == 0) {
-			memset(g_fixbucknv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
-			if (0 == ((EMMC_FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
-			 	nSectorCount = (EMMC_FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
+			memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
+			if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
+			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
 			else
-			 	nSectorCount = (EMMC_FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
 			nSectorOffset = off / EFI_SECTOR_SIZE;
 			base_sector = efi_GetPartBaseSec(PARTITION_FIX_NV2);
 			if (!Emmc_Read(g_dl_eMMCStatus.curEMMCArea, base_sector + nSectorOffset,  					nSectorCount, (unsigned char *)g_fixbucknv_buf)) {
-				memset(g_fixbucknv_buf, 0xff, EMMC_FIXNV_SIZE + EFI_SECTOR_SIZE);
+				memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
 			}
 			read_bkupnv_flag = 1;
-			if (eMMC_nv_is_correct(g_fixbucknv_buf, EMMC_FIXNV_SIZE))
+			if (eMMC_nv_is_correct(g_fixbucknv_buf, FIXNV_SIZE))
 				read_nv_check = FIX_BACKUP_NV_IS_OK;				
 		}
 
@@ -942,31 +940,31 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 		}		
 	} else if (is_ProdInfo_flag) {
 		if (read_prod_info_flag == 0) {
-			memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
-			if (0 == ((EMMC_PROD_INFO_SIZE + 8) % EFI_SECTOR_SIZE))
-			 	nSectorCount = (EMMC_PROD_INFO_SIZE + 8) / EFI_SECTOR_SIZE;
+			memset(g_prod_info_buf, 0xff, PRODUCTINFO_SIZE + EFI_SECTOR_SIZE);
+			if (0 == ((PRODUCTINFO_SIZE + 8) % EFI_SECTOR_SIZE))
+			 	nSectorCount = (PRODUCTINFO_SIZE + 8) / EFI_SECTOR_SIZE;
 			else
-			 	nSectorCount = (EMMC_PROD_INFO_SIZE + 8) / EFI_SECTOR_SIZE + 1;
+			 	nSectorCount = (PRODUCTINFO_SIZE + 8) / EFI_SECTOR_SIZE + 1;
 			nSectorOffset = off / EFI_SECTOR_SIZE;
 			if (!Emmc_Read(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector + nSectorOffset,  					nSectorCount, (unsigned char *)g_prod_info_buf)) {
-				memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
+				memset(g_prod_info_buf, 0xff, PRODUCTINFO_SIZE + EFI_SECTOR_SIZE);
 				read_prod_info_flag = 0;
 			}
 
-			if (!eMMC_prodinfo_is_correct(g_prod_info_buf, EMMC_PROD_INFO_SIZE)) {
-				memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
+			if (!eMMC_prodinfo_is_correct(g_prod_info_buf, PRODUCTINFO_SIZE)) {
+				memset(g_prod_info_buf, 0xff, PRODUCTINFO_SIZE + EFI_SECTOR_SIZE);
 				read_prod_info_flag = 0;
 			} else
 				read_prod_info_flag = 1;
 			
 			if (!read_prod_info_flag) {
-				memset(g_prod_info_buf, 0xff, EMMC_PROD_INFO_SIZE + EFI_SECTOR_SIZE);
+				memset(g_prod_info_buf, 0xff, PRODUCTINFO_SIZE + EFI_SECTOR_SIZE);
 				base_sector = efi_GetPartBaseSec(PARTITION_PROD_INFO2);
 				if (!Emmc_Read(g_dl_eMMCStatus.curEMMCArea, base_sector + nSectorOffset,  						nSectorCount, (unsigned char *)g_prod_info_buf)) {
 					SEND_ERROR_RSP(BSL_WRITE_ERROR);				
 					return 0;
 				}
-				if (!eMMC_prodinfo_is_correct(g_prod_info_buf, EMMC_PROD_INFO_SIZE)) {
+				if (!eMMC_prodinfo_is_correct(g_prod_info_buf, PRODUCTINFO_SIZE)) {
 					SEND_ERROR_RSP (BSL_EEROR_CHECKSUM);				
 					return 0;
 				}

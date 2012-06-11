@@ -80,8 +80,6 @@ eMMC_Parttion const _sprd_emmc_partition[]={
 	{0,0,0}
 };
 
-#define EMMC_FIXNV_SIZE		(64 * 1024)
-#define EMMC_PROD_INFO_SIZE	(3 * 1024)
 #endif
 
 typedef struct {
@@ -430,8 +428,8 @@ int fastboot_flashNVParttion(EFI_PARTITION_INDEX part, void *data, size_t sz)
 	disk_partition_t info;
 
 	//Set write para.
-	len = EMMC_FIXNV_SIZE + 4;
-	_add_4s(data, 0x5a, EMMC_FIXNV_SIZE);
+	len = FIXNV_SIZE + 4;
+	_add_4s(data, 0x5a, FIXNV_SIZE);
 
 	//Write to eMMC
 	pdev = get_dev("mmc", 1);

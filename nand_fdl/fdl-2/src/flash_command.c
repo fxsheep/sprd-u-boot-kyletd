@@ -23,8 +23,7 @@ extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
 
-#define FIXNV_SIZE		(64 * 1024)
-#define PHASECHECK_SIZE		(3 * 1024)
+
 #define TRANS_CODE_SIZE		(12 * 1024) /* dloadtools optimization value */
 #define NAND_NOTUSED_ADDRESS	(0x9000000f)
 
@@ -791,11 +790,11 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		char *productinfopoint = "/productinfo";
 		char *productinfofilename = "/productinfo/productinfo.bin";
 
-		/* g_PhasecheckBUF : (PHASECHECK_SIZE + 4) instead of g_PhasecheckBUFDataSize */
-		g_PhasecheckBUF[PHASECHECK_SIZE + 0] = g_PhasecheckBUF[PHASECHECK_SIZE + 1] = 0x5a;
-		g_PhasecheckBUF[PHASECHECK_SIZE + 2] = g_PhasecheckBUF[PHASECHECK_SIZE + 3] = 0x5a;
+		/* g_PhasecheckBUF : (PRODUCTINFO_SIZE + 4) instead of g_PhasecheckBUFDataSize */
+		g_PhasecheckBUF[PRODUCTINFO_SIZE + 0] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 1] = 0x5a;
+		g_PhasecheckBUF[PRODUCTINFO_SIZE + 2] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 3] = 0x5a;
 		cmd_yaffs_mount(productinfopoint);
-    		cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PHASECHECK_SIZE + 4));
+    		cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
 		ret = cmd_yaffs_ls_chk(productinfofilename);
 		cmd_yaffs_umount(productinfopoint);
 		g_prevstatus = NAND_SUCCESS;

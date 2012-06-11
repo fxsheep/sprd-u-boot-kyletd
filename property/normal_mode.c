@@ -35,19 +35,11 @@ static int flash_page_size = 0;
 
 #define DSP_SIZE		(3968 * 1024)
 #define VMJALUNA_SIZE		(300 * 1024)
-#define FIXNV_SIZE		(64 * 1024)
-#define PRODUCTINFO_SIZE	(3 * 1024)
 #define RUNTIMENV_SIZE		(256 * 1024)
-#ifdef MCP_F2R1
-#define MODEM_SIZE		(3500 * 1024)  	/* 3.5MB */
-#else
-#define MODEM_SIZE		(8 * 1024 * 1024)
-#endif
 
 #define DSP_ADR			0x00020000
 #define VMJALUNA_ADR		0x00400000
 #define FIXNV_ADR		0x00480000
-#define PRODUCTINFO_ADR		0x00490000
 #define RUNTIMENV_ADR		0x004a0000
 #define MODEM_ADR		0x00500000
 #define RAMDISK_ADR 		0x05500000
@@ -542,7 +534,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 			/* file isn't right and read backup file */
 			memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
-			if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV1, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0) {
+			if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0) {
 				if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 					/* file isn't right */
 					memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
@@ -552,7 +544,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	} else {
 		/* file don't exist and read backup file */
 		memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
-		if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV1, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0){
+		if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0){
 			if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 				/* file isn't right */
 				memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
