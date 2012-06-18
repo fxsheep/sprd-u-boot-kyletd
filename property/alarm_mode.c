@@ -43,6 +43,7 @@ void alarm_mode(void)
 unsigned long sprd_rtc_get_alarm_sec(void);
 unsigned long sprd_rtc_get_sec(void);
 void sprd_rtc_init(void);
+char time_buf[200]={0};
 #ifdef CONFIG_EMMC_BOOT
 void move2timebuf(unsigned char *src, unsigned char *dst)
 {
@@ -62,7 +63,6 @@ int alarm_flag_check(void)
 {
 
     int ret = -1;
-    char time_buf[20]={0};
     long time = 0;
     unsigned long now_rtc = 0;
     int time_lead = 0;
@@ -129,7 +129,6 @@ int alarm_flag_check(void)
     char *file_partition = "/productinfo";
     char *file_name = "/productinfo/alarm_flag";
     int ret = 0;
-    char time_buf[20]={0};
     long time = 0;
     unsigned long now_rtc = 0;
     int time_lead = 0;
