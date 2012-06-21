@@ -33,9 +33,6 @@ typedef  struct tag_cali_command {
 } COMMAND_T;
 
 extern int serial_tstc(void);
-extern int get_cal_enum_ms(void);
-extern int power_button_pressed(void);
-static int count_ms;
 static unsigned long long start_time;
 static unsigned long long now_time;
 
@@ -58,7 +55,6 @@ static void send_caliberation_request(void)
              serial_putc(data[i]);
 
         serial_putc(CALIBERATE_HEAD);
-        start_time = get_timer_masked();            
 }
 
 static int receive_caliberation_response(uint8_t *buf,int len)
@@ -117,41 +113,6 @@ unsigned int check_caliberate(uint8_t * buf, int len)
 	return command;
 }
 
-
-static int recheck_power_button(void)
-{
-	int cnt = 0;
-    	int ret = 0;
-    
-	do {
-        	ret = power_button_pressed();
-        	if (ret == 0)
-          		cnt++;
-        	else
-          		return 1;
-        
-		if (cnt > 4)
-          		return 0;
-        	else
-            		mdelay(1);
-    	} while(1);
-}
-
-int is_timeout(int key)
-{
-	if (!key) {
-        	if (!recheck_power_button() || charger_connected())
-          		return 2;
-    	}
-    
-    	now_time = get_timer_masked();
-
-    	if ((now_time - start_time) > count_ms)
-      		return 1;
-    	else
-        	return 0;
-} 
-
 void calibration_detect(int key)
 {
 	int ret;
@@ -164,7 +125,6 @@ void calibration_detect(int key)
 	printf("%s\n", "uart calibrate detecting");
 	loff_t off = 0;    	
     	send_caliberation_request();
-    	count_ms = get_cal_enum_ms();
    
 #ifdef CONFIG_MODEM_CALIBERATE
 	for(i = 0; i < 20; i++)
@@ -176,18 +136,11 @@ void calibration_detect(int key)
    		if (caliberate_device == CALIBERATE_DEVICE_UART)
 			break;
 
-        	ret = is_timeout(key);
-        	
-		if (ret == 0)
-          		continue;
-		else if (ret == 2) {
-			/* POWER KEY pressed */
-			printf("power down devices\n");
-          		power_down_devices();
-       		} else {
-            		printf("usb calibrate configuration timeout\n");
-           		return;
-        	}
+    		now_time = get_timer_masked();
+    		if ((now_time - start_time) > CALIBRATE_ENUM_MS) {
+      			printf("usb calibrate configuration timeout\n");
+			return;
+    		}
     	}	
 
 	printf("caliberate : what got from host total %d is \n", got);

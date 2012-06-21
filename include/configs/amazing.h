@@ -277,7 +277,7 @@
 #define FB_DOWNLOAD_BUF_SIZE (200*1024*1024)
 
 #define CONFIG_MODEM_CALIBERATE
-#define CONFIG_MODEM_CALI_UART  /* calibration both support uart usb*/
+#define CONFIG_MODEM_CALI_UART  /* uart calibration only */
 /*
 #define CONFIG_UPDATE_TFTP
 #define CONFIG_FIT
@@ -306,7 +306,7 @@
 #endif
 #endif // CONFIG_LCD
 
-#define CALIBRATE_ENUM_MS 15000
+#define CALIBRATE_ENUM_MS 1000
 #define CALIBRATE_IO_MS 10000
 
 #define LOW_BAT_ADC_LEVEL 782 /*phone battery adc value low than this value will not boot up*/
