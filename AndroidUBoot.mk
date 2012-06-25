@@ -5,6 +5,7 @@ UBOOT_BUILT_SPL := $(UBOOT_OUT)/nand_spl/u-boot-spl-16k.bin
 UBOOT_BUILT_BIN := $(UBOOT_OUT)/u-boot.bin
 UBOOT_BUILT_FDL := $(UBOOT_OUT)/nand_fdl/fdl2.bin
 UBOOT_CONFIG := $(UBOOT_OUT)/include/config.h
+AUTOBOOT_BIN := u-boot_autopoweron.bin
 
 .PHONY: $(UBOOT_OUT)
 $(UBOOT_OUT):
@@ -21,5 +22,8 @@ $(INSTALLED_UBOOT_TARGET) : $(UBOOT_CONFIG) $(UBOOT_OUT)
 	@cp $(UBOOT_BUILT_SPL) $(PRODUCT_OUT)
 	@cp $(UBOOT_BUILT_BIN) $(PRODUCT_OUT)
 	@cp $(UBOOT_BUILT_FDL) $(PRODUCT_OUT)
+	$(MAKE) -C u-boot CROSS_COMPILE=$(LOCAL_TOOLCHAIN) O=../$(UBOOT_OUT) clean
+	$(MAKE) -C u-boot CROSS_COMPILE=$(LOCAL_TOOLCHAIN) AUTOBOOT_FLAG=true O=../$(UBOOT_OUT)
+	@cp $(UBOOT_BUILT_BIN) $(PRODUCT_OUT)/${AUTOBOOT_BIN}
 	@echo "Install U-Boot target done"
 
