@@ -28,7 +28,7 @@ extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern unsigned int get_alarm_lead_set(void);
 #endif
-
+#define msleep(a) udelay(a * 1000)
 void alarm_mode(void)
 {
     printf("%s\n", __func__);
@@ -42,6 +42,7 @@ void alarm_mode(void)
 
 unsigned long sprd_rtc_get_alarm_sec(void);
 unsigned long sprd_rtc_get_sec(void);
+void sprd_rtc_set_alarm_sec(unsigned long secs);
 void sprd_rtc_init(void);
 char time_buf[200]={0};
 #ifdef CONFIG_EMMC_BOOT
@@ -66,7 +67,9 @@ int alarm_flag_check(void)
     long time = 0;
     unsigned long now_rtc = 0;
     int time_lead = 0;
-
+	unsigned long time_rtc= 0;
+    unsigned long read_secs;
+    int i = 0;
 	block_dev_desc_t *p_block_dev = NULL;
 
 	int factoryalarmret1 = 1, factoryalarmret2 = 1;
@@ -110,15 +113,29 @@ int alarm_flag_check(void)
         printf("alarm_flag file is exist\n");
         printf("time get %s", time_buf);
         time = simple_strtol(time_buf, NULL, 10);
+		time_rtc = time;
         sprd_rtc_init();
         now_rtc = sprd_rtc_get_sec();
         printf("now rtc %lu\n", now_rtc);
         time = time - now_rtc;
         time_lead = get_alarm_lead_set();
-        if((time < time_lead) && (time > time_lead -10))
+        if((time < time_lead +180) && (time > time_lead -10))
           ret = 1;
-        else
+        else{
+          sprd_rtc_set_alarm_sec(time_rtc);
+          msleep(150);
+          do {
+                     if(i!=0){
+                       sprd_rtc_set_alarm_sec(time_rtc);
+		         msleep(150);
+                        }
+			read_secs = sprd_rtc_get_alarm_sec();
+
+			msleep(1);
+			i++;
+		}while(read_secs != time_rtc && i < 100);
           ret = 0;
+         }
     }
 
     return ret;
@@ -130,9 +147,11 @@ int alarm_flag_check(void)
     char *file_name = "/productinfo/alarm_flag";
     int ret = 0;
     long time = 0;
+    unsigned long time_rtc= 0;
+    unsigned long read_secs;
     unsigned long now_rtc = 0;
     int time_lead = 0;
-
+    int i = 0;
     cmd_yaffs_mount(file_partition);
     ret = cmd_yaffs_ls_chk(file_name);
     if (ret == -1) {
@@ -143,15 +162,29 @@ int alarm_flag_check(void)
         cmd_yaffs_mread_file(file_name, (unsigned char *)time_buf);
         printf("time get %s", time_buf);
         time = simple_strtol(time_buf, NULL, 10);
+        time_rtc = time;
         sprd_rtc_init();
         now_rtc = sprd_rtc_get_sec();
         printf("now rtc %lu\n", now_rtc);
         time = time - now_rtc;
         time_lead = get_alarm_lead_set();
-        if((time < time_lead) && (time > time_lead -10))
+        if((time < time_lead +180) && (time > time_lead -10))
           ret = 1;
-        else
+        else{
+          sprd_rtc_set_alarm_sec(time_rtc);
+          msleep(150);
+          do {
+                     if(i!=0){
+                       sprd_rtc_set_alarm_sec(time_rtc);
+		         msleep(150);
+                        }
+			read_secs = sprd_rtc_get_alarm_sec();
+
+			msleep(1);
+			i++;
+		}while(read_secs != time_rtc && i < 100);
           ret = 0;
+         }
     }
     cmd_yaffs_umount(file_partition);
     return ret;
