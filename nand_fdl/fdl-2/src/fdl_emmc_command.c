@@ -10,6 +10,8 @@
 #include "fdl_stdio.h"
 
 #include "parsemtdparts.h"
+#include "fdl_backupnvitem.h"
+
 #include "asm/arch/sci_types.h"
 #include "asm/arch/nand_controller.h"
 #include <linux/mtd/mtd.h>
@@ -21,6 +23,10 @@
 
 #define EFI_SECTOR_SIZE 		(512)
 #define ERASE_SECTOR_SIZE		((64 * 1024) / EFI_SECTOR_SIZE)
+#define EMMC_BUF_SIZE			(((216 * 1024 * 1024) / EFI_SECTOR_SIZE) * EFI_SECTOR_SIZE)
+
+#define FIX_NV_IS_OK		(1)
+#define FIX_BACKUP_NV_IS_OK	(2)
 
 typedef struct DL_EMMC_STATUS_TAG
 {
@@ -42,9 +48,6 @@ static int is_ProdInfo_flag = 0;
 static unsigned long is_factorydownload_flag = 0;
 static int read_prod_info_flag = 0;
 
-
-#define EMMC_BUF_SIZE		(((216 * 1024 * 1024) / EFI_SECTOR_SIZE) * EFI_SECTOR_SIZE)
-
 unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
 unsigned char g_fix_nv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_fixbucknv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
@@ -59,6 +62,7 @@ typedef struct DL_FILE_STATUS_TAG
 
 static DL_EMMC_FILE_STATUS g_status;
 static int g_prevstatus;
+static int read_nv_check = 0;
 
 static __inline void FDL2_eMMC_SendRep (unsigned long err)
 {
@@ -725,6 +729,17 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 	return  1; 
 }
 
+void dump_nvitem(NV_BACKUP_ITEM_T *nvitem)
+{
+	int cnt2;
+
+	printf("\nszItemName = %s  wIsBackup = %d  wIsUseFlag = %d  dwID = 0x%08x  dwFlagCount = %d\n", nvitem->szItemName, nvitem->wIsBackup, nvitem->wIsUseFlag, nvitem->dwID, nvitem->dwFlagCount);
+	
+	for (cnt2 = 0; cnt2 < nvitem->dwFlagCount; cnt2 ++) {
+		printf("szFlagName = %s  dwCheck = %d\n", nvitem->nbftArray[cnt2].szFlagName, nvitem->nbftArray[cnt2].dwCheck);
+	}
+}
+
 int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 {
 	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, crc;
@@ -732,12 +747,189 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 	if (is_nv_flag) {
 		fix_nv_checksum = Get_CheckSum((unsigned char *) g_eMMCBuf, g_status.total_recv_size);
 		fix_nv_checksum = EndianConv_32 (fix_nv_checksum);
-		g_eMMCBuf[FIXNV_SIZE + 0] = g_eMMCBuf[FIXNV_SIZE + 1] = 0x5a;
-		g_eMMCBuf[FIXNV_SIZE + 2] = g_eMMCBuf[FIXNV_SIZE + 3] = 0x5a;
+
 	        if (fix_nv_checksum != g_checksum) {
 	        	SEND_ERROR_RSP(BSL_CHECKSUM_DIFF);
 			return 0;
 	        }
+
+		unsigned char *pDestCode = g_eMMCBuf;
+		unsigned long dwCodeSize = FIXNV_SIZE;
+		/* check nv struction from DLoad Tools */
+		/*dump_all_buffer(pDestCode, 1024);*/
+		if (!XCheckNVStructEx(pDestCode, dwCodeSize, 0, 1)) {
+			printf("NV data from DLoad Tools is wrong, Failed : Verify error.\n");
+			SEND_ERROR_RSP(BSL_REP_VERIFY_ERROR);
+			return 0;
+		}
+
+#ifdef FDL2_NOT_DLOAD_BACKUP_NVCALIBRATION
+		unsigned long backupnvitem_count = sizeof(backupnvitem) / sizeof(NV_BACKUP_ITEM_T);
+		unsigned long cnt;
+		unsigned long nSectorCount, base_sector;
+		unsigned char *lpReadBuffer = NULL;
+		unsigned long dwReadSize = 0;
+		printf("backupnvitem_count = %d\n", backupnvitem_count);
+		NV_BACKUP_ITEM_T *pNvBkpItem;
+
+		if (backupnvitem_count) {
+			/* read nv from PARTITION_FIX_NV1 */
+			memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
+			if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
+			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
+			else
+			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+
+			base_sector = efi_GetPartBaseSec(PARTITION_FIX_NV1);
+			if (!Emmc_Read(PARTITION_USER, base_sector, nSectorCount,
+				(unsigned char *)g_fix_nv_buf)) {
+				memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
+			}
+			read_nv_check = 0;
+			if (eMMC_nv_is_correct(g_fix_nv_buf, FIXNV_SIZE)) {
+				/* check nv in PARTITION_FIX_NV1 */
+				if (!XCheckNVStructEx(g_fix_nv_buf, FIXNV_SIZE, 0, 1))
+					printf("NV data in PARTITION_FIX_NV1 is crashed.\n");
+				else
+					read_nv_check += FIX_NV_IS_OK;
+			}
+
+			/* read nv from PARTITION_FIX_NV2 */
+			memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
+			if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
+			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
+			else
+			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+
+			base_sector = efi_GetPartBaseSec(PARTITION_FIX_NV2);
+			if (!Emmc_Read(PARTITION_USER, base_sector, nSectorCount,
+				(unsigned char *)g_fixbucknv_buf)) {
+				memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
+			}
+			if (eMMC_nv_is_correct(g_fixbucknv_buf, FIXNV_SIZE)) {
+				/* check nv in PARTITION_FIX_NV2 */
+				if (!XCheckNVStructEx(g_fixbucknv_buf, FIXNV_SIZE, 0, 1))
+					printf("NV data in PARTITION_FIX_NV1 is crashed.\n");
+				else
+					read_nv_check += FIX_BACKUP_NV_IS_OK;
+			}
+			
+			if (read_nv_check > 0) {
+				switch (read_nv_check) {
+				case (FIX_NV_IS_OK):
+					printf("nv is right!\n");
+					lpReadBuffer = g_fix_nv_buf;
+					dwReadSize = FIXNV_SIZE;
+				break;
+				case (FIX_BACKUP_NV_IS_OK):
+					printf("backupnv is right!\n");
+					lpReadBuffer = g_fixbucknv_buf;
+					dwReadSize = FIXNV_SIZE;
+				break;
+				case (FIX_NV_IS_OK + FIX_BACKUP_NV_IS_OK):
+					printf("nv and backupnv are all right!\n");
+					lpReadBuffer = g_fix_nv_buf;
+					dwReadSize = FIXNV_SIZE;
+				break;
+				}
+
+				/*dump_all_buffer(lpReadBuffer, 1024);*/
+				/*if (!XCheckNVStructEx(lpReadBuffer, dwReadSize, 0, 1))
+					printf("NV data in phone is crashed.\n");
+				else
+					printf("NV data in phone is right.\n");*/
+
+				/* check calibration reserved 7 and struct itself only for GSM */
+				/*if (!XCheckCalibration(lpReadBuffer, dwReadSize, 1)) {
+					printf("the phone is not to be GSM calibrated.\n");
+				}*/
+
+				/* calibrate every item in backupnvitem array */
+				for (cnt = 0; cnt < backupnvitem_count; cnt ++) {
+					pNvBkpItem = (backupnvitem + cnt);
+					dump_nvitem(pNvBkpItem);
+
+					unsigned long bReplace = 0;
+					unsigned long bContinue = 0;
+					unsigned long dwErrorRCID;
+					int mm, nNvBkpFlagCount = pNvBkpItem->dwFlagCount;
+				
+					if (nNvBkpFlagCount > MAX_NV_BACKUP_FALG_NUM)
+						nNvBkpFlagCount = MAX_NV_BACKUP_FALG_NUM;
+
+					for (mm = 0; mm < nNvBkpFlagCount; mm++) {
+						if (strcmp(pNvBkpItem->nbftArray[mm].szFlagName, "Replace") == 0)
+							bReplace = pNvBkpItem->nbftArray[mm].dwCheck;
+						else if (strcmp(pNvBkpItem->nbftArray[mm].szFlagName, "Continue") == 0)
+							bContinue = pNvBkpItem->nbftArray[mm].dwCheck;
+					}
+				
+					printf("bReplace = %d  bContinue = %d\n", bReplace, bContinue);
+					/* ------------------------------ */
+					if ((strcmp(pNvBkpItem->szItemName, "Calibration")) == 0) {
+						if (pNvBkpItem->wIsBackup == 1) {
+							dwErrorRCID = GSMCaliPreserve((unsigned char *)pDestCode, 										dwCodeSize, lpReadBuffer, dwReadSize,
+										  bReplace, bContinue, GSMCaliVaPolicy);
+							if (dwErrorRCID != 0) {
+								printf("Preserve calibration Failed : not Verify.\n");
+								SEND_ERROR_RSP(BSL_REP_NOT_VERIFY);
+								return 0;
+							}						
+						}					
+					} else if ((strcmp(pNvBkpItem->szItemName, "TD_Calibration")) == 0) {
+						if (pNvBkpItem->wIsBackup == 1) {
+							dwErrorRCID = XTDCaliPreserve((unsigned char *)pDestCode, 										dwCodeSize, lpReadBuffer, dwReadSize,	 											bReplace, bContinue);
+							if (dwErrorRCID != 0) {
+								printf("Preserve TD calibration Failed : not Verify.\n");
+								SEND_ERROR_RSP(BSL_REP_NOT_VERIFY);
+								return 0;
+							}
+						}
+					} else if ((strcmp(pNvBkpItem->szItemName, "LTE_Calibration")) == 0) {
+						if (pNvBkpItem->wIsBackup == 1) {
+							dwErrorRCID = LTECaliPreserve((unsigned char *)pDestCode, 										dwCodeSize, lpReadBuffer, dwReadSize, 											bReplace, bContinue);
+							if (dwErrorRCID != 0) {
+								printf("Preserve LTE calibration Failed : not Verify.\n");
+								SEND_ERROR_RSP(BSL_REP_NOT_VERIFY);
+								return 0;
+							}
+						}
+					} else if ((strcmp(pNvBkpItem->szItemName, "IMEI")) == 0) {
+						if (pNvBkpItem->wIsBackup == 1) {
+							dwErrorRCID = XPreserveIMEIs((unsigned short)pNvBkpItem->dwID, 
+									(unsigned char *)pDestCode, dwCodeSize, 									lpReadBuffer, dwReadSize, bReplace, bContinue);
+							if (dwErrorRCID != 0) {
+								printf("Preserve %s Failed : not Verify.\n", 
+									pNvBkpItem->szItemName);
+								SEND_ERROR_RSP(BSL_REP_NOT_VERIFY);
+								return 0;
+							}	
+						}					
+					} else {
+						if ((strcmp(pNvBkpItem->szItemName, "MMITest") == 0) || 
+							(strcmp(pNvBkpItem->szItemName, "MMITest Result") == 0))
+								bContinue = 1;
+
+						if (pNvBkpItem->wIsBackup == 1 && pNvBkpItem->dwID != 0xFFFFFFFF) {
+							dwErrorRCID = XPreserveNVItem((unsigned short)(pNvBkpItem->dwID), 										(unsigned char *)pDestCode, dwCodeSize, 									lpReadBuffer, dwReadSize, bReplace, bContinue);
+							if (dwErrorRCID != 0) {
+								printf("Preserve %s Failed : not Verify.\n", 
+									pNvBkpItem->szItemName);
+								SEND_ERROR_RSP(BSL_REP_NOT_VERIFY);
+								return 0;
+							}	
+						}	
+					}
+					/* ------------------------------ */
+				} /* for (cnt = 0; cnt < backupnvitem_count; cnt ++) */
+			} else /* if (read_nv_check > 0) */
+				printf("nv and backupnv are all empty or wrong, so download nv from DLoad Tools only.\n");
+		} else /* if (backupnvitem_count) */
+			printf("backupnvitem is empty, so don't backup nv and download nv from DLoad Tools only.\n");
+#endif
+
+		g_eMMCBuf[FIXNV_SIZE + 0] = g_eMMCBuf[FIXNV_SIZE + 1] = 0x5a;
+		g_eMMCBuf[FIXNV_SIZE + 2] = g_eMMCBuf[FIXNV_SIZE + 3] = 0x5a;
 
 		if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
 			nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
@@ -804,9 +996,7 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
     	return 1;
 }
 
-static int read_nv_check = 0;
-#define FIX_NV_IS_OK		1
-#define FIX_BACKUP_NV_IS_OK	2
+
 
 int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 {
