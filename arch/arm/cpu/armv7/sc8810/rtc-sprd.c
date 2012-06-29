@@ -96,7 +96,7 @@ unsigned long sprd_rtc_get_sec(void)
 	}while(1);
 	return first;
 }
-static inline void sprd_rtc_set_alarm_sec(unsigned long secs);
+ void sprd_rtc_set_alarm_sec(unsigned long secs);
 static inline void sprd_rtc_set_sec(unsigned long secs)
 {
 	unsigned sec, min, hour, day;
@@ -154,7 +154,7 @@ unsigned long sprd_rtc_get_alarm_sec(void)
 
 	return ((((day*24) + hour)*60 + min)*60 + sec);
 }
-static inline void sprd_rtc_set_alarm_sec(unsigned long secs)
+ void sprd_rtc_set_alarm_sec(unsigned long secs)
 {
 	unsigned sec, min, hour, day;
 	unsigned long temp;
