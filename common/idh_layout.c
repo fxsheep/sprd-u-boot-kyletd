@@ -14,8 +14,13 @@ int get_cal_io_ms(void)
 }
 unsigned int get_bat_low_level(void)
 {
-    return LOW_BAT_ADC_LEVEL;
+    return LOW_BAT_VOL;
 }
+unsigned int get_bat_low_level_chg(void)
+{
+	return LOW_BAT_VOL_CHG;
+}
+
 
 unsigned int get_pwr_key_cnt(void)
 {

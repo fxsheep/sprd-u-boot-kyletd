@@ -2,6 +2,8 @@
 #include <asm/arch/adc_drvapi.h>
 #include <boot_mode.h>
 unsigned int get_bat_low_level(void);
+unsigned int get_bat_low_level_chg(void);
+int charger_connected(void);
 
 #define _BUF_SIZE 10
 uint32_t vbat_buf[_BUF_SIZE];
@@ -31,7 +33,13 @@ int is_bat_low(void)
     int adc_value = 0;
     unsigned int comp_vbat = 0;
     int i;
-    comp_vbat = get_bat_low_level();
+
+    if(charger_connected()){
+        comp_vbat = get_bat_low_level_chg();
+    }else{
+        comp_vbat = get_bat_low_level();
+    }
+
     ADC_Init();
 
     for(i=0;i<_BUF_SIZE;i++){
@@ -50,7 +58,7 @@ retry_adc:
 	
 	printf("is_bat_low adc_value:%d,comp_vbat:%d\n",adc_value,comp_vbat);
 	
-    if(adc_value < comp_vbat)
+    if(CHGMNG_AdcvalueToVoltage (adc_value) < comp_vbat)
       return 1;
     else
       return 0;
