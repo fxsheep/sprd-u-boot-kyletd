@@ -665,6 +665,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
     int str_len;
     char * buf;
     buf = malloc(1024);
+	memset(buf, 0, 1024);
 
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
     str_len = strlen(buf);
@@ -734,6 +735,37 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 #else
     sprintf(&buf[str_len], " ram=256M");
 #endif
+
+	/* fixnv=0x????????,0x????????*/
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], " fixnv=0x");
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], "%08x", FIXNV_ADR);
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], ",0x");
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], "%x", FIXNV_SIZE);
+
+	/* productinfo=0x????????,0x????????*/
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], " productinfo=0x");
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], "%08x", PRODUCTINFO_ADR);
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], ",0x");
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], "%x", PRODUCTINFO_SIZE);
+	
+	/* productinfo=0x????????,0x????????*/
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], " runtimenv=0x");
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], "%08x", RUNTIMENV_ADR);
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], ",0x");
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], "%x", RUNTIMENV_SIZE);
+
     printf("pass cmdline: %s\n", buf);
     //lcd_printf(" pass cmdline : %s\n",buf);
     //lcd_display();

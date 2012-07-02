@@ -86,11 +86,11 @@
 #define CONFIG_SYS_PROMPT_HUSH_PS2 "> "
 #endif
 
-#define FIXNV_SIZE		(64 * 1024)
+#define FIXNV_SIZE		(124 * 1024)
 #define PRODUCTINFO_SIZE	(3 * 1024)
 #define MODEM_SIZE		(8 * 1024 * 1024)
 
-#define PRODUCTINFO_ADR		(0x00490000)
+#define PRODUCTINFO_ADR		(0x0049f000)
 
 /*#define CMDLINE_NEED_CONV */
 
