@@ -368,7 +368,8 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 	if (strcmp(phypart->name, "productinfo") == 0) {
 		/* for dlstatus, read real length */
 		char *productinfopoint = "/productinfo";
-		char *productinfofilename = "/productinfo/dlstatus.txt";
+		/* char *productinfofilename = "/productinfo/dlstatus.txt"; */
+		char *productinfofilename = "/productinfo/productinfo.bin";
 
 		if (read_dlstatus_flag == 0) {
 			memset(g_PhasecheckBUF, 0, 0x2000);
