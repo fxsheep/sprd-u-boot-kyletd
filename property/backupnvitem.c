@@ -334,50 +334,6 @@ typedef struct _LTE_NV_CALI_PARAM_T
 	LTE_NV_CALI_APC_CONTROL_WORD_DIV    APC_CONTROL_WORD_DIV;    
 }LTE_NV_CALI_PARAM_T;
 
-void dump_all_buffer(unsigned char *buf, unsigned long len)
-{
-	unsigned long row, col;
-	unsigned int offset;
-	unsigned long total_row, remain_col;
-	unsigned long flag = 1;
-
-	total_row = len / 16;
-	remain_col = len - total_row * 16;
-	//printf("total_row = %d  remain_col = %d\n", total_row, remain_col);
-	offset = 0;
-	for (row = 0; row < total_row; row ++) {
-		/*flag = 0;
-		for (col = 0; col < 16; col ++)
-			if (buf[offset + col] != 0) {
-				flag = 1;
-				break;
-			}*/
-		if (flag == 1) {
-			printf("%08xh: ", offset);
-			for (col = 0; col < 16; col ++)
-				printf("%02x ", buf[offset + col]);
-			printf("\n");
-		}
-		offset += 16;
-	}
-
-	if (remain_col > 0) {
-		/*flag = 0;
-		for (col = 0; col < remain_col; col ++)
-			if (buf[offset + col] != 0) {
-				flag = 1;
-				break;
-			}*/
-		if (flag == 1) {
-			printf("%08xh: ", offset);
-			for (col = 0; col < remain_col; col ++)
-				printf("%02x ", buf[offset + col]);
-			printf("\n");
-		}
-	}
-
-	printf("\n");
-}
 
 static unsigned long XCheckNVStruct(unsigned char *lpPhoBuf, unsigned long dwPhoSize, 
 	unsigned long bBigEndian, unsigned long bModule)

@@ -49,7 +49,7 @@ COM_OBJS = $(addprefix $(obj),$(COM_COBJS))
 
 FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o fdl_nand.o flash_command.o parsemtdparts.o
 ifdef CONFIG_EMMC_BOOT
-FDL2_COBJS_LIST += fdl_emmc_command.o fdl_partition.o phasecheck.o backupnvitem.o
+FDL2_COBJS_LIST += fdl_emmc_command.o fdl_partition.o phasecheck.o
 endif
 
 FDL2_COBJS = $(addprefix $(obj),$(FDL2_COBJS_LIST))
