@@ -133,6 +133,7 @@ static const char *const mtdids_default = NULL;
 static const char *const mtdparts_default = MTDPARTS_DEFAULT;
 #else
 static const char *const mtdparts_default = NULL;
+char * get_mtdparts(void);
 #endif
 
 /* copies of last seen 'mtdids', 'mtdparts' and 'partition' env variables */
@@ -1545,7 +1546,11 @@ static int parse_mtdparts(const char *const mtdparts)
 	}
 
 	/* re-read 'mtdparts' variable, mtd_devices_init may be updating env */
+#if defined(MTDPARTS_DEFAULT)
 	p = getenv("mtdparts");
+#else
+	p = get_mtdparts();
+#endif
 
 	if (strncmp(p, "mtdparts=", 9) != 0) {
 		printf("mtdparts variable doesn't start with 'mtdparts='\n");
@@ -1716,7 +1721,11 @@ int mtdparts_init(void)
 
 	/* get variables */
 	ids = getenv("mtdids");
+#if defined(MTDPARTS_DEFAULT)
 	parts = getenv("mtdparts");
+#else
+	parts = get_mtdparts();
+#endif
 	current_partition = getenv("partition");
 
 	/* save it for later parsing, cannot rely on current partition pointer

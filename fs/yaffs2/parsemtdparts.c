@@ -309,14 +309,14 @@ static int mtdpart_setup_real(char *s)
 	return 1;
 }
 
-
+char * get_mtdparts(void);
 int yaffs_parse_cmdline_partitions(struct mtd_partition *current, unsigned long long mastersize)
 {
 	unsigned long offset;
 	int i;
 	struct cmdline_mtd_partition *part;
 
-	cmdline = MTDPARTS_DEFAULT;
+	cmdline = get_mtdparts();
 
 	/* parse command line */
 	if (!cmdline_parsed) {

@@ -1543,6 +1543,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
     int str_len;
     char * buf;
     buf = malloc(1024);
+	memset(buf, 0, 1024);
 
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
 #if !(BOOT_NATIVE_LINUX)
