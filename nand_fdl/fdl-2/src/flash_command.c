@@ -71,6 +71,8 @@ struct real_mtd_partition phy_partition;
 struct real_mtd_partition phy_nv_partition;
 static unsigned int is_nbl_write;
 static unsigned int is_phasecheck_write;
+static unsigned int file_in_productinfo_partition = 0; /* 0 is null; 1 is productinfo.bin; 2 is nv_ram */
+static unsigned int read_productinfo_flag = 0, read_nvram_flag = 0;
 static unsigned int g_NBLFixBufDataSize = 0;
 static unsigned char g_FixNBLBuf[0x8000];
 static unsigned int g_PhasecheckBUFDataSize = 0;
@@ -102,6 +104,7 @@ static CUSTOM2LOG custom2log_table[] = {
 	{0x90000001, 0x80000005}, 
 	{0x90000003, 0x80000008}, 
 	{0x90000002, 0x80000011},
+	{0x90000022, 0x80000011},
 	{0xffffffff, 0xffffffff}
 };
 #define ECC_NBL_SIZE 0x4000
@@ -225,6 +228,8 @@ unsigned long custom2log(unsigned long custom)
 {
 	unsigned long idx, log = 0xffffffff;
 
+	file_in_productinfo_partition = 0;
+
 	if (custom == NAND_NOTUSED_ADDRESS)
 		return custom;
 
@@ -233,6 +238,9 @@ unsigned long custom2log(unsigned long custom)
 
 	for (idx = 0; custom2log_table[idx].custom != 0xffffffff; idx ++) {
 		if (custom2log_table[idx].custom == custom) {
+			if (custom == 0x90000002 || custom == 0x90000022)
+				file_in_productinfo_partition = custom;
+
 			log = custom2log_table[idx].log;
 			break;
 		}
@@ -370,23 +378,44 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 		char *productinfopoint = "/productinfo";
 		/* char *productinfofilename = "/productinfo/dlstatus.txt"; */
 		char *productinfofilename = "/productinfo/productinfo.bin";
+		char *nvramfilename = "/productinfo/nvram";
 
-		if (read_dlstatus_flag == 0) {
-			memset(g_PhasecheckBUF, 0, 0x2000);
-			/* read dlstatus */
-    			cmd_yaffs_mount(productinfopoint);
-			ret = cmd_yaffs_ls_chk(productinfofilename);
-			if (ret >= DL_OP_RECORD_LEN) {
-				cmd_yaffs_mread_file(productinfofilename, g_PhasecheckBUF);
-				read_dlstatus_flag = 1;//success
+		if (file_in_productinfo_partition == 0x90000002) {
+			if (read_productinfo_flag == 0) {
+				memset(g_PhasecheckBUF, 0, 0x2000);
+				/* read dlstatus */
+    				cmd_yaffs_mount(productinfopoint);
+				ret = cmd_yaffs_ls_chk(productinfofilename);
+				if (ret > 0) {
+					cmd_yaffs_mread_file(productinfofilename, g_PhasecheckBUF);
+					read_productinfo_flag = 1;//success
+				}
+				cmd_yaffs_umount(productinfopoint);
 			}
-			cmd_yaffs_umount(productinfopoint);
+
+			memcpy(buf, (unsigned char *)(g_PhasecheckBUF + off), size);
+
+			if (read_productinfo_flag == 1)
+				return NAND_SUCCESS;
+		} else if (file_in_productinfo_partition == 0x90000022) {
+			if (read_nvram_flag == 0) {
+				memset(g_PhasecheckBUF, 0, 0x2000);
+				/* read dlstatus */
+    				cmd_yaffs_mount(productinfopoint);
+				ret = cmd_yaffs_ls_chk(nvramfilename);
+				if (ret > 0) {
+					cmd_yaffs_mread_file(nvramfilename, g_PhasecheckBUF);
+					read_nvram_flag = 1;//success
+				}
+				cmd_yaffs_umount(productinfopoint);
+			}
+
+			memcpy(buf, (unsigned char *)(g_PhasecheckBUF + off), size);
+
+			if (read_nvram_flag == 1)
+				return NAND_SUCCESS;
 		}
-
-		memcpy(buf, (unsigned char *)(g_PhasecheckBUF + off), size);
-
-		if (read_dlstatus_flag == 1)
-			return NAND_SUCCESS;
+	
 		return NAND_SYSTEM_ERROR;
 	}//if (strcmp(phypart->name, "dlstatus") == 0)
 }
@@ -790,21 +819,30 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		/* write phasecheck to yaffs2 format */
 		char *productinfopoint = "/productinfo";
 		char *productinfofilename = "/productinfo/productinfo.bin";
+		char *nvramfilename = "/productinfo/nvram";
 
-		/* g_PhasecheckBUF : (PRODUCTINFO_SIZE + 4) instead of g_PhasecheckBUFDataSize */
-		g_PhasecheckBUF[PRODUCTINFO_SIZE + 0] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 1] = 0x5a;
-		g_PhasecheckBUF[PRODUCTINFO_SIZE + 2] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 3] = 0x5a;
-		cmd_yaffs_mount(productinfopoint);
-    		cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
-		ret = cmd_yaffs_ls_chk(productinfofilename);
-		cmd_yaffs_umount(productinfopoint);
-		g_prevstatus = NAND_SUCCESS;
-		/* factorydownload tools */
-		is_factorydownload_tools = 1;
-		is_check_dlstatus = get_DL_Status();
-		if (is_check_dlstatus == 1) {
-			get_Dl_Erase_Address_Table(&Dl_Erase_Address);
-			get_Dl_Data_Address_Table(&Dl_Data_Address);
+		if (file_in_productinfo_partition == 0x90000002) {
+			/* g_PhasecheckBUF : (PRODUCTINFO_SIZE + 4) instead of g_PhasecheckBUFDataSize */
+			g_PhasecheckBUF[PRODUCTINFO_SIZE + 0] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 1] = 0x5a;
+			g_PhasecheckBUF[PRODUCTINFO_SIZE + 2] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 3] = 0x5a;
+			cmd_yaffs_mount(productinfopoint);
+    			cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
+			ret = cmd_yaffs_ls_chk(productinfofilename);
+			cmd_yaffs_umount(productinfopoint);
+			g_prevstatus = NAND_SUCCESS;
+			/* factorydownload tools */
+			is_factorydownload_tools = 1;
+			is_check_dlstatus = get_DL_Status();
+			if (is_check_dlstatus == 1) {
+				get_Dl_Erase_Address_Table(&Dl_Erase_Address);
+				get_Dl_Data_Address_Table(&Dl_Data_Address);
+			}
+		} else if (file_in_productinfo_partition == 0x90000022) {
+			cmd_yaffs_mount(productinfopoint);
+    			cmd_yaffs_mwrite_file(nvramfilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
+			ret = cmd_yaffs_ls_chk(nvramfilename);
+			cmd_yaffs_umount(productinfopoint);
+			g_prevstatus = NAND_SUCCESS;
 		}
     	}
 #ifdef	TRANS_CODE_SIZE
