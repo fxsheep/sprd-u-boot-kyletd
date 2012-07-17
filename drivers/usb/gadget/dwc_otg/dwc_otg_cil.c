@@ -875,7 +875,7 @@ void dwc_otg_core_dev_init(dwc_otg_core_if_t * core_if)
 	dcfg.d32 = dwc_read_reg32(&dev_if->dev_global_regs->dcfg);
 	dcfg.b.descdma = (core_if->dma_desc_enable) ? 1 : 0;
 	dcfg.b.perfrint = DWC_DCFG_FRAME_INTERVAL_80;
-
+	dcfg.b.devspd = 1;
 	dwc_write_reg32(&dev_if->dev_global_regs->dcfg, dcfg.d32);
 
 	/* Configure data FIFO sizes */
