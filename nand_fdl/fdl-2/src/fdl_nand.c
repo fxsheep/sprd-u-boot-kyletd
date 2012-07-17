@@ -313,7 +313,7 @@ int get_nand_pageoob(NAND_PAGE_OOB_STATUS *nand_page_oob_info)
 	return NAND_SUCCESS;
 }
 
-int nand_start_write(struct real_mtd_partition *phypart, unsigned int size, NAND_PAGE_OOB_STATUS *nand_page_oob_info)
+int nand_start_write(struct real_mtd_partition *phypart, unsigned int size, NAND_PAGE_OOB_STATUS *nand_page_oob_info, unsigned long noerasepartition)
 {
 	struct mtd_partition cur_partition;
 	int erase_blk, ret = 0;
@@ -350,6 +350,9 @@ int nand_start_write(struct real_mtd_partition *phypart, unsigned int size, NAND
 
 	cur_partition.offset = phypart->offset;
 	cur_partition.size = phypart->size;
+
+	if (noerasepartition == 0x90000022) /* nvram */
+		return NAND_SUCCESS;
 
 	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
 		printf("erasing block : %d    %d % \r", (cur_partition.offset / nand->erasesize + erase_blk), (erase_blk * 100 ) / (cur_partition.size / nand->erasesize));

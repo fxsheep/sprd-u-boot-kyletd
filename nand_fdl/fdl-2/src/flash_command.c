@@ -331,7 +331,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				log2phy_table(&phy_nv_partition);
 				phy_partition_info(phy_nv_partition, __LINE__);
 				printf("erase backupfixnv start\n");
-				nand_start_write(&phy_nv_partition, 0, &nand_page_oob_info);
+				nand_start_write(&phy_nv_partition, 0, &nand_page_oob_info, 0);
 				printf("\nerase backupfixnv end\n");
 				printf("write backupfixnv start\n");
 				cmd_yaffs_mount(backupfixnvpoint);
@@ -347,7 +347,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				phy_partition_info(phy_nv_partition, __LINE__);
 				/* erase fixnv partition */
 				printf("erase fixnv start\n");
-				nand_start_write(&phy_nv_partition, 0, &nand_page_oob_info);
+				nand_start_write(&phy_nv_partition, 0, &nand_page_oob_info, 0);
 				printf("\nerase fixnv end\n");
 				printf("write fixnv start\n");
 				cmd_yaffs_mount(fixnvpoint);
@@ -468,7 +468,9 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	if (strcmp(phy_partition.name, "fixnv") == 0)
 		ret = get_nand_pageoob(&nand_page_oob_info);
 	else
-        	ret = nand_start_write(&phy_partition, size, &nand_page_oob_info);
+        	ret = nand_start_write(&phy_partition, size, &nand_page_oob_info, file_in_productinfo_partition);
+
+
         if (NAND_SUCCESS != ret)
             break;
 
@@ -751,7 +753,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		g_prevstatus = ret;
 		if (ret == NAND_SUCCESS) {
 			printf("erase fixnv start\n");
-			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info);
+			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info, 0);
 			printf("\nerase fixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {
@@ -780,7 +782,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		g_prevstatus = ret;
 		if (ret == NAND_SUCCESS) {
 			printf("erase backupfixnv start\n");
-			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info);
+			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info, 0);
 			printf("\nerase backupfixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {
@@ -839,7 +841,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			}
 		} else if (file_in_productinfo_partition == 0x90000022) {
 			cmd_yaffs_mount(productinfopoint);
-    			cmd_yaffs_mwrite_file(nvramfilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
+    			cmd_yaffs_mwrite_file(nvramfilename, g_PhasecheckBUF, PRODUCTINFO_SIZE);
 			ret = cmd_yaffs_ls_chk(nvramfilename);
 			cmd_yaffs_umount(productinfopoint);
 			g_prevstatus = NAND_SUCCESS;
