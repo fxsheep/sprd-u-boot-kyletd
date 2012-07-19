@@ -1618,6 +1618,7 @@ int dwc_otg_pcd_ep_queue(dwc_otg_pcd_t * pcd, void *ep_handle,
 				DWC_DEBUGPL(DBG_ANY, "ep0: odd state %d\n",
 					    pcd->ep0state);
 				DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags);
+                            dwc_free(req);
 				return -DWC_E_SHUTDOWN;
 			}
 

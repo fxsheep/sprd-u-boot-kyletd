@@ -485,6 +485,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		}
 	} 
 	else{
+              free(bmp_img);
 		return;
 	}
 	

@@ -187,6 +187,7 @@ int _gen_pmbr_part(struct partition *part)
 	{
 		*(unsigned long int*) part->nr_sects = PED_CPU_TO_LE32(emmc_part_device.total_sector);		
 	}
+       return 1;
 }
 
 int _gen_pmbr(legacy_mbr *pmbr)
@@ -203,6 +204,7 @@ unsigned int _write_pmbr(legacy_mbr *pmbr)
 {
 	//write ro disk
 	emmc_part_device._device_io->_write(0,1,(unsigned char *)pmbr);
+       return 1;
 }
 
 efi_guid_t _gen_guid(int part_index)
@@ -329,6 +331,7 @@ unsigned int _gen_backup_gpt(gpt_header *g_header,PARTITION_CFG *p_partition_cfg
 	*(unsigned long int*)g_header->header_crc32 = 0;
 	crc = uefi_crc32(g_header,le32_to_int(g_header->header_size));
 	*(unsigned long int*)g_header->header_crc32 = PED_CPU_TO_LE32(crc);
+       return 1;
 }
 
 unsigned int _write_gpt(gpt_header *g_header)
@@ -359,12 +362,12 @@ unsigned int _write_backup_gpt(gpt_header *g_header)
 **/
 int ueft_mount()
 {
-	
+       return 1;
 }
 
 int ueft_unmount()
 {
-	
+	return 1;
 }
 
 unsigned int read_uefi_partition_table(PARTITION_TABLE *p_partition_table)

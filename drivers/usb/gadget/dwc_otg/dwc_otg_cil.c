@@ -282,9 +282,9 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t * core_if)
 	if (core_if->host_if) {
 		dwc_free(core_if->host_if);
 	}
-	dwc_free(core_if);
 	DWC_TIMER_FREE(core_if->wkp_timer);
 	DWC_FREE(core_if->core_params);
+       dwc_free(core_if);
 }
 
 /**

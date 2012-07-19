@@ -122,5 +122,6 @@ void fastboot_mode(void)
 	dwc_otg_driver_init();
 	usb_fastboot_initialize();
 #endif
+free(bmp_img);
 
 }

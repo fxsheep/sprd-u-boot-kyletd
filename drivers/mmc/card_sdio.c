@@ -2363,7 +2363,7 @@ PUBLIC uint32 CARD_SDIO_GetCapacity(CARD_SDIO_HANDLE cardHandle)
 /*****************************************************************************/
 PUBLIC uint32 CARD_SDIO_BOOT_Enable(CARD_SDIO_HANDLE cardHandle)
 {
-
+    return 0;
 }
 
 PUBLIC BOOLEAN Emmc_Init()

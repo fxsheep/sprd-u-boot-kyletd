@@ -120,6 +120,7 @@ void DWC_VPRINTF(char *format, va_list args)
 int DWC_VSNPRINTF(char *str, int size, char *format, va_list args)
 {
 	vsprintf(str, format, args);
+       return 0;
 }
 
 void DWC_PRINTF(char *format, ...)
@@ -208,7 +209,7 @@ void *__DWC_DMA_ALLOC(uint32_t size, dwc_dma_t *dma_addr)
 	}
 	memset(buf, 0, (size_t)size);
 */
-	void * buf;
+	void * buf = NULL;
 	dwc_debug("NO SUPPORT %s\r\n", __func__);
 	return buf;
 }
@@ -332,6 +333,7 @@ static int work_done(void *data)
 int DWC_WORKQ_WAIT_WORK_DONE(dwc_workq_t *workq, int timeout)
 {
 	dwc_debug("NO SUPPORT %s\r\n", __func__);
+       return 0;
 	//return DWC_WAITQ_WAIT_TIMEOUT(workq->waitq, work_done, workq, timeout);
 }
 
@@ -507,6 +509,7 @@ dwc_mutex_t *DWC_MUTEX_ALLOC(void)
 	mutex_init(m);
 	return mutex;
 #endif
+       return NULL;
 }
 
 #if (defined(DWC_LINUX) && defined(CONFIG_DEBUG_MUTEXES))
@@ -538,6 +541,7 @@ int DWC_MUTEX_TRYLOCK(dwc_mutex_t *mutex)
 	struct mutex *m = (struct mutex *)mutex;
 	return mutex_trylock(m);
 */
+       return 0;
 }
 
 
@@ -745,6 +749,7 @@ uint32_t DWC_TIME(void)
 {
 	dwc_debug("NO SUPPORT %s\r\n", __func__);
 	//return jiffies_to_msecs(jiffies);
+       return 0;
 }
 
 

@@ -1362,7 +1362,7 @@ int __init gserial_setup(struct usb_gadget *g, unsigned count)
 {
 	unsigned			i;
 	struct usb_cdc_line_coding	coding;
-	int				status;
+	int				status =0;
 
 	if (count == 0 || count > N_PORTS)
 		return -EINVAL;
@@ -1397,7 +1397,7 @@ int __init gserial_setup(struct usb_gadget *g, unsigned count)
 	coding.bDataBits = USB_CDC_1_STOP_BITS;
 
 	tty_set_operations(gs_tty_driver, &gs_tty_ops);
-#endif
+
 
 	/* make devices be openable */
 	for (i = 0; i < count; i++) {
@@ -1411,7 +1411,7 @@ int __init gserial_setup(struct usb_gadget *g, unsigned count)
 	n_ports = count;
 
 	/* export the driver ... */
-#if 0
+
 	status = tty_register_driver(gs_tty_driver);
 	if (status) {
 		pr_err("%s: cannot register, err %d\n",
@@ -1432,7 +1432,7 @@ int __init gserial_setup(struct usb_gadget *g, unsigned count)
 
 	pr_debug("%s: registered %d ttyGS* device%s\n", __func__,
 			count, (count == 1) ? "" : "s");
-#endif
+
 
 	return status;
 fail:
@@ -1440,6 +1440,7 @@ fail:
 		kfree(ports[count].port);
 	//put_tty_driver(gs_tty_driver);
 	//gs_tty_driver = NULL;
+#endif
 	return status;
 }
 

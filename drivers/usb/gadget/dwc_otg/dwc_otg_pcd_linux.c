@@ -1180,6 +1180,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 int usb_gadget_handle_interrupts(void)
 {
 	dwc_otg_pcd_irq(0, sprd_pcd);
+       return 0;
 }
 	
 #endif				/* DWC_HOST_ONLY */

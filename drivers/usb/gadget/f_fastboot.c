@@ -768,6 +768,7 @@ fail1:
 	error("can't alloc requests");
 	return -1;
 #endif
+       return 0;
 }
 
 static void tx_complete(struct usb_ep *ep, struct usb_request *req)

@@ -418,6 +418,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 	
 		return NAND_SYSTEM_ERROR;
 	}//if (strcmp(phypart->name, "dlstatus") == 0)
+       return NAND_SYSTEM_ERROR;
 }
 
 

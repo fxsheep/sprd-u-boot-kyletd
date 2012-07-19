@@ -52,6 +52,10 @@ static int nand_dump(nand_info_t *nand, ulong off, int only_oob, int repeat)
 	oobbuf = malloc(nand->oobsize);
 	if (!datbuf || !oobbuf) {
 		puts("No memory for page buffer\n");
+              if(datbuf)
+                 free(datbuf);
+              if(oobbuf)
+                free(oobbuf);
 		return 1;
 	}
 	off &= ~(nand->writesize - 1);

@@ -54,4 +54,5 @@ unsigned int emmc_part_device_init()
 {
 	emmc_part_device._device_io = &g_part_device_io;
 	g_part_device_io._info(&emmc_part_device.total_sector);
+       return 0;
 }
