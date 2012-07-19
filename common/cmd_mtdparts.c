@@ -1578,6 +1578,7 @@ static int parse_mtdparts(const char *const mtdparts)
 	}
 	if (err == 1) {
 		device_delall(&devices);
+              free(dev);
 		return 1;
 	}
 

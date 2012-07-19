@@ -19,5 +19,6 @@ PARTITION_CFG const g_sprd_emmc_partition_cfg[] = {
 	{PARTITION_RECOVERY, 10 * 1024, PARTITION_RAW},
 	{PARTITION_FASTBOOT_LOGO, 1 * 1024, PARTITION_RAW},
 	{PARTITION_MISC, 256, PARTITION_RAW},
-	{0, 0, 0}
+	{0, 0, 0},
+        {0, 0, 0}
 };

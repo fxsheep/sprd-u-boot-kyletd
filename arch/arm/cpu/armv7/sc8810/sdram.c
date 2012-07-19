@@ -1448,7 +1448,8 @@ LOCAL void SDRAM_PinDrv_Set (void)
 **---------------------------------------------------------------------------*/
 LOCAL uint32 Chip_ConfigClk (void)
 {
-    volatile uint32 i,arm_ahb_clk;
+    volatile uint32 i;
+    volatile uint32 arm_ahb_clk =0;
 
 #if defined(PLATFORM_SC6800H)
 #ifdef _BL_NF_NBL_

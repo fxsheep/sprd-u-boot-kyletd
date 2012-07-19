@@ -386,7 +386,7 @@ int yaffs_open(const char *path, int oflag, int mode)
 			// Check if the object is already in use
 			alreadyOpen = alreadyExclusive = 0;
 
-			for(i = 0; i <= YAFFSFS_N_HANDLES; i++)
+			for(i = 0; i < YAFFSFS_N_HANDLES; i++)
 			{
 
 				if(i != handle &&

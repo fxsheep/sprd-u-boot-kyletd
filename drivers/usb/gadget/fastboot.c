@@ -435,11 +435,11 @@ int fastboot_flashNVParttion(EFI_PARTITION_INDEX part, void *data, size_t sz)
 	pdev = get_dev("mmc", 1);
 	if (pdev == NULL) {
 		fastboot_fail("Block device not supported!");
-		return;
+		return 0;
 	}
 	if (get_partition_info(pdev, part, &info)){
 		fastboot_fail("eMMC get partition ERROR!");
-		return;
+		return 0;
 	}
 	if (sz % 512)
 		nblocknum = sz / 512 + 1;
@@ -472,7 +472,7 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 			break;
 		pnum++;
 	}
-	printf("Flash emmc partition:%s check:%s-%d\n", _sprd_emmc_partition[pos].partition_str, arg, pnum);
+	printf("Flash emmc partition:%s check:%s-%d\n", _sprd_emmc_partition[pos-1].partition_str, arg, pnum);
 	if (pnum >= sizeof(_sprd_emmc_partition) / sizeof(eMMC_Parttion)){
 		fastboot_fail("unknown partition name");
 		return;
@@ -552,7 +552,7 @@ void cmd_erase(const char *arg, void *data, unsigned sz)
 			break;
 		pnum++;
 	}
-	printf("Flash emmc partition:%s check:%s-%d\n", _sprd_emmc_partition[pos].partition_str, arg, pnum);
+	printf("Flash emmc partition:%s check:%s-%d\n", _sprd_emmc_partition[pos-1].partition_str, arg, pnum);
 	if (pnum >= sizeof(_sprd_emmc_partition) / sizeof(eMMC_Parttion)){
 		fastboot_fail("unknown partition name");
 		return;

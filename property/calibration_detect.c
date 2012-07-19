@@ -417,6 +417,7 @@ void calibration_detect(int key)
 	}	
     
     //nerver come to here
+    free(cmd_buf);
     return;
 #endif
 }
