@@ -64,7 +64,10 @@ void create_mtdpart_buffer(unsigned long nandsize, unsigned long realsize)
 	while (strcmp(mtd_partition_cfg[i].name, "userdata") != 0)
 		i++;
 
-	mtd_partition_cfg[i].size = (nandsize - realsize) / 1024 * 1024; /* allign to MiB */
+	if (nandsize <= (512 * 1024))
+		mtd_partition_cfg[i].size = 180 * 1024; /* 180 MiB */
+	else if (nandsize <= (1024 * 1024))
+		mtd_partition_cfg[i].size = (nandsize - realsize) / 1024 * 1024; /* allign to MiB */
 
 	i = 0;
 	/*while (mtd_partition_cfg[i].size) {
