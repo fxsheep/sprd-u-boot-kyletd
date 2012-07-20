@@ -1025,6 +1025,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
     MMU_DisableIDCM();
 #endif
 
+#ifdef REBOOT_FUNCTION_INUBOOT
+	reboot_func();
+#endif
+
 #if BOOT_NATIVE_LINUX
 	start_linux();
 #else

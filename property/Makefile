@@ -38,6 +38,7 @@ COBJS-y += engtest_mode.o
 COBJS-y += sleep_mode.o
 COBJS-y += vbat_check.o
 COBJS-y += backupnvitem.o
+COBJS-y += reboot_mode.o
 
 
 
