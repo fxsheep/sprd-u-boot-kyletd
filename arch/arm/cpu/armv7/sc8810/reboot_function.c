@@ -65,16 +65,6 @@ void CHIP_ResetMCU (void)  //reset interrupt disable??
     while (i--);    
 
     WDG_ResetMCU ();
-    
-    {
-        volatile uint32 tick1 = SCI_GetTickCount();
-        volatile uint32 tick2 = SCI_GetTickCount();
-
-        while ( (tick2 - tick1) < 500)
-        {
-            tick2 = SCI_GetTickCount();
-        }
-    }
 }
 
 /*****************************************************************************/
