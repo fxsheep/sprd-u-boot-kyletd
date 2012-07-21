@@ -112,12 +112,39 @@ static struct lcd_cfg lcd_panel[] = {
 
 #else
 #ifdef CONFIG_LCD_788
-extern struct lcd_spec lcd_panel_hx8357;
+
+//#define  LCD_PANEL_ID_RM61581_TRULY	(0x6158|0xA1)  //ÐÅÀû
+#define  LCD_PANEL_ID_RM61581_TRULY	(0x6158|0x00)  //ÐÅÀû(ÔÝÎ´ÉÕÂ¼)
+#define  LCD_PANEL_ID_HX8357			(0x8357|0x00)  //Á¢µÂ
+//#define  LCD_PANEL_ID_HX8357_YUSHUN			(0x8357|0xA0) //ÓîË³
+//#define  LCD_PANEL_ID_RM61581_JINGDONGFANG	(0x6158|0xA0) //¾©¶«·½
+
+extern  struct lcd_spec lcd_panel_hx8357;
+extern  struct lcd_spec lcd_panel_eR6158_truly;
+//extern  struct lcd_spec lcd_panel_hx8357_yushun;
+//extern  struct lcd_spec lcd_panel_eR6158;//¾©¶«·½
 static struct lcd_cfg lcd_panel[] = {
-    [0]={
-        .lcd_id = 0x57,
-        .panel = &lcd_panel_hx8357,
-        },
+
+        [0]={
+		.lcd_id = LCD_PANEL_ID_RM61581_TRULY,
+		.panel = &lcd_panel_eR6158_truly,
+		},
+
+        [1]={
+		.lcd_id = LCD_PANEL_ID_HX8357,
+		.panel = &lcd_panel_hx8357,
+		},
+#if 0
+        [2]={
+		.lcd_id = LCD_PANEL_ID_HX8357_YUSHUN,
+		.panel = &lcd_panel_hx8357_yushun,
+		},
+
+        [3]={
+		.lcd_id = LCD_PANEL_ID_RM61581_JINGDONGFANG,
+		.panel = &lcd_panel_eR6158,
+		},
+#endif
 };
 #else                
 extern struct lcd_spec lcd_panel_hx8369;
@@ -243,12 +270,12 @@ static void lcdc_mcu_init(void)
 	/* LCDC module enable */
 	reg_val |= (1 << 0);
 
-	/* FMARK mode ： disable */
+	/* FMARK mode �?disable */
 	reg_val |= (1 << 1);
 
 	/*FMARK pol*/
 
-	/* dithering enable ： the logo is in the rgb565 buffer */
+	/* dithering enable �?the logo is in the rgb565 buffer */
 	reg_val |= (1 << 4);
 
 	__raw_writel(reg_val, LCDC_CTRL);

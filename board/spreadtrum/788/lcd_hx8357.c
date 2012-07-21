@@ -30,13 +30,15 @@
 static int32_t hx8357_init(struct lcd_spec *self)
 {
 	Send_data send_cmd = self->info.mcu->ops->send_cmd;
+	#if 0
 	Send_cmd_data send_cmd_data = self->info.mcu->ops->send_cmd_data;
+	#endif
 	Send_data send_data = self->info.mcu->ops->send_data;
 
 	LCD_PRINT("hx8357_init\n");
 
 ///////////////////CPT 3.5 6ŽúÏßžÄÍž¹ýÂÊpanel////////////// 
-	mdelay(120);
+	mdelay(130);
 	send_cmd(0x11);        // Sleep out
 	mdelay(150);
 	send_cmd(0x21);        // Display Inversion ON
@@ -48,10 +50,11 @@ static int32_t hx8357_init(struct lcd_spec *self)
 	send_data(0x57);       // Set EXTC
 	mdelay(5);
 	send_cmd(0xCC);
-	send_data(0x0B);       // Set panel   
-
-	//send_cmd_data(0x36, 0x00); //tong test
-	send_cmd_data(0x36, 0xc0); //tong test
+	send_data(0x07);       // Set panel
+#ifndef CONFIG_FB_LCD_NOFMARK
+	send_cmd(0x35);  // TE on
+	send_data(0x00);  //TE Mode 0
+#endif
 
 	send_cmd(0xB3);
 	//send_data(0x40);
@@ -126,7 +129,7 @@ static int32_t hx8357_init(struct lcd_spec *self)
   send_data(0x00);   //
   send_data(0x01); 
       
-	mdelay(120);
+	mdelay(130);
 	send_cmd(0x29);    // display on
 	mdelay(5);
 
@@ -140,11 +143,20 @@ static int32_t hx8357_set_window(struct lcd_spec *self,
 		uint16_t left, uint16_t top, uint16_t right, uint16_t bottom)
 {
 	Send_data send_cmd = self->info.mcu->ops->send_cmd;
-	Send_cmd_data send_cmd_data = self->info.mcu->ops->send_cmd_data;
 	Send_data send_data = self->info.mcu->ops->send_data;
 
 	LCD_PRINT("hx8357_set_window: %d, %d, %d, %d\n",left, top, right, bottom);
     
+      /*ZTE: added by tong.weili ·ÀÖ¹³öÏÖ»­Ãæ·­×ª20120704 ++*/
+      send_cmd(0xCC);
+      send_data(0x07);// Set panel
+      send_cmd(0xB3);
+      send_data(0x00);
+      send_data(0x00);
+      send_data(0x06);
+      send_data(0x06);       // Set RGB I/F
+      /*ZTE: added by tong.weili ·ÀÖ¹³öÏÖ»­Ãæ·­×ª20120704 --*/
+
 	/* set window size  */
 
 send_cmd(0x2A);
@@ -178,7 +190,6 @@ static int32_t hx8357_invalidate_rect(struct lcd_spec *self,
 				uint16_t left, uint16_t top,
 				uint16_t right, uint16_t bottom)
 {
-	Send_cmd_data send_cmd_data = self->info.mcu->ops->send_cmd_data;
 
 	LCD_PRINT("hx8357_invalidate_rect \n");
 
@@ -192,7 +203,6 @@ static int32_t hx8357_invalidate_rect(struct lcd_spec *self,
 
 static int32_t hx8357_set_direction(struct lcd_spec *self, uint16_t direction)
 {
-	Send_cmd_data send_cmd_data = self->info.mcu->ops->send_cmd_data;
 
 	LCD_PRINT("hx8357_set_direction\n");
 	self->direction = direction;
@@ -202,7 +212,6 @@ static int32_t hx8357_set_direction(struct lcd_spec *self, uint16_t direction)
 
 static int32_t hx8357_enter_sleep(struct lcd_spec *self, uint8_t is_sleep)
 {
-	Send_cmd_data send_cmd_data = self->info.mcu->ops->send_cmd_data;
 	Send_data send_cmd = self->info.mcu->ops->send_cmd;
 
 	if(is_sleep) 
@@ -217,8 +226,38 @@ static int32_t hx8357_enter_sleep(struct lcd_spec *self, uint8_t is_sleep)
 }
 static uint32_t hx8357_read_id(struct lcd_spec *self)
 {
+      Send_data send_cmd = self->info.mcu->ops->send_cmd;
+	Read_data read_data = self->info.mcu->ops->read_data;
+      Send_data send_data = self->info.mcu->ops->send_data;
+      uint32_t uID = 0;
+      uint32_t uICID[5] = {0};
+      uint32_t i;
 
-	return 0x57;
+      send_cmd(0xB0);
+      send_data(0x00);
+
+      send_cmd(0xBF);
+      for(i = 0; i < 5; i++)
+      {
+          uICID[i] = read_data();
+          printk("[tong][uboot]hx8357_read_id: uICID[%d] = 0x%x\n", i, uICID[i]);        
+      }
+
+      if((uICID[1] == 0x01) && (uICID[2] == 0x22) && (uICID[3] == 0x15) && (uICID[4] == 0x81))
+      {
+          printk("[tong][uboot]LCD driver IC: r61581\n");
+          return -1;
+      }
+      else
+      {
+          printk("[tong][uboot]LCD driver IC: hx8357c\n");
+      }
+
+      send_cmd(0xDA);
+      uID = read_data();
+      printk("[tong][uboot]hx8357_read_id: 0x%x from addr:0xDA\n", uID);
+
+	return (0x8357|uID);
 }
 
 static struct lcd_operations lcd_hx8357_operations = {
@@ -232,12 +271,23 @@ static struct lcd_operations lcd_hx8357_operations = {
 };
 
 static struct timing_mcu lcd_hx8357_timing = {
-		.rcss = 45,  // 25 ns
-		.rlpw = 35,
-		.rhpw = 90,
-		.wcss = 60,
-		.wlpw = 25,
-		.whpw = 25,
+/*ZTE: modified by tong.weili  20120601 ++*/
+#if 0
+	.rcss = 15,  // 15ns
+	.rlpw = 60,
+	.rhpw = 60,
+	.wcss = 10,
+	.wlpw = 35,
+	.whpw = 35,
+#else
+	.rcss = 55,
+	.rlpw = 45,
+	.rhpw = 130,
+	.wcss = 30,
+	.wlpw = 30,
+	.whpw = 30,
+#endif
+/*ZTE: modified by tong.weili 20120601 --*/
 };
 
 static struct info_mcu lcd_hx8357_info = {
