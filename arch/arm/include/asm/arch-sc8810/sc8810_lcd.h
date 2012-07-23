@@ -1,19 +1,16 @@
-/* drivers/video/sc8810/sc8810_lcd.h
- *
- * Spreadtrum LCD abstraction
- *
- * Copyright (C) 2010 Spreadtrum.com
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
-
+/******************************************************************************
+ ** File Name:    sc8810_lcd.h                                            *
+ ** Author:                                                           *
+ ** DATE:                                                           *
+ ** Copyright:    2005 Spreatrum, Incoporated. All Rights Reserved.           *
+ ** Description:      Spreadtrum LCD abstraction                                                        *
+ ******************************************************************************/
+/******************************************************************************
+ **                   Edit    History                                         *
+ **---------------------------------------------------------------------------*
+ ** DATE          NAME            DESCRIPTION                                 *
+ **
+ ******************************************************************************/
 #ifndef _SC8810_LCD_H_
 #define _SC8810_LCD_H_
 
