@@ -12,12 +12,34 @@ extern   "C"
 {
 #endif
 #include "sci_types.h"
+
 /******************************************************************************
                           Macro define
 ******************************************************************************/
 /******************************************************************************
                           Struct define
 ******************************************************************************/
+typedef struct
+{
+    // clock
+    uint32 arm_clk;
+    uint32 emc_clk;
+    
+    // driver strength
+    uint32 dqs_drv;
+    uint32 dat_drv;
+    uint32 ctl_drv;
+    uint32 clk_drv;
+    
+    // clk wr
+    uint32 clk_wr;
+    uint32 read_value;  // value from 0x20000174
+    //set cs map to external memory
+    uint32 cs_pos;
+	
+			
+} EMC_PARAM_T, *EMC_PARAM_T_PTR;
+ 
 typedef struct
 {
     uint32 row_ref_max;     //ROW_REFRESH_TIME,Refresh interval time , ns, tREF-max = 7800 ns

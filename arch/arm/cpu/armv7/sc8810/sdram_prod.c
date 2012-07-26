@@ -113,6 +113,45 @@
 /**---------------------------------------------------------------------------*
  **                         Local Variables                                   *
  **---------------------------------------------------------------------------*/
+#ifdef CONFIG_SP8810 // for 8810&6820
+LOCAL CONST EMC_PARAM_T s_emc_parm = 
+{
+    // clock
+    1000000000,		// arm_clk 1G
+     400000000,		// emc_clk 400M
+     
+    // driver strength
+    2,						// dqs_drv
+    2,						// dat_drv
+    0,						// ctl_drv
+    2,						// clk_drv
+    
+    // clk wr
+    12,						// clk_wr 
+    0x818,				// value read from 0x20000174
+
+	//set cs map to external memory
+    7 ,                //set cs map to 2G bit
+};
+#else  // for openphone
+LOCAL CONST EMC_PARAM_T s_emc_parm = 
+{
+    // clock
+     850000000,		// arm_clk 850M
+     333000000,		// emc_clk 333M
+     
+    // driver strength
+    1,						// dqs_drv
+    1,						// dat_drv
+    0,						// ctl_drv
+    2,						// clk_drv
+    
+    // clk wr
+    18,						// clk_wr 
+    0x81c,				// value read from 0x20000174
+};
+#endif
+
 /*******************************************************************************/
 //   sdram_parameters[] is used to config SDRAM controller according to variable
 //sdram. The unit is ns. The end of array is marked with 0xffffffff at the last element. 
@@ -140,6 +179,12 @@ LOCAL CONST SDRAM_CFG_INFO_T s_sdram_config_info =
 /**---------------------------------------------------------------------------*
  **                     Public Function Prototypes                            *
  **---------------------------------------------------------------------------*/
+PUBLIC EMC_PARAM_T_PTR EMC_GetPara(void)
+{
+  return (EMC_PARAM_T_PTR)&s_emc_parm;
+}
+
+
 /*****************************************************************************/
 //  Description:    This function get sdram config pointer
 //  Author:         nick.zhao
