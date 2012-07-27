@@ -351,7 +351,7 @@ int nand_start_write(struct real_mtd_partition *phypart, unsigned int size, NAND
 	cur_partition.offset = phypart->offset;
 	cur_partition.size = phypart->size;
 
-	if (noerasepartition == 0x90000022) /* nvram */
+	if ((noerasepartition >= 0x90000022)  && (noerasepartition <= 0x90000025))/* nvram */
 		return NAND_SUCCESS;
 
 	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
