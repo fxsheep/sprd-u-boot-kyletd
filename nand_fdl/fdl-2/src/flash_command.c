@@ -22,6 +22,7 @@ extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
+extern void cmd_yaffs_rm(const char *path);
 
 
 #define TRANS_CODE_SIZE		(12 * 1024) /* dloadtools optimization value */
@@ -1042,7 +1043,58 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 		phy_partition.offset = custom2log(addr);
 
-		if (phy_partition.offset == NAND_NOTUSED_ADDRESS) {
+		if ((file_in_productinfo_partition >= 0x90000022) && (file_in_productinfo_partition <= 0x90000025 )) {
+			char *productinfopoint = "/productinfo";
+			char *nvramfilename = "/productinfo/nvram";
+			char *amt0filename = "/productinfo/amt0";
+			char *amt2filename = "/productinfo/amt2";
+			char *factfilename = "/productinfo/fact";
+			char convbuf[2] = {0x5a, 0x5a};
+
+			if (file_in_productinfo_partition == 0x90000022) {
+				cmd_yaffs_mount(productinfopoint);
+				ret = cmd_yaffs_ls_chk(nvramfilename);
+				if (ret == 0) {
+					cmd_yaffs_mwrite_file(nvramfilename, convbuf, 1);
+					ret = 1;
+					cmd_yaffs_rm(nvramfilename);
+				}
+				cmd_yaffs_umount(productinfopoint);
+				g_prevstatus = NAND_SUCCESS;
+			} else if (file_in_productinfo_partition == 0x90000023) {
+				cmd_yaffs_mount(productinfopoint);
+				ret = cmd_yaffs_ls_chk(amt0filename);
+				if (ret == 0) {
+					cmd_yaffs_mwrite_file(amt0filename, convbuf, 1);
+					ret = 1;
+					cmd_yaffs_rm(amt0filename);
+				}
+				cmd_yaffs_umount(productinfopoint);
+				g_prevstatus = NAND_SUCCESS;
+			} else if (file_in_productinfo_partition == 0x90000024) {
+				cmd_yaffs_mount(productinfopoint);
+				ret = cmd_yaffs_ls_chk(amt2filename);
+				if (ret == 0) {
+					cmd_yaffs_mwrite_file(amt2filename, convbuf, 1);
+					ret = 1;
+					cmd_yaffs_rm(amt2filename);
+				}
+				cmd_yaffs_umount(productinfopoint);
+				g_prevstatus = NAND_SUCCESS;
+			} else if (file_in_productinfo_partition == 0x90000025) {
+				cmd_yaffs_mount(productinfopoint);
+    				cmd_yaffs_mwrite_file(factfilename, g_PhasecheckBUF, 1);
+				ret = cmd_yaffs_ls_chk(factfilename);
+				if (ret == 0) {
+					cmd_yaffs_mwrite_file(factfilename, convbuf, 1);
+					ret = 1;
+					cmd_yaffs_rm(factfilename);
+				}
+				cmd_yaffs_umount(productinfopoint);
+				g_prevstatus = NAND_SUCCESS;
+			}
+
+		} else if (phy_partition.offset == NAND_NOTUSED_ADDRESS) {
 			ret = NAND_SUCCESS;
 		} else {
 			ret = log2phy_table(&phy_partition);
