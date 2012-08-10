@@ -855,6 +855,16 @@ void cmd_yaffs_rm(const char *path)
 		printf("yaffs_unlink returning error: %d\n", retval);
 }
 
+int cmd_yaffs_rm_chk(const char *path)
+{
+	checkMount();
+	int retval = yaffs_unlink(path);
+	if ( retval < 0)
+		printf("yaffs_unlink returning error: %d\n", retval);
+
+	return retval;
+}
+
 void cmd_yaffs_mv(const char *oldPath, const char *newPath)
 {
 	checkMount();

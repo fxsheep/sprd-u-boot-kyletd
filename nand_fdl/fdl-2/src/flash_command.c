@@ -22,7 +22,7 @@ extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
-extern void cmd_yaffs_rm(const char *path);
+extern int cmd_yaffs_rm_chk(const char *path);
 
 
 #define TRANS_CODE_SIZE		(12 * 1024) /* dloadtools optimization value */
@@ -1057,30 +1057,42 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 				if (ret == 0) {
 					cmd_yaffs_mwrite_file(nvramfilename, convbuf, 1);
 					ret = 1;
-					cmd_yaffs_rm(nvramfilename);
 				}
+				if(ret > 0)
+					ret = cmd_yaffs_rm_chk(nvramfilename);
 				cmd_yaffs_umount(productinfopoint);
-				g_prevstatus = NAND_SUCCESS;
+				if(ret < 0)
+					g_prevstatus = NAND_SYSTEM_ERROR;
+				else
+					g_prevstatus = NAND_SUCCESS;
 			} else if (file_in_productinfo_partition == 0x90000023) {
 				cmd_yaffs_mount(productinfopoint);
 				ret = cmd_yaffs_ls_chk(amt0filename);
 				if (ret == 0) {
 					cmd_yaffs_mwrite_file(amt0filename, convbuf, 1);
 					ret = 1;
-					cmd_yaffs_rm(amt0filename);
 				}
+				if(ret > 0)
+					ret = cmd_yaffs_rm_chk(amt0filename);
 				cmd_yaffs_umount(productinfopoint);
-				g_prevstatus = NAND_SUCCESS;
+				if(ret < 0)
+					g_prevstatus = NAND_SYSTEM_ERROR;
+				else
+					g_prevstatus = NAND_SUCCESS;
 			} else if (file_in_productinfo_partition == 0x90000024) {
 				cmd_yaffs_mount(productinfopoint);
 				ret = cmd_yaffs_ls_chk(amt2filename);
 				if (ret == 0) {
 					cmd_yaffs_mwrite_file(amt2filename, convbuf, 1);
 					ret = 1;
-					cmd_yaffs_rm(amt2filename);
 				}
+				if(ret > 0)
+					ret = cmd_yaffs_rm_chk(amt2filename);
 				cmd_yaffs_umount(productinfopoint);
-				g_prevstatus = NAND_SUCCESS;
+				if(ret < 0)
+					g_prevstatus = NAND_SYSTEM_ERROR;
+				else
+					g_prevstatus = NAND_SUCCESS;
 			} else if (file_in_productinfo_partition == 0x90000025) {
 				cmd_yaffs_mount(productinfopoint);
     				cmd_yaffs_mwrite_file(factfilename, g_PhasecheckBUF, 1);
@@ -1088,10 +1100,14 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 				if (ret == 0) {
 					cmd_yaffs_mwrite_file(factfilename, convbuf, 1);
 					ret = 1;
-					cmd_yaffs_rm(factfilename);
 				}
+				if(ret > 0)
+					ret=cmd_yaffs_rm_chk(factfilename);
 				cmd_yaffs_umount(productinfopoint);
-				g_prevstatus = NAND_SUCCESS;
+				if(ret < 0)
+					g_prevstatus = NAND_SYSTEM_ERROR;
+				else
+					g_prevstatus = NAND_SUCCESS;
 			}
 
 		} else if (phy_partition.offset == NAND_NOTUSED_ADDRESS) {
