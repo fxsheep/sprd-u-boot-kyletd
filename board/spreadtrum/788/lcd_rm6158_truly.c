@@ -39,6 +39,8 @@ static int32_t eR6158_truly_init(struct lcd_spec *self)
 /*
   HW reset
 */
+      send_cmd(0x01);//soft reset
+      mdelay(120);
 
       send_cmd(0xFF);
 	send_cmd(0xFF);
@@ -262,6 +264,10 @@ static uint32_t eR6158_truly_read_id(struct lcd_spec *self)
       uint32_t uICID[5] = {0};
       uint32_t i;
 
+
+      send_cmd(0x01);//soft reset
+      mdelay(120);
+#if 0
       send_cmd(0xB0);
       send_data(0x00);
       
@@ -281,7 +287,32 @@ static uint32_t eR6158_truly_read_id(struct lcd_spec *self)
           printk("[tong][uboot]LCD driver IC: hx8357c\n");
           return -1;
       }
+#else
+      send_cmd(0xB9);
+      send_data(0xFF);
+      send_data(0x83);
+      send_data(0x57);
+
+      send_cmd(0xD0);
+      for(i = 0; i < 2; i++)
+      {
+          uICID[i] = read_data();
+          printk("[tong][uboot]eR6158_truly_read_id: uICID[%d] = 0x%x\n", i, uICID[i]);        
+      }
+      
+      if((uICID[1] == 0x90))
+      {
+          printk("[tong][uboot]LCD driver IC: hx8357c\n");
+          return -1;
+      }
+      else
+      {  
+          printk("[tong][uboot]LCD driver IC: r61581\n");
+          
+      }
      
+      
+#endif         
       send_cmd(0xA1);
       uID = read_data();
       printk("[tong][uboot]eR6158_truly_read_id: 0x%x from addr:0xA1\n", uID);
@@ -299,28 +330,30 @@ static struct lcd_operations lcd_eR6158_truly_operations = {
 	.lcd_readid          = eR6158_truly_read_id,
 };
 
-static struct timing_mcu lcd_eR6158_truly_timing = {
-    #if 0
+static struct timing_mcu lcd_eR6158_truly_timing[] = {
+    
+    [LCD_REGISTER_TIMING] = {                    // read/write register timing
 		.rcss = 170,  
 		.rlpw = 190,
 		.rhpw = 260,
 		.wcss = 30,
 		.wlpw = 30,
 		.whpw = 30,
-	#else
-    .rcss = 450,  
-		.rlpw = 200,
-		.rhpw = 300,
-		.wcss = 60,
-		.wlpw = 35,
-		.whpw = 35,
-    #endif
+    },
+    [LCD_GRAM_TIMING] = {                    // read/write gram timing
+	.rcss = 170,
+	.rlpw = 170,
+	.rhpw = 250,
+	.wcss = 30,
+	.wlpw = 30,
+	.whpw = 30,
+	},
 };
 
 static struct info_mcu lcd_eR6158_truly_info = {
 	.bus_mode = LCD_BUS_8080,
 	.bus_width = 18,
-	.timing = &lcd_eR6158_truly_timing,
+	.timing = lcd_eR6158_truly_timing,
 	.ops = NULL,
 };
 
