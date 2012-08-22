@@ -491,18 +491,23 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	
     extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
     extern void lcd_display(void);
+    extern void *lcd_base;
+    extern void Dcache_CleanRegion(unsigned int addr, unsigned int length);
     extern void set_backlight(uint32_t value);
     if(backlight_set == BACKLIGHT_ON){
-	    extern void *lcd_base;
-	    extern void Dcache_CleanRegion(unsigned int addr, unsigned int length);
-
 	    lcd_display_bitmap((ulong)bmp_img, 0, 0);
 #ifdef CONFIG_SC8810
 	    Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
 #endif
 	    lcd_display();
 	    set_backlight(255);
-    }
+    }else{
+        memset((unsigned int)lcd_base, 0, size);
+#ifdef CONFIG_SC8810
+	    Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
+#endif
+	    lcd_display();
+     }
 #endif
     set_vibrator(0);
 
