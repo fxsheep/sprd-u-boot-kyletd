@@ -8,7 +8,7 @@
 #include <asm/arch/fdl_stdio.h>
 #include "parsemtdparts.h"
 
-
+#include "fdl_yaffs2.h"
 #include "asm/arch/sci_types.h"
 #include "asm/arch/nand_controller.h"
 #include <linux/mtd/mtd.h>
@@ -53,6 +53,17 @@ static unsigned long g_sram_addr;
 static int read_nv_flag = 0;
 static int read_bkupnv_flag = 0;
 static int read_dlstatus_flag = 0;
+
+#ifdef CONFIG_BOARD_788
+static unsigned char buildprop_BUF[2048];
+static unsigned long find_zte_version = 0;
+static int zte_version_size = 0;
+static unsigned long zte_version_point = 0;
+static char  versionBUF[512];
+static unsigned int read_ZTEversion_flag = 0;
+static int download_system_flag = 0;
+#endif
+
 __align(4) unsigned char g_fixnv_buf[FIXNV_SIZE + 4];
 __align(4) unsigned char g_fixnv_buf_yaffs[FIXNV_SIZE + 4];
 
@@ -109,6 +120,7 @@ static CUSTOM2LOG custom2log_table[] = {
 	{0x90000023, 0x80000011},
 	{0x90000024, 0x80000011},
 	{0x90000025, 0x80000011},
+	{0x90000026, 0x80000011},
 	{0xffffffff, 0xffffffff}
 };
 #define ECC_NBL_SIZE 0x4000
@@ -242,7 +254,7 @@ unsigned long custom2log(unsigned long custom)
 
 	for (idx = 0; custom2log_table[idx].custom != 0xffffffff; idx ++) {
 		if (custom2log_table[idx].custom == custom) {
-			if ((custom == 0x90000002) || ((custom >= 0x90000022) && (custom <= 0x90000025 )))
+			if ((custom == 0x90000002) || ((custom >= 0x90000022) && (custom <= 0x90000026 )))
 				file_in_productinfo_partition = custom;
 
 			log = custom2log_table[idx].log;
@@ -386,6 +398,9 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 		char *amt0filename = "/productinfo/amt0";
 		char *amt2filename = "/productinfo/amt2";
 		char *factfilename = "/productinfo/fact";
+#ifdef CONFIG_BOARD_788
+		char *zteversionfilename = "/productinfo/ZTEversion";
+#endif
 		char convbuf[2] = {0x5a, 0x5a};
 
 		if (file_in_productinfo_partition == 0x90000002) {
@@ -396,7 +411,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				ret = cmd_yaffs_ls_chk(productinfofilename);
 				if (ret > 0) {
 					cmd_yaffs_mread_file(productinfofilename, g_PhasecheckBUF);
-					read_productinfo_flag = 1;//success
+					read_productinfo_flag = 1;
 				}
 				cmd_yaffs_umount(productinfopoint);
 			}
@@ -413,7 +428,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				ret = cmd_yaffs_ls_chk(nvramfilename);
 				if (ret > 0) {
 					cmd_yaffs_mread_file(nvramfilename, g_PhasecheckBUF);
-					read_nvram_flag = 1;//success
+					read_nvram_flag = 1;
 				}
 				cmd_yaffs_umount(productinfopoint);
 			}
@@ -434,7 +449,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				}
 				if (ret > 0) {
 					cmd_yaffs_mread_file(amt0filename, g_PhasecheckBUF);
-					read_amt0_flag = 1;//success
+					read_amt0_flag = 1;
 				}
 				cmd_yaffs_umount(productinfopoint);
 			}
@@ -455,7 +470,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				}
 				if (ret > 0) {
 					cmd_yaffs_mread_file(amt2filename, g_PhasecheckBUF);
-					read_amt2_flag = 1;//success
+					read_amt2_flag = 1;
 				}
 				cmd_yaffs_umount(productinfopoint);
 			}
@@ -476,7 +491,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				}
 				if (ret > 0) {
 					cmd_yaffs_mread_file(factfilename, g_PhasecheckBUF);
-					read_fact_flag = 1;//success
+					read_fact_flag = 1;
 				}
 				cmd_yaffs_umount(productinfopoint);
 			}
@@ -486,12 +501,65 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 			if (read_fact_flag == 1)
 				return NAND_SUCCESS;
 		}
+#ifdef CONFIG_BOARD_788
+		else if (file_in_productinfo_partition == 0x90000026) {
+			if (read_ZTEversion_flag == 0) {
+				memset(g_PhasecheckBUF, 0, 0x2000);
+				/* read dlstatus */
+				cmd_yaffs_mount(productinfopoint);
+				ret = cmd_yaffs_ls_chk(zteversionfilename);
+
+				if (ret > 0) {
+					cmd_yaffs_mread_file(zteversionfilename, g_PhasecheckBUF);
+					read_ZTEversion_flag = 1;
+				}
+				cmd_yaffs_umount(productinfopoint);
+			}
+
+			memcpy(buf, (unsigned char *)(g_PhasecheckBUF + off), size);
+
+			if (read_ZTEversion_flag == 1)
+				return NAND_SUCCESS;
+		}
+#endif
 	
 		return NAND_SYSTEM_ERROR;
 	}//if (strcmp(phypart->name, "dlstatus") == 0)
        return NAND_SYSTEM_ERROR;
 }
 
+#ifdef CONFIG_BOARD_788
+static char * g_zte_version(char *buf)
+{
+		char *product_release = "apps.setting.product.release";
+		char *internal_version = "ro.build.sw_internal_version";
+		char *product_release_pointer = NULL;
+		char *internal_version_pointer = NULL;
+		int   product_release_flag = 0;
+		int   internal_version_flag = 0;
+
+		memset(versionBUF,0x0,512);
+		product_release_pointer = strstr(buf,product_release);
+		internal_version_pointer = strstr(buf,internal_version);
+		if ((product_release_pointer == NULL) || (internal_version_pointer == NULL)) {
+			printf("zte version not found\n");
+			return NULL;
+		}
+
+		while ((*(product_release_pointer + product_release_flag)) != 0x0a) {
+			versionBUF[product_release_flag] = *(product_release_pointer + product_release_flag);
+			product_release_flag++;
+		}
+		versionBUF[product_release_flag++] = ';';
+
+		while((*(internal_version_pointer + internal_version_flag)) != 0x0a){
+			versionBUF[product_release_flag+internal_version_flag] = *(internal_version_pointer + internal_version_flag);
+			internal_version_flag++;
+		}
+
+		return versionBUF;
+}
+#endif
 
 int FDL2_DataStart (PACKET_T *packet, void *arg)
 {
@@ -505,7 +573,6 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 #endif
 
     set_dl_op_val(start_addr, size, STARTDATA, FAIL, 1);
-
     if (packet->packet_body.size == 12)
     {
 	memset(g_fixnv_buf, 0xff, FIXNV_SIZE + 4);
@@ -537,6 +604,13 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	if (NAND_SUCCESS != ret)
         	break;
 
+#ifdef CONFIG_BOARD_788
+	if (strcmp(phy_partition.name, "system") == 0)
+		download_system_flag = 1;
+	else
+		download_system_flag = 0;
+#endif
+
 	if (strcmp(phy_partition.name, "fixnv") == 0)
 		ret = get_nand_pageoob(&nand_page_oob_info);
 	else
@@ -557,7 +631,6 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 		g_PhasecheckBUFDataSize = 0;
 		memset(g_PhasecheckBUF, 0xff, 0x2000);
 	}
-
 #ifdef TRANS_CODE_SIZE
 	yaffs_buffer_size = (DATA_BUFFER_SIZE + (DATA_BUFFER_SIZE / nand_page_oob_info.writesize) * nand_page_oob_info.oobsize);
 
@@ -703,7 +776,6 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
 {
     	unsigned long size;
 	unsigned long ii;
-
     /* The previous download step failed. */
     if (NAND_SUCCESS != g_prevstatus)
     {
@@ -727,7 +799,6 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
         if (is_nbl_write == 1) {
 		g_prevstatus = NandWriteAndCheck( (unsigned int) size, (unsigned char *) (packet->packet_body.content));
 	} else if (is_phasecheck_write == 1) {
-		//printf("g_PhasecheckBUFDataSize = %d\n", g_PhasecheckBUFDataSize);
         	memcpy((g_PhasecheckBUF + g_PhasecheckBUFDataSize), (char *)(packet->packet_body.content), size);
         	g_PhasecheckBUFDataSize += size;
 		g_prevstatus = NAND_SUCCESS;
@@ -738,24 +809,49 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
 		g_BigSize += size;
 
 		if (g_BigSize < code_yaffs_buflen) {
-			//printf("continue to big buffer\n");
 			g_prevstatus = NAND_SUCCESS;
 		} else {
-			//printf("big buffer is full. g_BigSize = %d\n", g_BigSize);
 			for (ii = 0; ii < g_BigSize; ii += code_yaffs_onewrite) {
-				//printf(".");
 				if (strcmp(phy_partition.name, "cache") == 0)
 					g_prevstatus = NAND_SUCCESS;
-				else
+				else{
+#ifdef CONFIG_BOARD_788
+					if ((find_zte_version == 1) && (zte_version_size > 0)) {
+							memcpy(buildprop_BUF + zte_version_point, g_BigBUF + ii, 2048);
+							zte_version_point += 2048;
+							zte_version_size -= 2048;
+					}
+#endif
 					g_prevstatus = nand_write_fdl((unsigned int)code_yaffs_onewrite, 
 						(unsigned char *)(g_BigBUF + ii));
+
+#ifdef CONFIG_BOARD_788
+				if ((download_system_flag == 1) && (find_zte_version == 0)) {
+						yaffs_PackedTags2 checkpt;
+
+						memset(&checkpt, 0xff, sizeof(yaffs_PackedTags2));
+						memcpy(&checkpt, g_BigBUF + ii + 2048, sizeof(yaffs_PackedTags2));
+
+						if (checkpt.t.chunkId == 0) {
+							yaffs_ObjectHeader checkoh;
+							memset(&checkoh, 0xff, sizeof(yaffs_ObjectHeader));
+							memcpy(&checkoh, g_BigBUF + ii, sizeof(yaffs_ObjectHeader));
+
+							if ((strcmp(checkoh.name,"build.prop") ) == 0) {
+								find_zte_version = 1;
+								zte_version_size = checkoh.fileSize;
+								zte_version_point = 0;
+								memset(buildprop_BUF, 0xff, 2048);
+							}
+					}
+				}
+#endif
+			}
 				if (NAND_SUCCESS != g_prevstatus) {
-					//printf("\n");
 					printf("big buffer write error.\n");				
 					break;
 				}
 			}
-			//printf("\n");
 			g_BigSize = 0;
 			memset(g_BigBUF, 0xff, yaffs_buffer_size);
 		}
@@ -824,23 +920,19 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		phy_partition_info(phy_partition, __LINE__);
 		g_prevstatus = ret;
 		if (ret == NAND_SUCCESS) {
-			printf("erase fixnv start\n");
 			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info, 0);
-			printf("\nerase fixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {
-				printf("write fixnv start\n");
 				cmd_yaffs_mount(fixnvpoint);
     				cmd_yaffs_mwrite_file(fixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
 				ret = cmd_yaffs_ls_chk(fixnvfilename);
 				cmd_yaffs_umount(fixnvpoint);
-				printf("write fixnv end\n");
 				g_prevstatus = NAND_SUCCESS;			
 			}
 		}
 
 		/* write fixnv to yaffs2 format : backup */
-		char *backupfixnvpoint = "/backupfixnv";
+		char *backupfixnvpoint = "/backupfixv";
 		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
 
 		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
@@ -853,40 +945,35 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		phy_partition_info(phy_partition, __LINE__);
 		g_prevstatus = ret;
 		if (ret == NAND_SUCCESS) {
-			printf("erase backupfixnv start\n");
 			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info, 0);
-			printf("\nerase backupfixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {
-				printf("write backupfixnv start\n");
 				cmd_yaffs_mount(backupfixnvpoint);
     				cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
 				ret = cmd_yaffs_ls_chk(backupfixnvfilename);
 				cmd_yaffs_umount(backupfixnvpoint);
-				printf("write backupfixnv end\n");
 				g_prevstatus = NAND_SUCCESS;
 			}
 		}
-		//////////////////////////////
     	} else if (is_nbl_write == 1) {
 #ifdef CONFIG_NAND_SC8810	//only for sc8810 to write spl
 		g_prevstatus = nand_write_fdl(0x0, g_FixNBLBuf);
 #else
-	   	/* write the spl loader image to the nand*/
+
+		/* write the spl loader image to the nnd*/
 		for (i = 0; i < 3; i++) {
 			pos = 0;
 			while (pos < g_NBLFixBufDataSize) {
-				if ((g_NBLFixBufDataSize - pos) >= 2048)
+				if ((g_NBLFixBufDataSize  pos) >= 2048)
 					size = 2048;
 				else
 					size = g_NBLFixBufDataSize - pos;
-				//printf("pos = %d  size = %d\n", pos, size);
 				if (size == 0)
 					break;
 				g_prevstatus = nand_write_fdl (size, g_FixNBLBuf + pos);
 				pos += size;
 			}
-        	}//for (i = 0; i < 3; i++)
+		}
 #endif
 		is_nbl_write = 0;
    	} else if (is_phasecheck_write == 1) {
@@ -897,7 +984,11 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		char *amt0filename = "/productinfo/amt0";
 		char *amt2filename = "/productinfo/amt2";
 		char *factfilename = "/productinfo/fact";
-		if (file_in_productinfo_partition == 0x90000002) {
+
+#ifdef CONFIG_BOARD_788
+		char *zteversionfilename = "/productinfo/ZTEversion";
+#endif
+	if (file_in_productinfo_partition == 0x90000002) {
 			/* g_PhasecheckBUF : (PRODUCTINFO_SIZE + 4) instead of g_PhasecheckBUFDataSize */
 			g_PhasecheckBUF[PRODUCTINFO_SIZE + 0] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 1] = 0x5a;
 			g_PhasecheckBUF[PRODUCTINFO_SIZE + 2] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 3] = 0x5a;
@@ -911,8 +1002,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			is_check_dlstatus = get_DL_Status();
 			if (is_check_dlstatus == 1) {
 				get_Dl_Erase_Address_Table(&Dl_Erase_Address);
-				get_Dl_Data_Address_Table(&Dl_Data_Address);
-			}
+				get_Dl_Data_Address_Table(&Dl_Data_Address);			}
 		} else if (file_in_productinfo_partition == 0x90000022) {
 			cmd_yaffs_mount(productinfopoint);
     			cmd_yaffs_mwrite_file(nvramfilename, g_PhasecheckBUF, PRODUCTINFO_SIZE);
@@ -938,27 +1028,58 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			cmd_yaffs_umount(productinfopoint);
 			g_prevstatus = NAND_SUCCESS;
 		}
+#ifdef CONFIG_BOARD_788
+		else if (file_in_productinfo_partition == 0x90000026) {
+			cmd_yaffs_mount(productinfopoint);
+			cmd_yaffs_mwrite_file(zteversionfilename, g_PhasecheckBUF, 512);
+			ret = cmd_yaffs_ls_chk(zteversionfilename);
+			cmd_yaffs_umount(productinfopoint);
+			g_prevstatus = NAND_SUCCESS;
+		}
+#endif
     	}
+
+#ifdef CONFIG_BOARD_788
+	if (find_zte_version == 1) {
+		char *productinfopoint = "/productinfo";
+		char *productinfofilename = "/productinfo/productinfo.bin";
+
+		cmd_yaffs_mount(productinfopoint);
+		ret = cmd_yaffs_ls_chk(productinfofilename);
+	if (ret > 0) {
+		char *zte_buf = NULL;
+		zte_buf = g_zte_version(buildprop_BUF);
+
+		if (zte_buf == NULL) {
+			printf("zte version is NULL");
+		} else {
+			char *zteversionfilename = "/productinfo/ZTEversion";
+			
+			cmd_yaffs_mwrite_file(zteversionfilename, zte_buf,512);
+			ret = cmd_yaffs_ls_chk(zteversionfilename);
+			cmd_yaffs_umount(productinfopoint);
+			g_prevstatus = NAND_SUCCESS;
+			find_zte_version = 0;
+		}
+	}
+}
+#endif
+
 #ifdef	TRANS_CODE_SIZE
 	else {
-		//printf("data end, g_BigSize = %d\n", g_BigSize);
 		ii = 0;
 		while (ii < g_BigSize) {
 			realii = min(g_BigSize - ii, code_yaffs_onewrite);
-			//printf(".");
 			if (strcmp(phy_partition.name, "cache") == 0)
 				g_prevstatus = NAND_SUCCESS;
 			else
 				g_prevstatus = nand_write_fdl((unsigned int)realii, 
 					(unsigned char *)(g_BigBUF + ii));
 			if (NAND_SUCCESS != g_prevstatus) {
-				//printf("\n");
-				printf("big buffer write error.\n");				
 				break;
 			}
 			ii += realii;
 		}
-		//printf("\n");
 		g_BigSize = 0;
 	}
 #endif
@@ -990,7 +1111,6 @@ int FDL2_ReadFlash (PACKET_T *packet, void *arg)
 	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 	phy_partition.offset = custom2log(addr);
 	ret = log2phy_table(&phy_partition);
-	//phy_partition_info(phy_partition, __LINE__);
     
 	if (size > MAX_PKT_SIZE) {
         	FDL_SendAckPacket (BSL_REP_DOWN_SIZE_ERROR);
@@ -1043,12 +1163,13 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 		phy_partition.offset = custom2log(addr);
 
-		if ((file_in_productinfo_partition >= 0x90000022) && (file_in_productinfo_partition <= 0x90000025 )) {
+		if ((file_in_productinfo_partition >= 0x90000022) && (file_in_productinfo_partition <= 0x90000026 )) {
 			char *productinfopoint = "/productinfo";
 			char *nvramfilename = "/productinfo/nvram";
 			char *amt0filename = "/productinfo/amt0";
 			char *amt2filename = "/productinfo/amt2";
 			char *factfilename = "/productinfo/fact";
+			char *zteversionfilename = "/productinfo/ZTEversion";
 			char convbuf[2] = {0x5a, 0x5a};
 
 			if (file_in_productinfo_partition == 0x90000022) {
@@ -1109,6 +1230,27 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 				else
 					g_prevstatus = NAND_SUCCESS;
 			}
+#ifdef CONFIG_BOARD_788
+			else if (file_in_productinfo_partition == 0x90000026) {
+				cmd_yaffs_mount(productinfopoint);
+				cmd_yaffs_mwrite_file(zteversionfilename, g_PhasecheckBUF, 1);
+				ret = cmd_yaffs_ls_chk(zteversionfilename);
+
+				if (ret == 0) {
+					cmd_yaffs_mwrite_file(zteversionfilename, convbuf, 1);
+					ret = 1;
+				}
+
+				if (ret > 0)
+					ret = cmd_yaffs_rm_chk(zteversionfilename);
+				cmd_yaffs_umount(productinfopoint);
+
+				if (ret < 0)
+					g_prevstatus = NAND_SYSTEM_ERROR;
+				else
+					g_prevstatus = NAND_SUCCESS;
+			}
+#endif
 
 		} else if (phy_partition.offset == NAND_NOTUSED_ADDRESS) {
 			ret = NAND_SUCCESS;
