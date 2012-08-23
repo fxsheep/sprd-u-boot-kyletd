@@ -1054,7 +1054,6 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			printf("zte version is NULL");
 		} else {
 			char *zteversionfilename = "/productinfo/ZTEversion";
-			
 			cmd_yaffs_mwrite_file(zteversionfilename, zte_buf,512);
 			ret = cmd_yaffs_ls_chk(zteversionfilename);
 			cmd_yaffs_umount(productinfopoint);
