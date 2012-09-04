@@ -99,7 +99,7 @@ static ADDR_TO_PART g_eMMC_Addr2Part_Table[] = {
 	{0x90000002, PARTITION_PROD_INFO1},
 	{0x9000000f, PARTITION_PROD_INFO3},
 	{0x90000003, PARTITION_RUNTIME_NV1}, 
-	{0x80000011, PARTITION_INTER_SD},
+	{0x80000011, PARTITION_SD},
 	{0xffffffff, 0xffffffff}
 };
 
@@ -1008,7 +1008,8 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 	unsigned long size = * (data + 1);
 	int           ret = EMMC_SUCCESS;
 	unsigned long part_size;
-
+	unsigned long sd_data_size;
+	unsigned long base_sector;
 	addr = EndianConv_32 (addr);
 	size = EndianConv_32 (size);
 	if ((addr == 0) && (size = 0xffffffff)) {
@@ -1020,13 +1021,10 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 		ret = NAND_SUCCESS;
 	} else {
 		g_dl_eMMCStatus.curUserPartition = addr2part(addr);
-		if (g_dl_eMMCStatus.curUserPartition != PARTITION_INTER_SD){
 		if (!emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition)) {
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);
 			return 0;
 		}
-		}else
-			printf("skip earse \n");
 
 		if (g_dl_eMMCStatus.curUserPartition == PARTITION_RUNTIME_NV1) {
 			if (!emmc_real_erase_partition(PARTITION_RUNTIME_NV2)) {
@@ -1044,21 +1042,21 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 			}
 		}
 
-		if (g_dl_eMMCStatus.curUserPartition == PARTITION_INTER_SD) {
-			part_size = efi_GetPartSize(PARTITION_INTER_SD);
-			unsigned int SD_SectorCount = newfs_msdos_main(g_eMMCBuf);
+		if (g_dl_eMMCStatus.curUserPartition == PARTITION_SD) {
+			part_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
+			sd_data_size = newfs_msdos_main(g_eMMCBuf);
 			int count;
-			unsigned char tmp_buf[SD_SectorCount];
-			memset(tmp_buf,0xff,SD_SectorCount);
-			memcpy(tmp_buf,g_eMMCBuf,SD_SectorCount);
-			if (0 == (SD_SectorCount % EFI_SECTOR_SIZE))
-				count = SD_SectorCount /EFI_SECTOR_SIZE;
+			unsigned char tmp_buf[sd_data_size+EFI_SECTOR_SIZE];
+			memset(tmp_buf,0xff,sd_data_size+EFI_SECTOR_SIZE);
+			memcpy(tmp_buf,g_eMMCBuf,sd_data_size+EFI_SECTOR_SIZE);
+			if (0 == (sd_data_size % EFI_SECTOR_SIZE))
+				count = sd_data_size /EFI_SECTOR_SIZE;
 			else
-				count = SD_SectorCount /EFI_SECTOR_SIZE + 1;
+				count = sd_data_size /EFI_SECTOR_SIZE + 1;
 
-			g_dl_eMMCStatus.curEMMCArea = PARTITION_INTER_SD;
-			g_dl_eMMCStatus.base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
-			if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,count,(unsigned char *)tmp_buf)) {
+			g_dl_eMMCStatus.curEMMCArea = PARTITION_USER;
+			base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
+			if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, base_sector,count, (unsigned char *)tmp_buf)){
 				SEND_ERROR_RSP (BSL_WRITE_ERROR);
 				return 0;
 			}

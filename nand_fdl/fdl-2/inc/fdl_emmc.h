@@ -54,6 +54,5 @@ int FDL2_eMMC_Erase (PACKET_T *packet, void *arg);
  ******************************************************************************/
 int FDL2_eMMC_Repartition (PACKET_T *pakcet, void *arg);
 
-extern unsigned int newfs_msdos_main(char *newfs_SDBUF);
 #endif 	//CONFIG_EMMC_BOOT
 #endif	//_DISK_PART_UEFI_H 

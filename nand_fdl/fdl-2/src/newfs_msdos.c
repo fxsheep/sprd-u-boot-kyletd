@@ -2,10 +2,7 @@
 #include "fdl_emmc.h"
 #include <linux/time.h>
 #include <linux/ctype.h>
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: src/sbin/newfs_msdos/newfs_msdos.c,v 1.33 2009/04/11 14:56:29 ed Exp $";
-#endif /* not lint */
+
 
 
 #define MAXU16	  0xffff	/* maximum unsigned 16-bit quantity */
@@ -172,12 +169,11 @@ static const unsigned char bootcode[] = {
 };
 
 
-static void getstdfmt(const char *, struct bpb *);
 static void getdiskinfo(int, const char *, const char *, int,
 			struct bpb *);
 static void print_bpb(struct bpb *);
 static void setstr(unsigned char *dest, const char *src, size_t len);
-unsigned int newfs_msdos_main(char *newfs_SDBUF);
+unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF);
 extern unsigned long efi_GetPartSize(unsigned long Partition);
 extern PARTITION_CFG g_sprd_emmc_partition_cfg[];
 	 
@@ -203,7 +199,7 @@ mklabel(u_int8_t *dest, const char *src)
  * Construct a FAT12, FAT16, or FAT32 file system.
  */
 unsigned int
-newfs_msdos_main(char *newfs_SDBUF)
+newfs_msdos_main(unsigned char *newfs_SDBUF)
 {
     const char *opt_B =0, *opt_L =0, *opt_O=0, *opt_f =0;
     unsigned int opt_I = 0, opt_S = 0, opt_a = 0, opt_b = 0, opt_c = 0;
@@ -224,7 +220,7 @@ newfs_msdos_main(char *newfs_SDBUF)
     struct bsx *bsx;
     struct de *de;
     unsigned char *img;
-    char *fname =newfs_SDBUF;
+    unsigned char *fname = newfs_SDBUF;
     unsigned int fat = 32, bss = 0, rds = 0, cls, dir = 0, lsn = 0, x = 0, x1 = 0, x2 = 0;
     int  fd = 0;
     long opt_ofs = 0;
@@ -267,7 +263,6 @@ newfs_msdos_main(char *newfs_SDBUF)
 
     if (opt_f && fat == 32)
 	bpb.rde = 0;
-    bpb.spc==32;
     bss = 1;
 
     if (!bpb.nft)
@@ -466,26 +461,14 @@ newfs_msdos_main(char *newfs_SDBUF)
 	    fname_off = fname_off+bpb.bps;
 	    sectorCount = sectorCount+bpb.bps;
         }
-	}
 	free(img);
 	free(tm);
+	}
+
         return sectorCount;
 }
 
-/*
- * Get a standard format.
- */
-static void
-getstdfmt(const char *fmt, struct bpb *bpb)
-{
-    unsigned int x, i;
 
-    x = sizeof(stdfmt) / sizeof(stdfmt[0]);
-    for (i = 0; i < x && strcmp(fmt, stdfmt[i].name); i++);
-    if (i == x)
-	printf("%s: unknown standard format", fmt);
-    *bpb = stdfmt[i].bpb;
-}
 
 /*
  * Get disk slice, partition, and geometry information.
@@ -498,7 +481,8 @@ getdiskinfo(int fd, const char *fname, const char *dtype,  int oflag,
     bpb->bps = 512;
     bpb->spt = 16;
     bpb->hds = 4;
-    bpb->bsec = efi_GetPartSize(PARTITION_INTER_SD)/bpb->bps;
+    bpb->bsec = efi_GetPartSize(PARTITION_SD)/bpb->bps;
+	printf("bpb->bsec=%d\n",bpb->bsec);
 }
 
 
