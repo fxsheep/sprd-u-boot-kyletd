@@ -1044,19 +1044,10 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 
 		if (g_dl_eMMCStatus.curUserPartition == PARTITION_SD) {
 			part_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
-			sd_data_size = newfs_msdos_main(g_eMMCBuf);
-			int count;
-			unsigned char tmp_buf[sd_data_size+EFI_SECTOR_SIZE];
-			memset(tmp_buf,0xff,sd_data_size+EFI_SECTOR_SIZE);
-			memcpy(tmp_buf,g_eMMCBuf,sd_data_size+EFI_SECTOR_SIZE);
-			if (0 == (sd_data_size % EFI_SECTOR_SIZE))
-				count = sd_data_size /EFI_SECTOR_SIZE;
-			else
-				count = sd_data_size /EFI_SECTOR_SIZE + 1;
-
+			sd_data_size = newfs_msdos_main(g_eMMCBuf,part_size);
 			g_dl_eMMCStatus.curEMMCArea = PARTITION_USER;
 			base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
-			if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, base_sector,count, (unsigned char *)tmp_buf)){
+			if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, base_sector,sd_data_size / EFI_SECTOR_SIZE, g_eMMCBuf)){
 				SEND_ERROR_RSP (BSL_WRITE_ERROR);
 				return 0;
 			}

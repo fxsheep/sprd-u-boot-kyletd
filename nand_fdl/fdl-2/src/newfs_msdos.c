@@ -1,5 +1,3 @@
-
-#include "fdl_emmc.h"
 #include <linux/time.h>
 #include <linux/ctype.h>
 
@@ -23,7 +21,10 @@
 #define MAXCLS12  0xfed 	/* maximum FAT12 clusters */
 #define MAXCLS16  0xfff5	/* maximum FAT16 clusters */
 #define MAXCLS32  0xffffff5	/* maximum FAT32 clusters */
-
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define powerof2(x)     ((((x) - 1) & (x)) == 0)
+#define howmany(x, y)   (((x) + ((y) - 1)) / (y))
+#define MAX(x, y)  ((x) > (y) ? (x) : (y))
 #define mincls(fat)  ((fat) == 12 ? MINCLS12 :	\
 		      (fat) == 16 ? MINCLS16 :	\
 				    MINCLS32)
@@ -169,37 +170,16 @@ static const unsigned char bootcode[] = {
 };
 
 
-static void getdiskinfo(int, const char *, const char *, int,
-			struct bpb *);
+static void getdiskinfo(unsigned long count, struct bpb *);
 static void print_bpb(struct bpb *);
 static void setstr(unsigned char *dest, const char *src, size_t len);
-unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF);
-extern unsigned long efi_GetPartSize(unsigned long Partition);
-extern PARTITION_CFG g_sprd_emmc_partition_cfg[];
-	 
-#define powerof2(x)     ((((x) - 1) & (x)) == 0)
-#define howmany(x, y)   (((x) + ((y) - 1)) / (y))
-#define MAX(x,y) ((x) > (y) ? (x) : (y)) 
+unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF, unsigned long part_size);
 
-/*
- * Make a volume label.
- */
-static void
-mklabel(u_int8_t *dest, const char *src)
-{
-    int c, i;
-
-    for (i = 0; i < 11; i++) {
-	c = *src ? toupper(*src++) : ' ';
-	*dest++ = !i && c == '\xe5' ? 5 : c;
-    }
-}
 
 /*
  * Construct a FAT12, FAT16, or FAT32 file system.
  */
-unsigned int
-newfs_msdos_main(unsigned char *newfs_SDBUF)
+unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF, unsigned long part_size)
 {
     const char *opt_B =0, *opt_L =0, *opt_O=0, *opt_f =0;
     unsigned int opt_I = 0, opt_S = 0, opt_a = 0, opt_b = 0, opt_c = 0;
@@ -238,7 +218,7 @@ newfs_msdos_main(unsigned char *newfs_SDBUF)
 	bpb.hid = opt_o;
     if (!(opt_f || (opt_h && opt_u && opt_S && opt_s && oflag))) {
 	long delta;
-	getdiskinfo(fd, fname, "", oflag, &bpb);
+	getdiskinfo(part_size, &bpb);
         if (opt_s) {
             bpb.bsec = opt_s;
         }
@@ -457,9 +437,9 @@ newfs_msdos_main(unsigned char *newfs_SDBUF)
 		    (unsigned int)tm->tm_mday;
 		mk2(de->date, x);
 	    }
- 	    memcpy(fname+fname_off, img, bpb.bps);
-	    fname_off = fname_off+bpb.bps;
-	    sectorCount = sectorCount+bpb.bps;
+ 	    memcpy(fname + fname_off, img, bpb.bps);
+	    fname_off = fname_off + bpb.bps;
+	    sectorCount = sectorCount + bpb.bps;
         }
 	free(img);
 	free(tm);
@@ -474,23 +454,19 @@ newfs_msdos_main(unsigned char *newfs_SDBUF)
  * Get disk slice, partition, and geometry information.
  */
 
-static void
-getdiskinfo(int fd, const char *fname, const char *dtype,  int oflag,
-	    struct bpb *bpb)
+static void getdiskinfo(unsigned long count, struct bpb *bpb)
 {
     bpb->bps = 512;
     bpb->spt = 16;
     bpb->hds = 4;
-    bpb->bsec = efi_GetPartSize(PARTITION_SD)/bpb->bps;
-	printf("bpb->bsec=%d\n",bpb->bsec);
+    bpb->bsec = count / 512 ;
 }
 
 
 /*
  * Print out BPB values.
  */
-static void
-print_bpb(struct bpb *bpb)
+static void print_bpb(struct bpb *bpb)
 {
     printf("bps = %u spc = %u res = %u nft = %u", bpb->bps, bpb->spc, bpb->res,
 	   bpb->nft);
@@ -498,7 +474,7 @@ print_bpb(struct bpb *bpb)
 	printf(" rde = %u", bpb->rde);
     if (bpb->sec)
 	printf(" sec=%u", bpb->sec);
-    printf(" mid=%#x", bpb->mid);
+	printf(" mid=%#x", bpb->mid);
     if (bpb->spf)
 	printf(" spf=%u", bpb->spf);
     printf(" spt = %u hds=%u hid=%u", bpb->spt, bpb->hds, bpb->hid);
@@ -517,8 +493,7 @@ print_bpb(struct bpb *bpb)
 /*
  * Copy string, padding with spaces.
  */
-static void
-setstr(unsigned char *dest, const char *src, size_t len)
+static void setstr(unsigned char *dest, const char *src, size_t len)
 {
     while (len--)
 	*dest++ = *src ? *src++ : ' ';
