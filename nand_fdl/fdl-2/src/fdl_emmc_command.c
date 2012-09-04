@@ -8,7 +8,6 @@
 #include "packet.h"
 #include "fdl_crc.h"
 #include "fdl_stdio.h"
-
 #include "parsemtdparts.h"
 
 #include "asm/arch/sci_types.h"
@@ -100,6 +99,7 @@ static ADDR_TO_PART g_eMMC_Addr2Part_Table[] = {
 	{0x90000002, PARTITION_PROD_INFO1},
 	{0x9000000f, PARTITION_PROD_INFO3},
 	{0x90000003, PARTITION_RUNTIME_NV1}, 
+	{0x80000011, PARTITION_INTER_SD},
 	{0xffffffff, 0xffffffff}
 };
 
@@ -209,8 +209,7 @@ int emmc_real_erase_partition(EFI_PARTITION_INDEX part)
 	len = len / EFI_SECTOR_SIZE; /* partition size : in blocks */
 	base_sector = efi_GetPartBaseSec(part);
 	memset(g_eMMCBuf, 0xff, EMMC_BUF_SIZE);
-
-	count = len / (EMMC_BUF_SIZE / EFI_SECTOR_SIZE);	
+	count = len / (EMMC_BUF_SIZE / EFI_SECTOR_SIZE);
 	for (i = 0; i < count; i++) {
 		if (!Emmc_Write(curArea, base_sector + i * (EMMC_BUF_SIZE / EFI_SECTOR_SIZE), 
 			EMMC_BUF_SIZE / EFI_SECTOR_SIZE, (unsigned char *)g_eMMCBuf))
@@ -731,7 +730,6 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 {
 	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, crc;
-	
 	if (is_nv_flag) {
 		fix_nv_checksum = Get_CheckSum((unsigned char *) g_eMMCBuf, g_status.total_recv_size);
 		fix_nv_checksum = EndianConv_32 (fix_nv_checksum);
@@ -1013,7 +1011,6 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 
 	addr = EndianConv_32 (addr);
 	size = EndianConv_32 (size);
-
 	if ((addr == 0) && (size = 0xffffffff)) {
 		printf("Scrub to erase all of flash\n");
 		if (!emmc_erase_allflash()) {
@@ -1023,10 +1020,13 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 		ret = NAND_SUCCESS;
 	} else {
 		g_dl_eMMCStatus.curUserPartition = addr2part(addr);
+		if (g_dl_eMMCStatus.curUserPartition != PARTITION_INTER_SD){
 		if (!emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition)) {
-			SEND_ERROR_RSP (BSL_WRITE_ERROR);			
+			SEND_ERROR_RSP (BSL_WRITE_ERROR);
 			return 0;
 		}
+		}else
+			printf("skip earse \n");
 
 		if (g_dl_eMMCStatus.curUserPartition == PARTITION_RUNTIME_NV1) {
 			if (!emmc_real_erase_partition(PARTITION_RUNTIME_NV2)) {
@@ -1044,6 +1044,25 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 			}
 		}
 
+		if (g_dl_eMMCStatus.curUserPartition == PARTITION_INTER_SD) {
+			part_size = efi_GetPartSize(PARTITION_INTER_SD);
+			unsigned int SD_SectorCount = newfs_msdos_main(g_eMMCBuf);
+			int count;
+			unsigned char tmp_buf[SD_SectorCount];
+			memset(tmp_buf,0xff,SD_SectorCount);
+			memcpy(tmp_buf,g_eMMCBuf,SD_SectorCount);
+			if (0 == (SD_SectorCount % EFI_SECTOR_SIZE))
+				count = SD_SectorCount /EFI_SECTOR_SIZE;
+			else
+				count = SD_SectorCount /EFI_SECTOR_SIZE + 1;
+
+			g_dl_eMMCStatus.curEMMCArea = PARTITION_INTER_SD;
+			g_dl_eMMCStatus.base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
+			if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,count,(unsigned char *)tmp_buf)) {
+				SEND_ERROR_RSP (BSL_WRITE_ERROR);
+				return 0;
+			}
+		}
 		ret = NAND_SUCCESS;
 	}
 
