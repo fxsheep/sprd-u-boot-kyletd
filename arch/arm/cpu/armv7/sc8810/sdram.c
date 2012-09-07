@@ -21,6 +21,7 @@ EMC_PARAM_T s_emc_config = {0};
 
 /*lint -e760 -e547 ,because pclint error e63 e26 with REG32()*/
 #define REG32(x)   (*((volatile uint32 *)(x)))
+#define REG8(x)   (*((volatile uint8 *)(x)))
 /*lint +e760 +e547 ,because pclint error e63 e26 with REG32()*/
 
 /*lint -e765*/
@@ -1538,11 +1539,18 @@ LOCAL uint32 Chip_ConfigClk (void)
     return arm_ahb_clk;
 }
 
+int timer_init(void);
+unsigned long long get_ticks(void);
 void ddr_init()
 {
 	volatile unsigned int i;
+	unsigned long long now;
 	uint32 clkwr_dll = (64*s_emc_config.clk_wr)/(s_emc_config.read_value/2);
-	
+
+	timer_init();
+	now = get_ticks();
+	do{}while(get_ticks() <= now+2);
+
 	REG32(0x20000004) = 0x00000049;
 	for(i = 0; i < 1000; i++);
 
@@ -1613,7 +1621,7 @@ void ddr_init()
 	//REG32(0x20000014) = 0x223;
 
 	REG32(0x20000184) = 0x233a3566;
-	REG32(0x20000188) = 0x121c0172;
+	REG32(0x20000188) = 0x1a260322;
 	//REG32(0x20000184) = 0x02371422;
 	//REG32(0x20000188) = 0x121c0322;
 	
@@ -1666,6 +1674,12 @@ void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv, uint32 dqs_drv
 
 }
 
+void uart_trace(uint32 ch)
+{
+	volatile uint32 i;
+	REG32(0x84000000) = ch;
+	for(i = 0; i < 0x4000; i++);
+}
 #ifdef SPL_USB_DOWNLOAD
 typedef void (*JUMPTOHANDLER) (void);
 #ifdef CONFIG_SP8810
@@ -1673,12 +1687,6 @@ typedef void (*JUMPTOHANDLER) (void);
 #else
 #define KEY_DOWNLOAD_MODE_MAP 0x01 //keyout0-keyin7
 #endif
-void uart_trace(uint32 ch)
-{
-	volatile uint32 i;
-	REG32(0x84000000) = ch;
-	for(i = 0; i < 0x4000; i++);
-}
 PUBLIC void _KeypadEnable()
 {
 	volatile uint32 i;
@@ -1925,6 +1933,54 @@ void sc8810_emc_Init()
 	
 #endif
 	ddr_init();
+	for(i = 0; i< 0x1f; i++){
+		REG8(i) = 0xa5;
+	}
+	for(i = 0; i< 0x1f; i++){
+		if(REG8(i) != 0xa5){
+			uart_trace('5');
+			uart_trace('b');
+			uart_trace('a');
+			uart_trace('d');
+			while(1);
+		}
+	}
+	for(i = 0; i< 0x1f; i++){
+		REG8(i) = 0x5a;
+	}
+	for(i = 0; i< 0x1f; i++){
+		if(REG8(i) != 0x5a){
+			uart_trace('6');
+			uart_trace('b');
+			uart_trace('a');
+			uart_trace('d');
+			while(1);
+		}
+	}
+	for(i = 0; i< 0x1f; i++){
+		REG32(4*i) = 0xa5a5a5a5;
+	}
+	for(i = 0; i< 0x1f; i++){
+		if(REG32(4*i) != 0xa5a5a5a5){
+			uart_trace('7');
+			uart_trace('b');
+			uart_trace('a');
+			uart_trace('d');
+			while(1);
+		}
+	}
+	for(i = 0; i< 0x1f; i++){
+		REG32(4*i) = 0x5a5a5a5a;
+	}
+	for(i = 0; i< 0x1f; i++){
+		if(REG32(4*i) != 0x5a5a5a5a){
+			uart_trace('8');
+			uart_trace('b');
+			uart_trace('a');
+			uart_trace('d');
+			while(1);
+		}
+	}
 }
 
 PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/

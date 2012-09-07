@@ -55,6 +55,7 @@ static ulong lastinc;
  * "time" is measured in 1 / CONFIG_SYS_HZ seconds,
  * "tick" is internal timer period
  */
+#ifndef CONFIG_NAND_SPL
 static inline unsigned long long tick_to_time(unsigned long long tick)
 {
 	tick *= CONFIG_SYS_HZ;
@@ -75,6 +76,7 @@ static inline unsigned long long us_to_tick(unsigned long long us)
 	do_div(us, CONFIG_SYS_HZ*1000);
 	return us;
 }
+#endif
 
 
 /* nothing really to do with interrupts, just starts up a counter. */
@@ -118,6 +120,7 @@ unsigned long long get_ticks(void)
 	return timestamp;
 }
 
+#ifndef CONFIG_NAND_SPL
 ulong get_timer_masked(void)
 {
 	return tick_to_time(get_ticks());
@@ -144,3 +147,4 @@ void __udelay (unsigned long usec)
 	while(get_ticks() < tmp) //loop till event
 		/*NOP*/;
 }
+#endif
