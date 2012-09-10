@@ -45,7 +45,7 @@ static int read_bkupnv_flag = 0;
 static int is_ProdInfo_flag = 0;
 static unsigned long is_factorydownload_flag = 0;
 static int read_prod_info_flag = 0;
-
+static int need_earse_SD = 0;
 unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
 unsigned char g_fix_nv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_fixbucknv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
@@ -142,8 +142,8 @@ int uefi_get_part_info(void)
 		if(info.size <= 0 )
 			return 0;
 		uefi_part_info[i].partition_index = g_sprd_emmc_partition_cfg[i].partition_index;
-		uefi_part_info[i].partition_size= info.size;
-		uefi_part_info[i].partition_index= info.start;			
+		uefi_part_info[i].partition_size = info.size;
+		uefi_part_info[i].partition_index = info.start;
 	}
 
 	uefi_part_info_ok_flag = 1;
@@ -173,21 +173,42 @@ unsigned long efi_GetPartSize(unsigned long Partition)
 	return (EFI_SECTOR_SIZE * uefi_part_info[efi_covert_index(Partition)].partition_size);
 }
 
+int earse_externelSD_partition(void)
+{
+	unsigned long part_size;
+	unsigned long sd_data_size;
+	unsigned long base_sector;
+
+	part_size = efi_GetPartSize(PARTITION_SD);
+	g_dl_eMMCStatus.curUserPartition = PARTITION_SD;
+	sd_data_size = newfs_msdos_main(g_eMMCBuf, part_size);
+	g_dl_eMMCStatus.curEMMCArea = PARTITION_USER;
+	base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
+
+	if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, base_sector,sd_data_size / EFI_SECTOR_SIZE, g_eMMCBuf)){
+			SEND_ERROR_RSP (BSL_WRITE_ERROR);
+			return 0;
+	}
+}
+
 int FDL_Check_Partition_Table(void)
 {
 	int i;
 	uefi_part_info_ok_flag = 0;
-	if(!uefi_get_part_info())
+
+	if (!uefi_get_part_info())
 		return 0;
-	for(i=0; i < MAX_PARTITION_INFO; i++){
-		if(g_sprd_emmc_partition_cfg[i].partition_index == 0)
+	for (i=0; i < MAX_PARTITION_INFO; i++) {
+		if (g_sprd_emmc_partition_cfg[i].partition_index == 0)
 			break;
-		if(MAX_SIZE_FLAG == g_sprd_emmc_partition_cfg[i].partition_size)
+		if (MAX_SIZE_FLAG == g_sprd_emmc_partition_cfg[i].partition_size)
 			continue;
-		if(2 * g_sprd_emmc_partition_cfg[i].partition_size !=  uefi_part_info[i].partition_size) {
+		if (g_sprd_emmc_partition_cfg[i].partition_index == PARTITION_SD)
+			need_earse_SD = 1;
+		if ((2 * g_sprd_emmc_partition_cfg[i].partition_size != uefi_part_info[i].partition_size) )
 			return 0;
-		}
 	}
+	need_earse_SD = 0;
 	return 1;
 }
 
@@ -1008,8 +1029,6 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 	unsigned long size = * (data + 1);
 	int           ret = EMMC_SUCCESS;
 	unsigned long part_size;
-	unsigned long sd_data_size;
-	unsigned long base_sector;
 	addr = EndianConv_32 (addr);
 	size = EndianConv_32 (size);
 	if ((addr == 0) && (size = 0xffffffff)) {
@@ -1042,16 +1061,6 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 			}
 		}
 
-		if (g_dl_eMMCStatus.curUserPartition == PARTITION_SD) {
-			part_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
-			sd_data_size = newfs_msdos_main(g_eMMCBuf,part_size);
-			g_dl_eMMCStatus.curEMMCArea = PARTITION_USER;
-			base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
-			if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, base_sector,sd_data_size / EFI_SECTOR_SIZE, g_eMMCBuf)){
-				SEND_ERROR_RSP (BSL_WRITE_ERROR);
-				return 0;
-			}
-		}
 		ret = NAND_SUCCESS;
 	}
 
@@ -1070,6 +1079,10 @@ int FDL2_eMMC_Repartition (PACKET_T *pakcet, void *arg)
 		    break;
 	}
 
+	if (need_earse_SD == 1) {
+		earse_externelSD_partition();
+		need_earse_SD = 0;
+	}
 	if (i < 3) {
 		FDL2_eMMC_SendRep (EMMC_SUCCESS);
 		return 1;
