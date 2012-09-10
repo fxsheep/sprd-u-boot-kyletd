@@ -45,7 +45,9 @@ static int read_bkupnv_flag = 0;
 static int is_ProdInfo_flag = 0;
 static unsigned long is_factorydownload_flag = 0;
 static int read_prod_info_flag = 0;
+#ifdef CONFIG_SP8810EA
 static int need_earse_SD = 0;
+#endif
 unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
 unsigned char g_fix_nv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_fixbucknv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
@@ -99,7 +101,6 @@ static ADDR_TO_PART g_eMMC_Addr2Part_Table[] = {
 	{0x90000002, PARTITION_PROD_INFO1},
 	{0x9000000f, PARTITION_PROD_INFO3},
 	{0x90000003, PARTITION_RUNTIME_NV1}, 
-	{0x80000011, PARTITION_SD},
 	{0xffffffff, 0xffffffff}
 };
 
@@ -203,12 +204,17 @@ int FDL_Check_Partition_Table(void)
 			break;
 		if (MAX_SIZE_FLAG == g_sprd_emmc_partition_cfg[i].partition_size)
 			continue;
+#ifdef CONFIG_SP8810EA
 		if (g_sprd_emmc_partition_cfg[i].partition_index == PARTITION_SD)
 			need_earse_SD = 1;
+#endif
 		if ((2 * g_sprd_emmc_partition_cfg[i].partition_size != uefi_part_info[i].partition_size) )
 			return 0;
 	}
+#ifdef CONFIG_SP8810EA
 	need_earse_SD = 0;
+#endif
+
 	return 1;
 }
 
@@ -1078,11 +1084,12 @@ int FDL2_eMMC_Repartition (PACKET_T *pakcet, void *arg)
 		if (FDL_Check_Partition_Table())
 		    break;
 	}
-
+#ifdef CONFIG_SP8810EA
 	if (need_earse_SD == 1) {
 		earse_externelSD_partition();
 		need_earse_SD = 0;
 	}
+#endif
 	if (i < 3) {
 		FDL2_eMMC_SendRep (EMMC_SUCCESS);
 		return 1;
