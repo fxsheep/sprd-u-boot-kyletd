@@ -36,10 +36,30 @@ static int flash_page_size = 0;
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
 
-#define DSP_SIZE		(3968 * 1024)
-#define VMJALUNA_SIZE		(300 * 1024)
+#define DSP_SIZE			(3968 * 1024)
+#define VMJALUNA_SIZE		(384 * 1024)
 #define RUNTIMENV_SIZE		(256 * 1024)
 
+#ifdef CONFIG_TIGER
+#define DSP_ADR			0x80020000
+#define VMJALUNA_ADR		0x80400000
+#define FIXNV_ADR		0x80480000
+#define RUNTIMENV_ADR		0x804a0000
+#define MODEM_ADR		0x80500000
+#define RAMDISK_ADR 		0x85500000
+#if BOOT_NATIVE_LINUX
+//pls make sure uboot running area
+#define VLX_TAG_ADDR            (0x80000100)
+#define KERNEL_ADR		(0x80008000)
+
+#else
+
+#define KERNEL_ADR		0x84508000
+#define VLX_TAG_ADDR            0x85100000 //after initrd
+
+#endif
+
+#else
 #define DSP_ADR			0x00020000
 #define VMJALUNA_ADR		0x00400000
 #define FIXNV_ADR		0x00480000
@@ -57,6 +77,7 @@ static int flash_page_size = 0;
 #define KERNEL_ADR		0x04508000
 #define VLX_TAG_ADDR            0x5100000 //after initrd
 
+#endif
 #endif
 
 #define MAX_SN_LEN 			(24)
@@ -134,6 +155,7 @@ extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
 extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
+int get_partition_info (block_dev_desc_t *dev_desc, int part, disk_partition_t *info);
 void set_vibrator(int on);
 void vibrator_hw_init(void);
 void MMU_InvalideICACHEALL(void);
@@ -1024,7 +1046,9 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
     creat_atags(VLX_TAG_ADDR, buf, NULL, 0);
     void (*entry)(void) = (void*) VMJALUNA_ADR;
 #ifndef CONFIG_SC8810
+#ifndef CONFIG_TIGER
     MMU_InvalideICACHEALL();
+#endif
 #endif
 #ifdef CONFIG_SC8810
     MMU_DisableIDCM();
@@ -1509,6 +1533,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 
 	off = part->offset;
 	nand = &nand_info[dev->id->num];
+	flash_page_size = nand->writesize;
 	size = (MODEM_SIZE +(flash_page_size - 1)) & (~(flash_page_size - 1));
 	if(size <= 0) {
 		printf("modem image should not be zero\n");

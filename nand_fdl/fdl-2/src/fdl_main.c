@@ -35,6 +35,42 @@ static int bss_end_end;
 static int bss_start_start;
 char mempool[1024*1024] = {0};
 #endif
+#ifdef FPGA_TRACE_DOWNLOAD
+#define BIN_TABLE_ADDR	0x80a00000
+typedef struct {
+	unsigned int base_addr;//logic id
+	unsigned int bin_addr; //bin address in dram
+	unsigned int bin_size; //bin size(bytes)
+	unsigned int var;
+}bin_table_t;
+#define WRITE_MAX_SIZE	(1024*8)
+static void write_bin2flash()
+{
+	bin_table_t *pbin_table;
+	int buf_size;
+	int write_size;
+	unsigned char *pbuf;
+	for(pbin_table = (bin_table_t *)BIN_TABLE_ADDR; pbin_table->base_addr; pbin_table += 1) {
+		printf("write_bin2flash, base_addr=0x%x, bin_addr=0x%x,bin_size=%x\r\n",pbin_table->base_addr,
+			pbin_table->bin_addr,pbin_table->bin_size);
+		FDL2_DramStart(pbin_table->base_addr, pbin_table->bin_size);
+		pbuf = (unsigned char *)pbin_table->bin_addr;
+		buf_size = pbin_table->bin_size;
+		while(buf_size > 0) {
+			write_size = (buf_size > WRITE_MAX_SIZE) ? WRITE_MAX_SIZE : buf_size;
+			printf("write_bin2flash writesize = 0x%x, pbuf = 0x%x\r\n",write_size, pbuf);
+			if(FDL2_DramMidst(pbuf, write_size) == 0){
+				printf("write_bin2flash, 0x%x, write_size =0x%x\r\n",pbin_table->bin_addr, write_size);
+				while(1); //fail
+			}
+			pbuf += write_size;
+			buf_size  -= write_size;
+		}
+		FDL2_DramEnd();
+		printf("write_bin2flash, 0x%x, sucessfully\r\n",pbin_table->bin_addr);
+	}
+}
+#endif
 int main(void)
 {
 	/* All hardware initialization has been done in the 1st FDL,
@@ -45,8 +81,9 @@ int main(void)
 	int err;
 	uint32 sigture_address;
 	unsigned int i, j;
-
+#ifndef CONFIG_TIGER
   	MMU_Init(0);
+#endif	
  	sigture_address = (uint32)FDL2_signature;
 
 #if defined(CHIP_ENDIAN_DEFAULT_LITTLE) && defined(CHIP_ENDIAN_BIG)    
@@ -63,10 +100,12 @@ int main(void)
 	mem_malloc_init (_bss_end, CONFIG_SYS_MALLOC_LEN);	   
 #endif	   
 	   timer_init();
+#ifdef CONFIG_TIGER
+#else
 #ifndef CONFIG_SC8810
        sprd_clean_rtc();
 #endif
-
+#endif
 //        FDL_SendAckPacket (BSL_REP_ACK);
 	do {
 #ifdef CONFIG_EMMC_BOOT		
@@ -78,6 +117,13 @@ int main(void)
 				FDL_SendAckPacket (convert_err (err));
 				break;
 			}
+#ifdef FPGA_TRACE_DOWNLOAD
+			if(NAND_SUCCESS == err)
+			{
+				write_bin2flash();
+			}
+			while(1);
+#endif			
 #ifdef CONFIG_EMMC_BOOT	
 		}else{
 			extern PARTITION_CFG g_sprd_emmc_partition_cfg[];

@@ -33,8 +33,14 @@
 #include <config.h>
 #include <common.h>
 #include <version.h>
-#define SVC_STACK_TEMP 0x40008000
 
+#ifdef CONFIG_TIGER
+#define SVC_STACK_TEMP 0x0028000 //for tiger
+#define SPL_STACK 0x808f0000
+#else
+#define SVC_STACK_TEMP 0x40008000
+#define SPL_STACK 0x008f0000
+#endif
 .globl _start
 _start: b	reset
 #ifdef CONFIG_PRELOADER
@@ -202,7 +208,7 @@ time:	subs	r1,r1,#0x1
 	  The sp here must be in the reserved region
 	  */
 	LDMIA sp!, {lr}
-	LDR     sp, =0x008f0000 
+	LDR     sp, =SPL_STACK 
 #endif
 
 /* Set stackpointer in internal RAM to call board_init_f */

@@ -39,7 +39,11 @@ EMMC_PATH = $(TOPDIR)/drivers/mmc
 
 ifdef CONFIG_EMMC_BOOT
 UEFI_LIB = $(OBJTREE)/disk/libdisk.o
+ifdef CONFIG_TIGER
+EMMC_LIB = $(OBJTREE)/drivers/mmc/libmmc.o $(OBJTREE)/arch/arm/cpu/armv7/tiger/ldo.o
+else
 EMMC_LIB = $(OBJTREE)/drivers/mmc/libmmc.o $(OBJTREE)/arch/arm/cpu/armv7/sc8810/ldo.o
+endif
 endif
 
 FDL2_SOBJS_LIST = init.o

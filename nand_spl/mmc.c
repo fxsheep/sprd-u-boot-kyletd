@@ -1,12 +1,22 @@
+#include <config.h>
 #include "asm/arch/sci_types.h"
+#if defined (CONFIG_TIGER)
 #include "asm/arch/sc8810_reg_global.h" 
 #include "asm/arch/sc8810_reg_ahb.h"
 #include "asm/arch/sc8810_module_config.h" 
+#else
+#include "asm/arch/sc8810_reg_global.h" 
+#include "asm/arch/sc8810_reg_ahb.h"
+#include "asm/arch/sc8810_module_config.h" 
+#endif
 #include <asm/arch/ldo.h>
 #include <asm/arch/ldo_reg_v3.h>
-
+#include <asm/arch/sdio_reg_v3.h>
+#include <asm/arch/int_reg_v3.h>
+#include <asm/arch/sys_timer_reg_v0.h>
 
 #define     SDIO_BASE_CLK_48M       48000000        // 48 MHz
+#define     SDIO_BASE_CLK_384M      384000000        // 384 MHz
 
 
 #define PARTITION_CFG_BOOT_PARTITION_ENABLE_OFFSET   3
@@ -97,7 +107,11 @@ typedef enum
 	SDIO_CARD_PAL_SLOT_0,
 	SDIO_CARD_PAL_SLOT_1,
 	SDIO_CARD_PAL_SLOT_2,
-	SDIO_CARD_PAL_SLOT_3
+	SDIO_CARD_PAL_SLOT_3,
+	SDIO_CARD_PAL_SLOT_4,
+	SDIO_CARD_PAL_SLOT_5,
+	SDIO_CARD_PAL_SLOT_6,
+	SDIO_CARD_PAL_SLOT_7
 ,
 	SDIO_CARD_PAL_SLOT_MAX
 }
@@ -331,6 +345,18 @@ typedef enum
 }SDIO_CARD_PAL_PWR_E;
 
 
+#if defined (CONFIG_TIGER)
+LDO_CTL_T ldo_ctl_data_sdio3 =
+    {
+        LDO_LDO_SDIO3,  ANA_LDO_PD_CTL1, BIT_4,  BIT_5,  ANA_LDO_VCTL4,  BIT_4,BIT_5,
+        ANA_LDO_VCTL4,  BIT_6, BIT_7, NULL,   LDO_VOLT_LEVEL_FAULT_MAX,     NULL
+    };
+LDO_CTL_T ldo_ctl_data_vdd30 =
+    {
+        LDO_LDO_VDD30,  ANA_LDO_PD_CTL1, BIT_6,  BIT_7,  ANA_LDO_VCTL1,  BIT_8,BIT_9,
+        ANA_LDO_VCTL1,  BIT_10, BIT_11, NULL,   LDO_VOLT_LEVEL_FAULT_MAX,     NULL
+    };
+#else
 LDO_CTL_T ldo_ctl_data_sim2 =
      {
         LDO_LDO_SIM2,  ANA_LDO_PD_CTL1, BIT_6,  BIT_7,  ANA_LDO_VCTL4,  BIT_8,  BIT_9,
@@ -342,7 +368,7 @@ LDO_CTL_T ldo_ctl_data_sdio1 =
         LDO_LDO_SDIO1,  ANA_LDO_PD_CTL1, BIT_0,  BIT_1,  ANA_LDO_VCTL3,  BIT_12,BIT_13,
         ANA_LDO_VCTL3,  BIT_14, BIT_15, NULL,   LDO_VOLT_LEVEL_FAULT_MAX,     NULL
     };
-
+#endif
 
 //SLP_LDO_CTL_T slp_ldo_ctl_data_sdio1=  {SLP_LDO_SDIO1,     ANA_LDO_SLP_CTL0,    BIT_15, SLP_BIT_SET,    TRUE,   NULL};
 //SLP_LDO_CTL_T slp_ldo_ctl_data_sim2=  {SLP_LDO_SIM2,      ANA_LDO_SLP_CTL2,    BIT_2,  SLP_BIT_SET,    TRUE,   NULL};
@@ -527,7 +553,11 @@ PUBLIC ISR_EXE_T _SDHOST_IrqHandle (uint32 isrnum)
     SDHOST_HANDLE sdhost_handler;
 
     //buffer.slotNum = _GetIntSDHOSTSlotNum();
+#if defined (CONFIG_TIGER)
+    buffer.slotNum =  SDHOST_SLOT_7;
+#else
     buffer.slotNum =  SDHOST_SLOT_1;
+#endif
     sdhost_handler = &sdio_port_ctl[buffer.slotNum];
     buffer.pSdhost_handler = &sdio_port_ctl[buffer.slotNum];
 
@@ -598,9 +628,14 @@ PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
 {
     uint32 clk = 0;
     //Select the clk source of SDIO
+#if defined (CONFIG_TIGER)
+     REG32 (GR_CLK_GEN5) &= ~ (BIT_23|BIT_24);
+     clk = SDIO_BASE_CLK_384M;
+#else
     REG32 (GR_CLK_GEN5) &= ~ (BIT_17|BIT_18);
      clk = SDIO_BASE_CLK_48M;
      REG32 (GR_CLK_GEN5) |= (2<<19);
+#endif
     //REG32 (GR_CLK_GEN5) |= (2<<17);
         
     return clk;
@@ -610,11 +645,19 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
 {
     uint32 status = 0, i = 0;
 
+#if defined (CONFIG_TIGER)
+     REG32 (AHB_CTL0)     |= BIT_23;
+     REG32 (AHB_SOFT_RST) |= BIT_21;
+     REG32 (AHB_SOFT_RST) &= ~BIT_21;
+     sdio_port_ctl[slot_NO].open_flag = TRUE;
+     sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_384M);
+#else
      REG32 (AHB_CTL0)     |= BIT_19;
      REG32 (AHB_SOFT_RST) |= BIT_16;
      REG32 (AHB_SOFT_RST) &= ~BIT_16;
      sdio_port_ctl[slot_NO].open_flag = TRUE;
      sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_48M);
+#endif
 
     switch (slot_NO)
     {
@@ -626,9 +669,45 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
 
         case SDHOST_SLOT_1:
             {
+#ifdef CONFIG_TIGER			
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO0_BASE_ADDR+0x100) );
+#else
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO1_BASE_ADDR);
+#endif				
             }
             break;
+#ifdef CONFIG_TIGER			
+        case SDHOST_SLOT_2:
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO0_BASE_ADDR+0x200) );
+            }
+            break;
+        case SDHOST_SLOT_3:
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO1_BASE_ADDR );
+            }
+            break;
+        case SDHOST_SLOT_4:
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO1_BASE_ADDR+0x100) );
+            }
+            break;
+        case SDHOST_SLOT_5:
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO1_BASE_ADDR+0x200) );
+            }
+            break;
+        case SDHOST_SLOT_6:
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO2_BASE_ADDR );
+            }
+            break;
+        case SDHOST_SLOT_7:
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) EMMC_BASE_ADDR );
+            }
+            break;
+#endif			
 
     }
 
@@ -1822,10 +1901,17 @@ LDO_ERR_E LDO_SetVoltLevel(LDO_ID_E ldo_id, LDO_VOLT_LEVEL_E volt_level)
 	b0_mask = (volt_level & BIT_0)?~0:0;
 	b1_mask = (volt_level & BIT_1)?~0:0;
 
+#if defined (CONFIG_TIGER)
+	if( LDO_LDO_SDIO3 == ldo_id )
+		ctl = &ldo_ctl_data_sdio3;
+	else
+ 		ctl = &ldo_ctl_data_vdd30;  
+#else
 if( LDO_LDO_SDIO1 == ldo_id )
 	ctl = &ldo_ctl_data_sdio1;
 else
  	ctl = &ldo_ctl_data_sim2;  
+#endif
  
 	if(ctl->level_reg_b0 == NULL)
 	{
@@ -1849,10 +1935,17 @@ else
 {
 	LDO_CTL_PTR ctl = NULL;
                    uint32 reg_val;
+#if defined (CONFIG_TIGER)
+	if( LDO_LDO_SDIO3 == ldo_id )
+		ctl = &ldo_ctl_data_sdio3;
+	else
+ 		ctl = &ldo_ctl_data_vdd30;  
+#else
 if( LDO_LDO_SDIO1 == ldo_id )
 	ctl = &ldo_ctl_data_sdio1;
 else
  	ctl = &ldo_ctl_data_sim2;  
+#endif
 
 	if(ctl->ref == 0)
 		REG_SETCLRBIT(ctl->bp_reg, ctl->bp_rst, ctl->bp);
@@ -1865,10 +1958,17 @@ else
 {
 	LDO_CTL_PTR ctl = NULL;
                    uint32 reg_val;
+#if defined (CONFIG_TIGER)
+	if( LDO_LDO_SDIO3 == ldo_id )
+		ctl = &ldo_ctl_data_sdio3;
+	else
+ 		ctl = &ldo_ctl_data_vdd30;  
+#else
 if( LDO_LDO_SDIO1 == ldo_id )
 	ctl = &ldo_ctl_data_sdio1;
 else
  	ctl = &ldo_ctl_data_sim2;  
+#endif
 
    if(ctl->ref > 0)
             ctl->ref--;
@@ -1888,6 +1988,12 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_
         {
             unsigned int tempreg;
              SDHOST_RST(handle->sdio_port, RST_MODULE);
+#if defined (CONFIG_TIGER)
+            LDO_SetVoltLevel (LDO_LDO_SDIO3, LDO_VOLT_LEVEL3);
+            LDO_SetVoltLevel (LDO_LDO_VDD30, LDO_VOLT_LEVEL1); 
+            LDO_TurnOnLDO(LDO_LDO_SDIO3);
+            LDO_TurnOnLDO(LDO_LDO_VDD30);
+#else
             LDO_SetVoltLevel (LDO_LDO_SDIO1, LDO_VOLT_LEVEL3);
             LDO_SetVoltLevel (LDO_LDO_SIM2, LDO_VOLT_LEVEL1); 
             tempreg = *(volatile unsigned int  *)0x8B000008; 
@@ -1911,9 +2017,10 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_
 	   *(volatile unsigned int	*)0x8A000180 = tempreg & (~(1<<7));
 	   for(i=0; i<10*10000;i++);
 	   *(volatile unsigned int	*)0x8A000180 = tempreg | (1<<7);	   */
-#endif
             LDO_TurnOnLDO(LDO_LDO_SDIO1);
             LDO_TurnOnLDO(LDO_LDO_SIM2);
+#endif
+#endif
              
             SDHOST_SD_Clk_Freq_Set (handle->sdio_port,400000);
             SDHOST_internalClk_On(handle->sdio_port);
@@ -1930,8 +2037,13 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_
 
    case SDIO_CARD_PAL_OFF:
         {
+#if defined (CONFIG_TIGER)
+            LDO_TurnOffLDO (LDO_LDO_SDIO3);
+            LDO_TurnOffLDO (LDO_LDO_VDD30);
+#else
             LDO_TurnOffLDO (LDO_LDO_SDIO1);
             LDO_TurnOffLDO (LDO_LDO_SIM2);
+#endif
             SDHOST_RST (handle->sdio_port,RST_ALL);
             //SDHOST_SD_clk_Off(handle->sdio_port,CLK_OFF);
             handle->sdio_port->host_cfg->HOST_CTL1 &= (~BIT_2);
@@ -2003,7 +2115,11 @@ PUBLIC BOOLEAN Emmc_Init()
 	
 	//emmc_handle = CARD_SDIO_Open(CARD_SDIO_SLOT_1);
 	emmc_handle = &cadport;
+#ifdef CONFIG_TIGER
+	emmc_handle->sdioPalHd = SDIO_Card_Pal_Open(SDIO_CARD_PAL_SLOT_7);
+#else	
 	emmc_handle->sdioPalHd = SDIO_Card_Pal_Open(SDIO_CARD_PAL_SLOT_1);
+#endif	
          //CARD_SDIO_PwrCtl(emmc_handle, FALSE);
 	CARD_SDIO_PwrCtl(emmc_handle, TRUE);
 	emmc_handle->BlockLen = 0;

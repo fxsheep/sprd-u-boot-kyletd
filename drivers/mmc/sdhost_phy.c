@@ -21,6 +21,12 @@
 #include "asm/arch/os_api.h"
 #include "asm/arch/chip_plf_export.h"
 #include "sdhost_drv.h"
+#ifdef CONFIG_TIGER
+#include <asm/arch/sdio_reg_v3.h>
+#include <asm/arch/int_reg_v3.h>
+#include <asm/arch/sys_timer_reg_v0.h>
+#include <asm/arch/sc8810_module_config.h>
+#endif
 //#include "sc8810_reg_ahb.h"
 #if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC6800H)
 //#include "ldo_drvapi.h"
@@ -31,7 +37,7 @@
 //#include "clock_drvapi.h"
 #endif
 //#include "Ref_outport.h"
-#ifdef CONFIG_SC8810
+#if defined (CONFIG_SC8810) || defined (CONFIG_TIGER)
 #define PLATFORM_SC8800G
 #endif
 
@@ -269,6 +275,7 @@ typedef enum
 /*****************************************************************************/
 PUBLIC void SDHOST_Cfg_Voltage (SDHOST_HANDLE sdhost_handler,SDHOST_VOL_RANGE_E voltage)
 {
+#ifdef CONFIG_TIGER
     /*<CR:MS00234475 modify for SPI smartphone 30/03/2011 by shengyanxin bagin*/
 #if defined (MODEM_CONTROL_SUPPORT_SPI)
     return;
@@ -311,9 +318,14 @@ PUBLIC void SDHOST_Cfg_Voltage (SDHOST_HANDLE sdhost_handler,SDHOST_VOL_RANGE_E 
             break;
     }
 
+#if defined (CONFIG_TIGER)
+    LDO_SetVoltLevel (LDO_LDO_SDIO3, LDO_VOLT_LEVEL3);
+    LDO_SetVoltLevel (LDO_LDO_VDD30, LDO_VOLT_LEVEL1); 
+#else
     LDO_SetVoltLevel (LDO_LDO_SDIO1, LDO_VOLT_LEVEL3);
     
     LDO_SetVoltLevel (LDO_LDO_SIM2, LDO_VOLT_LEVEL1);
+#endif
     
     //__udelay(20*1000);
     //gpio_direction_output(139, 1);
@@ -390,6 +402,7 @@ PUBLIC void SDHOST_Cfg_Voltage (SDHOST_HANDLE sdhost_handler,SDHOST_VOL_RANGE_E 
     sdhost_handler->host_cfg->HOST_CTL0 = tmpReg;
 #endif
 #endif
+#endif
 }
 
 /*****************************************************************************/
@@ -415,14 +428,24 @@ PUBLIC void SDHOST_SD_POWER (SDHOST_HANDLE sdhost_handler,SDHOST_PWR_ONOFF_E on_
     if (POWR_ON == on_off)
     {
         //LDO_TurnOnLDO (LDO_LDO_SDIO);
+#if defined (CONFIG_TIGER)
+		LDO_TurnOnLDO(LDO_LDO_SDIO3);
+		LDO_TurnOnLDO(LDO_LDO_VDD30);
+#else
         LDO_TurnOnLDO(LDO_LDO_SDIO1);
         LDO_TurnOnLDO(LDO_LDO_SIM2);
+#endif
     }
     else
     {
         //LDO_TurnOffLDO (LDO_LDO_SDIO);
+#if defined (CONFIG_TIGER)
+		LDO_TurnOffLDO(LDO_LDO_SDIO3);
+		LDO_TurnOffLDO(LDO_LDO_VDD30);
+#else
         LDO_TurnOffLDO (LDO_LDO_SDIO1);
         LDO_TurnOffLDO (LDO_LDO_SIM2);
+#endif
     }
 
 #else
@@ -649,12 +672,24 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
 
     tmpReg = sdhost_handler->host_cfg->HOST_CTL1;
     tmpReg &= (~ (0xff<<8));
-
+#if defined (CONFIG_TIGER)
+    if (512 < clkDiv)
+    {
+        clkDiv = 1024;
+        tmpReg |= (0x2 << 6);
+    }
+    else if (256 < clkDiv)
+    {
+        clkDiv = 512;
+        tmpReg |= (0x1 << 6);
+    }
+#else    
     if (256 < clkDiv)
     {
         SDHOST_PRINT ( ("   clkDiv: %d is too big!!!!!",clkDiv));
         SCI_ASSERT (0);/*assert to do*/
     }
+#endif
     else if (128 < clkDiv)
     {
         clkDiv = 256;
@@ -2043,12 +2078,19 @@ LOCAL SDHOST_SLOT_NO _GetIntSDHOSTSlotNum (void)
 {
     uint32 tmpReg;
     SDHOST_SLOT_NO ret;
-
+#if defined (CONFIG_TIGER)
+    tmpReg = REG32 (EMMC_SLOT_INT_STS);
+#else
     tmpReg = REG32 (SDIO1_SLOT_INT_STS);
+#endif
 
     if ( (tmpReg& (0x01<<0)))
     {
+#if defined (CONFIG_TIGER)
+        ret = SDHOST_SLOT_7;
+#else
         ret = SDHOST_SLOT_1;
+#endif
     }
     else if ( (tmpReg& (0x01<<1)))
     {
@@ -2178,12 +2220,20 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
     }
 
     // select slot 0
+#if defined (CONFIG_TIGER)
+     REG32 (AHB_CTL0)     |= BIT_23;
+     REG32 (AHB_SOFT_RST) |= BIT_21;
+     REG32 (AHB_SOFT_RST) &= ~BIT_21;
+     sdio_port_ctl[slot_NO].open_flag = TRUE;
+     sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_384M);
+#else
 	    REG32 (AHB_CTL0)     |= BIT_19;
 	    REG32 (AHB_SOFT_RST) |= BIT_16;
 	    REG32 (AHB_SOFT_RST) &= ~BIT_16;
 
     sdio_port_ctl[slot_NO].open_flag = TRUE;
     sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_48M);
+#endif
 
     switch (slot_NO)
     {
@@ -2195,17 +2245,56 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
 
         case SDHOST_SLOT_1:
             {
+#if defined(CONFIG_TIGER)		
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO0_BASE_ADDR+0x100) );
+#else
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO1_BASE_ADDR);
+#endif				
             }
             break;
 
         case SDHOST_SLOT_2:
+#if defined(CONFIG_TIGER)		
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO0_BASE_ADDR+0x200) );
+            }
+            break;
+#endif			
         case SDHOST_SLOT_3:
+#if defined(CONFIG_TIGER)	
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO1_BASE_ADDR );
+            }
+            break;
+#endif			
         case SDHOST_SLOT_4:
+#if defined(CONFIG_TIGER)	
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO1_BASE_ADDR+0x100) );
+            }
+            break;
+#endif			
         case SDHOST_SLOT_5:
+#if defined(CONFIG_TIGER)	
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO1_BASE_ADDR+0x200) );
+            }
+            break;
+#endif			
         case SDHOST_SLOT_6:
+#if defined(CONFIG_TIGER)			
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO2_BASE_ADDR );
+            }
+            break;
+#endif			
         case SDHOST_SLOT_7:
-
+#if defined(CONFIG_TIGER)			
+            {
+                sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) EMMC_BASE_ADDR);
+            }
+            break;
+#endif
         default:
             {
                 SCI_ASSERT (0);/*assert to do*/
@@ -2338,7 +2427,32 @@ PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
 #else
 PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
 {
-#ifdef  PLATFORM_SC8800G
+#if defined(CONFIG_TIGER)
+    uint32 clk = 0;
+    REG32 (GR_CLK_GEN5) &= ~ (BIT_23|BIT_24);
+    //Select the clk source of SDIO
+    if (sdio_base_clk >= SDIO_BASE_CLK_384M)
+    {
+        clk = SDIO_BASE_CLK_384M;
+    }
+    else if (sdio_base_clk >= SDIO_BASE_CLK_256M)
+    {
+        clk = SDIO_BASE_CLK_256M;
+        REG32 (GR_CLK_GEN5) |= (1<<23);
+    }
+    else if (sdio_base_clk >= SDIO_BASE_CLK_153M)
+    {
+        clk = SDIO_BASE_CLK_153M;
+        REG32 (GR_CLK_GEN5) |= (2<<23);
+        //REG32 (GR_CLK_GEN5) |= (2<<17);
+    }
+    else
+    {
+        clk = SDIO_BASE_CLK_26M;
+        REG32 (GR_CLK_GEN5) |= (3<<23);
+    }
+    return clk;
+#elif defined(PLATFORM_SC8800G)
     uint32 clk = 0;
 
     //Select the clk source of SDIO

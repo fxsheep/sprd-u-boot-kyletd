@@ -41,13 +41,20 @@
 #include <./configs/omap730.h>
 #endif
 
+#ifdef CONFIG_TIGER
+#define BIGEND_PROT_REG 0x20900290
+#define AHB_CTRL5_REG  	0x20900230
+#define FDL2_STACK 	0x81000000
+#endif
 #ifdef PLATFORM_SC8800G
 #define BIGEND_PROT_REG 0x20900290
 #define AHB_CTRL5_REG  0x20900230
+#define FDL2_STACK 	0x31000000
 #endif
 #ifdef CONFIG_SC8810
 #define BIGEND_PROT_REG 0x20900290
 #define AHB_CTRL5_REG  0x20900230
+#define FDL2_STACK 	0x1000000
 #endif
 
 /*
@@ -142,11 +149,7 @@ time:	subs	r0,r0,#0x1
 
 	/*set stack limit to 0*/
 	MOV R10, #0
-#ifndef CONFIG_NAND_SC8810
-	ldr sp, =0x31000000
-#else
-	ldr sp, =0x1000000
-#endif	
+	ldr sp, =FDL2_STACK	
 clear_bss:
 	ldr	r0, _bss_start		/* find start of bss segment        */
 	ldr	r1, _bss_end		/* stop here                        */

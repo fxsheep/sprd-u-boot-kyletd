@@ -756,142 +756,6 @@ int NandChangeBootloaderHeader(unsigned int *bl_start_addr)
 
 }
 
-int NandWriteAndCheck(unsigned int size, unsigned char *buf)
-{
-
-    memcpy (g_FixNBLBuf + g_NBLFixBufDataSize, buf, size); /* copy the data to the temp buffer */
-    g_NBLFixBufDataSize += size;
-
-    if ((g_NBLFixBufDataSize) <= ECC_NBL_SIZE)
-    {
-        return NAND_SUCCESS;
-    }
-#ifndef CONFIG_NAND_SC8810	
-    NandChangeBootloaderHeader((unsigned int *) g_FixNBLBuf);
-#endif	
-    return NAND_SUCCESS;
-}
-
-int FDL2_DataMidst (PACKET_T *packet, void *arg)
-{
-    	unsigned long size;
-	unsigned long ii;
-    /* The previous download step failed. */
-    if (NAND_SUCCESS != g_prevstatus)
-    {
-	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 1);
-        FDL2_SendRep (g_prevstatus);
-        return 0;
-    }
-
-    size = packet->packet_body.size;
-	//printf("size = %d  recv_size = %d   total_size = %d\n", size, g_status.recv_size, g_status.total_size);
-    if ( (g_status.recv_size + size) > g_status.total_size)
-    {
-        g_prevstatus = NAND_INVALID_SIZE;
-	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 2);
-        FDL2_SendRep (g_prevstatus);
-        return 0;
-    }
-
-    if (CHECKSUM_OTHER_DATA == g_checksum)
-    {
-        if (is_nbl_write == 1) {
-		g_prevstatus = NandWriteAndCheck( (unsigned int) size, (unsigned char *) (packet->packet_body.content));
-	} else if (is_phasecheck_write == 1) {
-        	memcpy((g_PhasecheckBUF + g_PhasecheckBUFDataSize), (char *)(packet->packet_body.content), size);
-        	g_PhasecheckBUFDataSize += size;
-		g_prevstatus = NAND_SUCCESS;
-	} else {
-#ifdef TRANS_CODE_SIZE
-		//printf("g_BigSize = %d  buflen = %d, onewrite = %d  size = %d\n", g_BigSize, code_yaffs_buflen, code_yaffs_onewrite, size);
-		memcpy((g_BigBUF + g_BigSize), (char *)(packet->packet_body.content), size);
-		g_BigSize += size;
-
-		if (g_BigSize < code_yaffs_buflen) {
-			g_prevstatus = NAND_SUCCESS;
-		} else {
-			for (ii = 0; ii < g_BigSize; ii += code_yaffs_onewrite) {
-				if (strcmp(phy_partition.name, "cache") == 0)
-					g_prevstatus = NAND_SUCCESS;
-				else{
-#ifdef CONFIG_BOARD_788
-					if ((find_zte_version == 1) && (zte_version_size > 0)) {
-							memcpy(buildprop_BUF + zte_version_point, g_BigBUF + ii, 2048);
-							zte_version_point += 2048;
-							zte_version_size -= 2048;
-					}
-#endif
-					g_prevstatus = nand_write_fdl((unsigned int)code_yaffs_onewrite, 
-						(unsigned char *)(g_BigBUF + ii));
-
-#ifdef CONFIG_BOARD_788
-				if ((download_system_flag == 1) && (find_zte_version == 0)) {
-						yaffs_PackedTags2 checkpt;
-
-						memset(&checkpt, 0xff, sizeof(yaffs_PackedTags2));
-						memcpy(&checkpt, g_BigBUF + ii + 2048, sizeof(yaffs_PackedTags2));
-
-						if (checkpt.t.chunkId == 0) {
-							yaffs_ObjectHeader checkoh;
-							memset(&checkoh, 0xff, sizeof(yaffs_ObjectHeader));
-							memcpy(&checkoh, g_BigBUF + ii, sizeof(yaffs_ObjectHeader));
-
-							if ((strcmp(checkoh.name,"build.prop") ) == 0) {
-								find_zte_version = 1;
-								zte_version_size = checkoh.fileSize;
-								zte_version_point = 0;
-								memset(buildprop_BUF, 0xff, 2048);
-							}
-					}
-				}
-#endif
-			}
-				if (NAND_SUCCESS != g_prevstatus) {
-					printf("big buffer write error.\n");				
-					break;
-				}
-			}
-			g_BigSize = 0;
-			memset(g_BigBUF, 0xff, yaffs_buffer_size);
-		}
-#else
-		if (strcmp(phy_partition.name, "cache") == 0)
-			g_prevstatus = NAND_SUCCESS;
-		else
-        		g_prevstatus = nand_write_fdl((unsigned int) size, 
-				(unsigned char *)(packet->packet_body.content));
-#endif
-	}
-
-        if (NAND_SUCCESS == g_prevstatus)
-        {
-            g_status.recv_size += size;
-
-            if (!packet->ack_flag)
-            {
-                packet->ack_flag = 1;
-		set_dl_op_val(0, 0, MIDSTDATA, SUCCESS, 8);
-		FDL_SendAckPacket (BSL_REP_ACK);
-                return NAND_SUCCESS == g_prevstatus;
-            }
-        }
-
-	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 4);
-        FDL2_SendRep (g_prevstatus);
-        return NAND_SUCCESS == g_prevstatus;
-    }
-    else //It's fixnv data. We should backup it.
-    {
-        memcpy ( (unsigned char *) g_sram_addr, (char *) (packet->packet_body.content), size);
-        g_sram_addr += size;
-	g_status.recv_size += size;
-	set_dl_op_val(0, 0, MIDSTDATA, SUCCESS, 8);
-        FDL_SendAckPacket (BSL_REP_ACK);
-        return 1;
-    }
-}
-
 int FDL2_DataEnd (PACKET_T *packet, void *arg)
 {
 	unsigned long pos, size, ret;
@@ -956,7 +820,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			}
 		}
     	} else if (is_nbl_write == 1) {
-#ifdef CONFIG_NAND_SC8810	//only for sc8810 to write spl
+#if (defined(CONFIG_NAND_SC8810) || defined(CONFIG_NAND_TIGER))//only for sc8810 to write spl
 		g_prevstatus = nand_write_fdl(0x0, g_FixNBLBuf);
 #else
 
@@ -1095,6 +959,469 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
     	return (NAND_SUCCESS == g_prevstatus);
 }
 
+
+int NandWriteAndCheck(unsigned int size, unsigned char *buf)
+{
+
+    memcpy (g_FixNBLBuf + g_NBLFixBufDataSize, buf, size); /* copy the data to the temp buffer */
+    g_NBLFixBufDataSize += size;
+
+    if ((g_NBLFixBufDataSize) <= ECC_NBL_SIZE)
+    {
+        return NAND_SUCCESS;
+    }
+#if !(defined(CONFIG_NAND_SC8810) || defined(CONFIG_NAND_TIGER))
+    NandChangeBootloaderHeader((unsigned int *) g_FixNBLBuf);
+#endif	
+    return NAND_SUCCESS;
+}
+
+int FDL2_DataMidst (PACKET_T *packet, void *arg)
+{
+    	unsigned long size;
+	unsigned long ii;
+    /* The previous download step failed. */
+    if (NAND_SUCCESS != g_prevstatus)
+    {
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 1);
+        FDL2_SendRep (g_prevstatus);
+        return 0;
+    }
+
+    size = packet->packet_body.size;
+	//printf("size = %d  recv_size = %d   total_size = %d\n", size, g_status.recv_size, g_status.total_size);
+    if ( (g_status.recv_size + size) > g_status.total_size)
+    {
+        g_prevstatus = NAND_INVALID_SIZE;
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 2);
+        FDL2_SendRep (g_prevstatus);
+        return 0;
+    }
+
+    if (CHECKSUM_OTHER_DATA == g_checksum)
+    {
+        if (is_nbl_write == 1) {
+		g_prevstatus = NandWriteAndCheck( (unsigned int) size, (unsigned char *) (packet->packet_body.content));
+	} else if (is_phasecheck_write == 1) {
+        	memcpy((g_PhasecheckBUF + g_PhasecheckBUFDataSize), (char *)(packet->packet_body.content), size);
+        	g_PhasecheckBUFDataSize += size;
+		g_prevstatus = NAND_SUCCESS;
+	} else {
+#ifdef TRANS_CODE_SIZE
+		//printf("g_BigSize = %d  buflen = %d, onewrite = %d  size = %d\n", g_BigSize, code_yaffs_buflen, code_yaffs_onewrite, size);
+		memcpy((g_BigBUF + g_BigSize), (char *)(packet->packet_body.content), size);
+		g_BigSize += size;
+
+		if (g_BigSize < code_yaffs_buflen) {
+			g_prevstatus = NAND_SUCCESS;
+		} else {
+			for (ii = 0; ii < g_BigSize; ii += code_yaffs_onewrite) {
+				if (strcmp(phy_partition.name, "cache") == 0)
+					g_prevstatus = NAND_SUCCESS;
+				else{
+#ifdef CONFIG_BOARD_788
+					if ((find_zte_version == 1) && (zte_version_size > 0)) {
+							memcpy(buildprop_BUF + zte_version_point, g_BigBUF + ii, 2048);
+							zte_version_point += 2048;
+							zte_version_size -= 2048;
+					}
+#endif
+					g_prevstatus = nand_write_fdl((unsigned int)code_yaffs_onewrite, 
+						(unsigned char *)(g_BigBUF + ii));
+
+#ifdef CONFIG_BOARD_788
+				if ((download_system_flag == 1) && (find_zte_version == 0)) {
+						yaffs_PackedTags2 checkpt;
+
+						memset(&checkpt, 0xff, sizeof(yaffs_PackedTags2));
+						memcpy(&checkpt, g_BigBUF + ii + 2048, sizeof(yaffs_PackedTags2));
+
+						if (checkpt.t.chunkId == 0) {
+							yaffs_ObjectHeader checkoh;
+							memset(&checkoh, 0xff, sizeof(yaffs_ObjectHeader));
+							memcpy(&checkoh, g_BigBUF + ii, sizeof(yaffs_ObjectHeader));
+
+							if ((strcmp(checkoh.name,"build.prop") ) == 0) {
+								find_zte_version = 1;
+								zte_version_size = checkoh.fileSize;
+								zte_version_point = 0;
+								memset(buildprop_BUF, 0xff, 2048);
+							}
+					}
+				}
+#endif
+			}
+				if (NAND_SUCCESS != g_prevstatus) {
+					printf("big buffer write error.\n");				
+					break;
+				}
+			}
+			g_BigSize = 0;
+			memset(g_BigBUF, 0xff, yaffs_buffer_size);
+		}
+#else
+		if (strcmp(phy_partition.name, "cache") == 0)
+			g_prevstatus = NAND_SUCCESS;
+		else
+        		g_prevstatus = nand_write_fdl((unsigned int) size, 
+				(unsigned char *)(packet->packet_body.content));
+#endif
+	}
+
+        if (NAND_SUCCESS == g_prevstatus)
+        {
+            g_status.recv_size += size;
+
+            if (!packet->ack_flag)
+            {
+                packet->ack_flag = 1;
+		set_dl_op_val(0, 0, MIDSTDATA, SUCCESS, 8);
+		FDL_SendAckPacket (BSL_REP_ACK);
+                return NAND_SUCCESS == g_prevstatus;
+            }
+        }
+
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 4);
+        FDL2_SendRep (g_prevstatus);
+        return NAND_SUCCESS == g_prevstatus;
+    }
+    else //It's fixnv data. We should backup it.
+    {
+        memcpy ( (unsigned char *) g_sram_addr, (char *) (packet->packet_body.content), size);
+        g_sram_addr += size;
+	g_status.recv_size += size;
+	set_dl_op_val(0, 0, MIDSTDATA, SUCCESS, 8);
+        FDL_SendAckPacket (BSL_REP_ACK);
+        return 1;
+    }
+}
+#ifdef FPGA_TRACE_DOWNLOAD
+int FDL2_DramStart (unsigned long base_addr, unsigned long size)
+{
+    unsigned long start_addr = base_addr;
+    int           ret;
+    //FDL_SendAckPacket (BSL_REP_ACK);
+    
+    set_dl_op_val(start_addr, size, STARTDATA, FAIL, 1);
+
+    //if (packet->packet_body.size == 12)
+    if (base_addr == 0x90000001) //nv
+    {
+	memset(g_fixnv_buf, 0xff, FIXNV_SIZE + 4);
+        //g_checksum = * (data+2);
+        g_checksum = 0;
+        g_sram_addr = (unsigned long) g_fixnv_buf;
+    } else {
+	        g_checksum = CHECKSUM_OTHER_DATA;
+    }
+
+    do
+    {
+	memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+	phy_partition.offset = custom2log(start_addr);
+	ret = log2phy_table(&phy_partition);
+	phy_partition_info(phy_partition, __LINE__);
+
+	if (NAND_SUCCESS != ret)
+        	break;
+
+	if (size >= phy_partition.size) {
+		printf("\n\nimage file size : 0x%08x is bigger than partition size : 0x%08x\n", size, phy_partition.size);
+		ret = NAND_INVALID_SIZE;
+	}
+	if (NAND_SUCCESS != ret)
+        	break;
+
+	if (strcmp(phy_partition.name, "fixnv") == 0)
+		ret = get_nand_pageoob(&nand_page_oob_info);
+	else
+        	ret = nand_start_write(&phy_partition, size, &nand_page_oob_info);
+        if (NAND_SUCCESS != ret)
+            break;
+
+	is_nbl_write = 0;
+	is_phasecheck_write = 0;
+
+	if (strcmp(phy_partition.name, "spl") == 0) {
+		is_nbl_write = 1;
+		g_NBLFixBufDataSize = 0;
+	} else if (strcmp(phy_partition.name, "productinfo") == 0) {
+		is_phasecheck_write = 1;
+		g_PhasecheckBUFDataSize = 0;
+		memset(g_PhasecheckBUF, 0xff, 0x2000);
+	}
+
+#ifdef TRANS_CODE_SIZE
+	yaffs_buffer_size = (DATA_BUFFER_SIZE + (DATA_BUFFER_SIZE / nand_page_oob_info.writesize) * nand_page_oob_info.oobsize);
+
+	if (phy_partition.yaffs == 0) {
+		code_yaffs_buflen = DATA_BUFFER_SIZE;
+		code_yaffs_onewrite = nand_page_oob_info.writesize;
+	} else if (phy_partition.yaffs == 1) {
+		code_yaffs_buflen = yaffs_buffer_size;
+		code_yaffs_onewrite = nand_page_oob_info.writesize + nand_page_oob_info.oobsize;
+	}
+	
+	g_BigSize = 0;
+	if (g_BigBUF == NULL)
+		g_BigBUF = (unsigned char *)malloc(yaffs_buffer_size);
+
+	if (g_BigBUF == NULL) {
+		printf("malloc is wrong : %d\n", yaffs_buffer_size);
+		ret = NAND_SYSTEM_ERROR;		
+		break;
+	}
+	memset(g_BigBUF, 0xff, yaffs_buffer_size);
+	//printf("code_yaffs_onewrite = %d  code_yaffs_buflen = %d  yaffs_buffer_size = %d\n", code_yaffs_onewrite, code_yaffs_buflen, yaffs_buffer_size);
+#endif
+
+        g_status.total_size  = size;
+        g_status.recv_size   = 0;
+        g_prevstatus = NAND_SUCCESS;
+
+	set_dl_op_val(start_addr, size, STARTDATA, SUCCESS, 1);
+        //FDL_SendAckPacket (BSL_REP_ACK);	
+        return 1;
+    }
+    while (0);
+
+    //FDL2_SendRep (ret);
+    return 0;
+}
+int FDL2_DramMidst (unsigned char *pbuf, unsigned long size)
+{
+	unsigned long ii;
+
+    /* The previous download step failed. */
+    if (NAND_SUCCESS != g_prevstatus)
+    {
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 1);
+        //FDL2_SendRep (g_prevstatus);
+        return 0;
+    }
+
+   // size = packet->packet_body.size;
+	printf("size = %d  recv_size = %d   total_size = %d\n", size, g_status.recv_size, g_status.total_size);
+    if ( (g_status.recv_size + size) > g_status.total_size)
+    {
+        g_prevstatus = NAND_INVALID_SIZE;
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 2);
+        //FDL2_SendRep (g_prevstatus);
+        return 0;
+    }
+
+    if (CHECKSUM_OTHER_DATA == g_checksum)
+    {
+        if (is_nbl_write == 1) {
+		g_prevstatus = NandWriteAndCheck( (unsigned int) size, (unsigned char *) (pbuf));
+	} else if (is_phasecheck_write == 1) {
+		printf("g_PhasecheckBUFDataSize = %d\n", g_PhasecheckBUFDataSize);
+        	memcpy((g_PhasecheckBUF + g_PhasecheckBUFDataSize), (char *)(pbuf), size);
+        	g_PhasecheckBUFDataSize += size;
+		g_prevstatus = NAND_SUCCESS;
+	} else {
+#ifdef TRANS_CODE_SIZE
+		//printf("g_BigSize = %d  buflen = %d, onewrite = %d  size = %d\n", g_BigSize, code_yaffs_buflen, code_yaffs_onewrite, size);
+		memcpy((g_BigBUF + g_BigSize), (char *)(pbuf), size);
+		g_BigSize += size;
+
+		if (g_BigSize < code_yaffs_buflen) {
+			//printf("continue to big buffer\n");
+			g_prevstatus = NAND_SUCCESS;
+		} else {
+			//printf("big buffer is full. g_BigSize = %d\n", g_BigSize);
+			for (ii = 0; ii < g_BigSize; ii += code_yaffs_onewrite) {
+				//printf(".");
+				g_prevstatus = nand_write_fdl( (unsigned int) code_yaffs_onewrite, (unsigned char *) (g_BigBUF + ii));
+				if (NAND_SUCCESS != g_prevstatus) {
+					//printf("\n");
+					printf("big buffer write error.\n");				
+					break;
+				}
+			}
+			//printf("\n");
+			g_BigSize = 0;
+			memset(g_BigBUF, 0xff, yaffs_buffer_size);
+		}
+#else
+        	g_prevstatus = nand_write_fdl( (unsigned int) size, (unsigned char *) (pbuf));
+#endif
+	}
+
+        if (NAND_SUCCESS == g_prevstatus)
+        {
+            g_status.recv_size += size;
+
+            //if (!packet->ack_flag)
+            //  {
+           //      packet->ack_flag = 1;
+	   //	set_dl_op_val(0, 0, MIDSTDATA, SUCCESS, 8);
+		//FDL_SendAckPacket (BSL_REP_ACK);
+          //       return NAND_SUCCESS == g_prevstatus;
+          //  }
+        }
+
+	set_dl_op_val(0, 0, MIDSTDATA, FAIL, 4);
+        //FDL2_SendRep (g_prevstatus);
+        return NAND_SUCCESS == g_prevstatus;
+    }
+    else //It's fixnv data. We should backup it.
+    {
+        memcpy ( (unsigned char *) g_sram_addr, (char *) (pbuf), size);
+        g_sram_addr += size;
+	g_status.recv_size += size;
+	set_dl_op_val(0, 0, MIDSTDATA, SUCCESS, 8);
+        //FDL_SendAckPacket (BSL_REP_ACK);
+        return 1;
+    }
+}
+int FDL2_DramEnd ()
+{
+	unsigned long pos, size, ret;
+    	unsigned long i, fix_nv_size, fix_nv_checksum, ii, realii;
+
+	set_dl_op_val(0, 0, ENDDATA, FAIL, 1);
+    	if (CHECKSUM_OTHER_DATA != g_checksum) {
+		/* It's fixnv data */
+        	fix_nv_size = g_sram_addr - (unsigned long) g_fixnv_buf;
+        	fix_nv_checksum = Get_CheckSum ( (unsigned char *) g_fixnv_buf, fix_nv_size);
+        	fix_nv_checksum = EndianConv_32 (fix_nv_checksum);
+        	//don't check the data when use trace32 load the nv
+        	//if (fix_nv_checksum != g_checksum)
+        	//	printf("FDL2_DramEnd fixnv check sum error\n");
+		
+		/* write fixnv to yaffs2 format : orginal */
+		char *fixnvpoint = "/fixnv";
+		char *fixnvfilename = "/fixnv/fixnv.bin";
+		
+		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
+		g_fixnv_buf[FIXNV_SIZE + 0] = g_fixnv_buf[FIXNV_SIZE + 1] = 0x5a;
+		g_fixnv_buf[FIXNV_SIZE + 2] = g_fixnv_buf[FIXNV_SIZE + 3] = 0x5a;
+		/* erase fixnv partition */
+		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+		strcpy(phy_partition.name, "fixnv");
+		ret = log2phy_table(&phy_partition);
+		phy_partition_info(phy_partition, __LINE__);
+		g_prevstatus = ret;
+		if (ret == NAND_SUCCESS) {
+			printf("erase fixnv start\n");
+			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info);
+			printf("\nerase fixnv end\n");
+			g_prevstatus = ret;
+			if (ret == NAND_SUCCESS) {
+				printf("write fixnv start\n");
+				cmd_yaffs_mount(fixnvpoint);
+    				cmd_yaffs_mwrite_file(fixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
+				ret = cmd_yaffs_ls_chk(fixnvfilename);
+				cmd_yaffs_umount(fixnvpoint);
+				printf("write fixnv end\n");
+				g_prevstatus = NAND_SUCCESS;			
+			}
+		}
+
+		/* write fixnv to yaffs2 format : backup */
+		char *backupfixnvpoint = "/backupfixnv";
+		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
+
+		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
+		g_fixnv_buf[FIXNV_SIZE + 0] = g_fixnv_buf[FIXNV_SIZE + 1] = 0x5a;
+		g_fixnv_buf[FIXNV_SIZE + 2] = g_fixnv_buf[FIXNV_SIZE + 3] = 0x5a;
+		/* erase backup fixnv partition */
+		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
+		strcpy(phy_partition.name, "backupfixnv");
+		ret = log2phy_table(&phy_partition);
+		phy_partition_info(phy_partition, __LINE__);
+		g_prevstatus = ret;
+		if (ret == NAND_SUCCESS) {
+			printf("erase backupfixnv start\n");
+			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info);
+			printf("\nerase backupfixnv end\n");
+			g_prevstatus = ret;
+			if (ret == NAND_SUCCESS) {
+				printf("write backupfixnv start\n");
+				cmd_yaffs_mount(backupfixnvpoint);
+    				cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
+				ret = cmd_yaffs_ls_chk(backupfixnvfilename);
+				cmd_yaffs_umount(backupfixnvpoint);
+				printf("write backupfixnv end\n");
+				g_prevstatus = NAND_SUCCESS;
+			}
+		}
+		//////////////////////////////
+    	} else if (is_nbl_write == 1) {
+#if (defined(CONFIG_NAND_SC8810) || defined(CONFIG_NAND_TIGER))	//only for write spl
+		g_prevstatus = nand_write_fdl(0x0, g_FixNBLBuf);
+#else
+	   	/* write the spl loader image to the nand*/
+		for (i = 0; i < 3; i++) {
+			pos = 0;
+			while (pos < g_NBLFixBufDataSize) {
+				if ((g_NBLFixBufDataSize - pos) >= 2048)
+					size = 2048;
+				else
+					size = g_NBLFixBufDataSize - pos;
+				//printf("pos = %d  size = %d\n", pos, size);
+				if (size == 0)
+					break;
+				g_prevstatus = nand_write_fdl (size, g_FixNBLBuf + pos);
+				pos += size;
+			}
+        	}//for (i = 0; i < 3; i++)
+#endif
+		is_nbl_write = 0;
+   	} else if (is_phasecheck_write == 1) {
+		/* write phasecheck to yaffs2 format */
+		char *productinfopoint = "/productinfo";
+		char *productinfofilename = "/productinfo/productinfo.bin";
+
+		/* g_PhasecheckBUF : (PHASECHECK_SIZE + 4) instead of g_PhasecheckBUFDataSize */
+		g_PhasecheckBUF[PHASECHECK_SIZE + 0] = g_PhasecheckBUF[PHASECHECK_SIZE + 1] = 0x5a;
+		g_PhasecheckBUF[PHASECHECK_SIZE + 2] = g_PhasecheckBUF[PHASECHECK_SIZE + 3] = 0x5a;
+		cmd_yaffs_mount(productinfopoint);
+    		cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PHASECHECK_SIZE + 4));
+		ret = cmd_yaffs_ls_chk(productinfofilename);
+		cmd_yaffs_umount(productinfopoint);
+		g_prevstatus = NAND_SUCCESS;
+		/* factorydownload tools */
+		is_factorydownload_tools = 1;
+		is_check_dlstatus = get_DL_Status();
+		if (is_check_dlstatus == 1) {
+			get_Dl_Erase_Address_Table(&Dl_Erase_Address);
+			get_Dl_Data_Address_Table(&Dl_Data_Address);
+		}
+    	}
+#ifdef	TRANS_CODE_SIZE
+	else {
+		//printf("data end, g_BigSize = %d\n", g_BigSize);
+		ii = 0;
+		while (ii < g_BigSize) {
+			realii = min(g_BigSize - ii, code_yaffs_onewrite);
+			//printf(".");
+			g_prevstatus = nand_write_fdl( (unsigned int) realii, (unsigned char *) (g_BigBUF + ii));
+			if (NAND_SUCCESS != g_prevstatus) {
+				//printf("\n");
+				printf("big buffer write error.\n");				
+				break;
+			}
+			ii += realii;
+		}
+		//printf("\n");
+		g_BigSize = 0;
+	}
+#endif
+
+    	if (NAND_SUCCESS != g_prevstatus) {
+		set_dl_op_val(0, 0, ENDDATA, FAIL, 2);
+        	//FDL2_SendRep (g_prevstatus);
+        	return 0;
+    	}
+
+    	g_prevstatus = nand_end_write();
+	set_dl_op_val(0, 0, ENDDATA, SUCCESS, 1);
+    	//FDL2_SendRep (g_prevstatus);
+    	return (NAND_SUCCESS == g_prevstatus);
+}
+#endif
 int FDL2_ReadFlash (PACKET_T *packet, void *arg)
 {
     	unsigned long *data = (unsigned long *) (packet->packet_body.content);

@@ -122,6 +122,7 @@ void fastboot_mode(void)
 	dwc_otg_driver_init();
 	usb_fastboot_initialize();
 #endif
+#if defined CONFIG_SPLASH_SCREEN && defined CONFIG_EXT4_SPARSE_DOWNLOAD
 free(bmp_img);
-
+#endif
 }

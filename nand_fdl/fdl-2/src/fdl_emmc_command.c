@@ -48,7 +48,11 @@ static int read_prod_info_flag = 0;
 #ifdef CONFIG_SP8810EA
 static int need_earse_SD = 0;
 #endif
+#if defined CONFIG_TIGER
+unsigned char *g_eMMCBuf = (unsigned char*)0x82000000;
+#else
 unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
+#endif
 unsigned char g_fix_nv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_fixbucknv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_prod_info_buf[PRODUCTINFO_SIZE + EFI_SECTOR_SIZE];
@@ -402,11 +406,29 @@ unsigned short eMMCCheckSum(const unsigned int *src, int len)
     return (unsigned short) (~sum);
 }
 
+#if 	defined CONFIG_TIGER
+#define BOOTLOADER_HEADER_OFFSET 0x20
+typedef struct{
+	uint32 version;
+	uint32 magicData;
+	uint32 checkSum;
+	uint32 hashLen;
+}EMMC_BootHeader;
+#endif
 void splFillCheckData(unsigned int * splBuf,  int len)
 {
+#if   defined(CONFIG_SC8810)
 	*(splBuf + MAGIC_DATA_SAVE_OFFSET) = MAGIC_DATA;
 	*(splBuf + CHECKSUM_SAVE_OFFSET) = (unsigned int)eMMCCheckSum((unsigned int *)&splBuf[CHECKSUM_START_OFFSET/4], SPL_CHECKSUM_LEN - CHECKSUM_START_OFFSET);
 //	*(splBuf + CHECKSUM_SAVE_OFFSET) = splCheckSum(splBuf);
+#elif defined(CONFIG_TIGER)
+	EMMC_BootHeader *header;
+	header = (EMMC_BootHeader *)((unsigned char*)splBuf+BOOTLOADER_HEADER_OFFSET);
+	header->version  = 0;
+	header->magicData= MAGIC_DATA;
+	header->checkSum = (unsigned int)eMMCCheckSum((unsigned char*)splBuf+BOOTLOADER_HEADER_OFFSET+sizeof(*header), SPL_CHECKSUM_LEN-(BOOTLOADER_HEADER_OFFSET+sizeof(*header)));
+	header->hashLen  = 0;
+#endif
 }
 
 

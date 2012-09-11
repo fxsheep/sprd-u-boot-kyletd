@@ -520,7 +520,9 @@ void board_init_r (gd_t *id, ulong dest_addr)
 
 #if defined(CONFIG_CMD_NAND)
 	puts ("NAND:  ");
+#if !(defined CONFIG_TIGER && defined CONFIG_EMMC_BOOT)
 	nand_init();		/* go init the NAND */
+#endif
 #endif
     boot_pwr_check();
 #ifdef SPRD_EVM_TAG_ON
@@ -528,7 +530,9 @@ void board_init_r (gd_t *id, ulong dest_addr)
 #endif
 
 #if defined(CONFIG_CMD_ONENAND)
+#if !(defined CONFIG_TIGER && defined CONFIG_EMMC_BOOT)
 	onenand_init();
+#endif
 #endif
 
 #ifdef CONFIG_GENERIC_MMC
@@ -552,7 +556,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	/* must do this after the framebuffer is allocated */
 	drv_vfd_init();
 #endif /* CONFIG_VFD */
-
+#ifndef CONFIG_TIGER
 	/* IP Address */
 	gd->bd->bi_ip_addr = getenv_IPaddr ("ipaddr");
 
@@ -664,6 +668,7 @@ void board_init_r (gd_t *id, ulong dest_addr)
 
 #ifdef SPRD_EVM_TAG_ON
 		SPRD_EVM_TAG(11);
+#endif
 #endif
     extern int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]);
     boot_pwr_check();

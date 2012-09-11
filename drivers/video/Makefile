@@ -45,6 +45,7 @@ COBJS-$(CONFIG_VIDEO_VCXK) += bus_vcxk.o
 #ifdef CONFIG_LCD
 COBJS-$(CONFIG_SC8800G) += sc8800g_fb.o
 COBJS-$(CONFIG_SC8810)  += sc8810_fb.o
+COBJS-$(CONFIG_TIGER)  += sc8810_fb.o
 #endif
 
 COBJS	:= $(COBJS-y)

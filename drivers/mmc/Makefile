@@ -37,6 +37,7 @@ COBJS-$(CONFIG_PXA_MMC) += pxa_mmc.o
 COBJS-$(CONFIG_S5P_MMC) += s5p_mmc.o
 
 COBJS-$(CONFIG_SP8810_MMC) += sp8810_mmc.o
+COBJS-$(CONFIG_TIGER_MMC) += sp8810_mmc.o
 COBJS-$(CONFIG_EMMC_BOOT) += sdio_card_pal.o sdhost_phy.o card_sdio.o
 COBJS-$(CONFIG_EXT4_SPARSE_DOWNLOAD) += simg2img.o sparse_crc32.o
 CFLAGS += -I $(TOPDIR)/arch/arm/include/asm/arch-sc8810

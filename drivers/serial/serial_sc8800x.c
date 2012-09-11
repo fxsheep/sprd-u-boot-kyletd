@@ -21,6 +21,9 @@
 /* GEN0_UART0_EN    (0x1 << 1) */
 /* GEN0_UART1_EN    (0x1 << 2) */
 #define GR_UART_CTRL_EN    (0x3<<1)
+#elif defined(CONFIG_TIGER)
+#define GR_CTRL_REG        0x4b000004
+#define GR_UART_CTRL_EN    (0x3 << 20 )
 #elif defined(PLATFORM_SC8800G) || defined(CONFIG_SC8810)
 #define GR_CTRL_REG        0x8b000004
 /* GEN0_UART0_EN    (0x1 << 20) */
@@ -45,12 +48,12 @@ typedef struct UartPort
 
 UartPort_T gUart0PortInfo =
 {
-    0x83000000,
+    ARM_UART0_BASE,
     115200
 };
 UartPort_T gUart1PortInfo =
 {
-    0x84000000,
+    ARM_UART1_BASE,
     115200
 };
 
