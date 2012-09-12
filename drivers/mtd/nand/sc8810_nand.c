@@ -757,8 +757,7 @@ int board_nand_init(struct nand_chip *this)
 #endif
 	this->chip_delay = 20;
 	this->priv = &g_info;
-	this->options |= NAND_BUSWIDTH_16;
-
+	this->options |= NAND_BUSWIDTH_16 | NAND_USE_FLASH_BBT;
 	return 0;
 }
 
