@@ -91,8 +91,12 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         fastboot_mode();
     }else if(rst_mode == NORMAL_MODE){
         normal_mode();
-    }else if(rst_mode == ALARM_MODE && alarm_flag_check()){
-		alarm_mode();
+    }else if(rst_mode == ALARM_MODE){
+              int flag =alarm_flag_check();
+              if(flag == 1)
+			alarm_mode();
+              else if(flag == 2)
+			normal_mode();
     }else if(rst_mode == SLEEP_MODE){
 		sleep_mode();
 	}
@@ -146,7 +150,11 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         charge_mode();
     }else if(alarm_triggered() && alarm_flag_check()){
         DBG("%s: alarm triggered\n", __FUNCTION__);
-        alarm_mode();
+        int flag =alarm_flag_check();
+        if(flag == 1)
+		alarm_mode();
+        else if(flag == 2)
+              normal_mode();
     }else{
         calibration_detect(0);
         //if calibrate success, it will here

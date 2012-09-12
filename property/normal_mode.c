@@ -346,7 +346,7 @@ int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX p
 				buf[PRODUCTINFO_SIZE + 4] = 0xff;
 		} else
 			ret = 1;
-	} else if ((offset == 4096) || (offset == 8192)) {
+	} else if ((offset == 4096) || (offset == 8192) || (offset == 12288)) {
 		/* factorymode or alarm mode */
 		if ((buf[PRODUCTINFO_SIZE + 11] == (crc & 0xff)) \
 			&& (buf[PRODUCTINFO_SIZE + 10] == ((crc & (0xff << 8)) >> 8)) \
