@@ -75,6 +75,12 @@ extern   "C"
 #define LCDC_CTL_BEGIN                  0x20700000    //LCDC Control Registers                      
 #define LCDC_CTL_END                    0x2070017C    //length unit:word.
 
+#define DISPC_CTL_BEGIN          0x21000000   //DISPC Registers
+#define DISPC_CTL_END              0x21000110 //length unit: word.
+
+#define DSI_CTL_BEGIN  0x60100000   //DSI Registers
+#define DSI_CTL_END  0x60100070   //length unit:word
+
 #define LCDC_LCM_CTL_BEGIN              0x20700180    //LCDC/LCM Control Registers              
 #define LCDC_LCM_CTL_END                0x207001a4    //length unit:word.
 

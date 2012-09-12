@@ -1,6 +1,6 @@
 #
-# (C) Copyright 2009 DENX Software Engineering
-# Author: John Rigby <jcrigby@gmail.com>
+# (C) Copyright 2000-2007
+# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
 #
 # See file CREDITS for list of people who contributed to this
 # project.
@@ -12,7 +12,7 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
@@ -21,28 +21,27 @@
 # MA 02111-1307 USA
 #
 
+
 include $(TOPDIR)/config.mk
 
-LIB	= $(obj)lib$(BOARD).o
+LIB	:= $(obj)libsc8825fb.o
 
-COBJS	:= openphone.o sprd_kp.o lcd_s6d0139.o
-SOBJS	:= 
+#ifdef CONFIG_LCD
+COBJS-$(CONFIG_TIGER) += sprdfb_main.o sprdfb_panel.o sprdfb_dispc.o sprdfb_mcu.o sprdfb_rgb.o sprdfb_mipi.o sprdfb_i2c.o sprdfb_spi.o sprdfb_dsi.o mipi_dsih_api.o mipi_dsih_dphy.o mipi_dsih_hal.o
+#endif
 
-SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
+COBJS	:= $(COBJS-y)
+SRCS	:= $(COBJS:.o=.c)
 OBJS	:= $(addprefix $(obj),$(COBJS))
-SOBJS	:= $(addprefix $(obj),$(SOBJS))
 
-$(LIB):	$(obj).depend $(OBJS) $(SOBJS)
-	$(AR) $(ARFLAGS) $@ $(OBJS) $(SOBJS)
+all:	$(LIB)
 
-clean:
-	rm -f $(SOBJS) $(OBJS)
-
-distclean:	clean
-	rm -f $(LIB) core *.bak $(obj).depend
+$(LIB):	$(obj).depend $(OBJS)
+	$(call cmd_link_o_target, $(OBJS))
 
 #########################################################################
 
+# defines $(obj).depend target
 include $(SRCTREE)/rules.mk
 
 sinclude $(obj).depend

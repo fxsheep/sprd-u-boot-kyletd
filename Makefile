@@ -245,6 +245,7 @@ LIBS += drivers/usb/host/libusb_host.o
 LIBS += drivers/usb/musb/libusb_musb.o
 LIBS += drivers/usb/phy/libusb_phy.o
 LIBS += drivers/video/libvideo.o
+LIBS += drivers/video/sc8825fb/libsc8825fb.o
 LIBS += property/libproperty.o
 LIBS += drivers/watchdog/libwatchdog.o
 LIBS += common/libcommon.o

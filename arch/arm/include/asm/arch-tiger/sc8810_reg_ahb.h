@@ -38,6 +38,7 @@ extern   "C"
 #define AHB_SOFT_RST            (AHB_REG_BASE + 0x10)
 #define AHB_PAUSE               (AHB_REG_BASE + 0x14)
 #define AHB_REMAP               (AHB_REG_BASE + 0x18)
+#define AHB_DISPC_CLK       (AHB_REG_BASE + 0x20)
 #define AHB_ARM_CLK             (AHB_REG_BASE + 0x24)
 #define AHB_SDIO_CTL            (AHB_REG_BASE + 0x28)
 #define AHB_CTL4                (AHB_REG_BASE + 0x2C)
