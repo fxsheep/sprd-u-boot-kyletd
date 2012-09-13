@@ -1298,6 +1298,11 @@ tiger_openphone_config	: unconfig
 	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 tiger spreadtrum tiger
+
+sp8825_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sp8825 spreadtrum sc8825
 #########################################################################
 #########################################################################
 
@@ -1338,7 +1343,7 @@ clean:
 	@find $(OBJTREE) -type f \
 		\( -name 'core' -o -name '.depend' -o -name '*.bak' -o -name '*~' \
 		-o -name '*.o'	-o -name '*.a' -o -name '*.exe'	\) -print \
-		| grep -v property | grep -v sc8800g | grep -v sc8800x | grep -v sc8810 | grep -v tiger\
+		| grep -v property | grep -v sc8800g | grep -v sc8800x | grep -v sc8810 | grep -v tiger | grep -v sc8825 \
 		| grep -v nand_fdl | grep -v nand_spl |  xargs rm -f
 else
 clean:
@@ -1382,7 +1387,7 @@ endif
 
 ifdef CONFIG_IDH_BUILD
 clobber:	clean
-	@find $(OBJTREE) \( -path ".*/property" -o -path ".*/sc8800g" -o -path ".*/sc8810" \
+	@find $(OBJTREE) \( -path ".*/property" -o -path ".*/sc8800g" -o -path ".*/sc8810" -o -path ".*/sc8825" \
 			   -o -path ".*/sc8800x" -o -path ".*/nand_fdl" -o -path "nand_spl" -o -path ".*/tiger" \) \
 			   -prune -o -type f \( -name '*.depend' \
 		-o -name '*.srec' -o -name '*.bin' -o -name u-boot.img \) \
