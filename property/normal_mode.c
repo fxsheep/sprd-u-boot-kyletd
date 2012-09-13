@@ -942,6 +942,15 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	memset(buf, 0, 1024);
 
     sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
+
+    /* preset loop_per_jiffy */
+    str_len = strlen(buf);
+#ifdef CONFIG_LOOP_PER_JIFFY
+    sprintf(&buf[str_len], " lpj=%d", CONFIG_LOOP_PER_JIFFY);
+#else
+    sprintf(&buf[str_len], " lpj=%d", 3350528); /* SC8810 1GHz */
+#endif
+
     str_len = strlen(buf);
     //mtdpart_def = get_mtdparts();
     //sprintf(&buf[str_len], " %s", mtdpart_def);
