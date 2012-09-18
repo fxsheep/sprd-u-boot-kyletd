@@ -13,7 +13,7 @@
 #include "fdl_emmc.h"
 
 extern  const unsigned char FDL2_signature[][24];
-int sprd_clean_rtc(void);
+extern int sprd_clean_rtc(void);
 
 static void fdl_error(void)
 {
@@ -102,9 +102,8 @@ int main(void)
 	   timer_init();
 #ifdef CONFIG_TIGER
 #else
-#ifndef CONFIG_SC8810
        sprd_clean_rtc();
-#endif
+
 #endif
 //        FDL_SendAckPacket (BSL_REP_ACK);
 	do {

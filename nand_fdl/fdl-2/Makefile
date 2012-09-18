@@ -77,7 +77,7 @@ CPU_OBJ = timer.o chip_cfg.o chip_phy_v3.o boot_mode.o watchdog_hal.o watchdog_p
 CPU_LIB = $(addprefix $(obj),$(CPU_OBJ))
 else
 
-CPU_OBJ = timer.o chip_cfg.o chip_phy_v3.o boot_mode.o watchdog_hal.o watchdog_phy_v3.o adi_drv.o mmu.o mmu_asm.o
+CPU_OBJ = timer.o chip_cfg.o chip_phy_v3.o boot_mode.o watchdog_hal.o watchdog_phy_v3.o adi_drv.o mmu.o mmu_asm.o rtc-sprd.o
 CPU_LIB = $(addprefix $(obj),$(CPU_OBJ))
 endif
 
