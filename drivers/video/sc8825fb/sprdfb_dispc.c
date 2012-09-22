@@ -274,9 +274,8 @@ static int32_t sprdfb_dispc_refresh (struct sprdfb_device *dev)
 	if(SPRDFB_PANEL_IF_DPI == dev->panel_if_type){
 		/*dpi register update*/
 		dispc_set_bits((1<<5), DISPC_DPI_CTRL);
-		while(!(dispc_read(DISPC_INT_RAW) & (0x10)));
-		FB_PRINT("sprdfb:[%s] got dispc update int (%d)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
 		if(is_first_frame){
+			udelay(30);
 			/*dpi register update with SW and VSync*/
 			dispc_clear_bits((1<<4), DISPC_DPI_CTRL);
 
@@ -284,8 +283,11 @@ static int32_t sprdfb_dispc_refresh (struct sprdfb_device *dev)
 			dispc_set_bits((1 << 4), DISPC_CTRL);
 
 			is_first_frame = 0;
-		}
-		dispc_set_bits((1<<5), DISPC_INT_CLR);
+		}else{
+		while(!(dispc_read(DISPC_INT_RAW) & (0x10)));
+			FB_PRINT("sprdfb:[%s] got dispc update int (%d)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
+			dispc_set_bits((1<<5), DISPC_INT_CLR);
+                   }
 	}else{
 		/* start refresh */
 		dispc_set_bits((1 << 4), DISPC_CTRL);

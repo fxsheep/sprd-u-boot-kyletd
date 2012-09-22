@@ -86,7 +86,7 @@ static inline void dispc_set_bits(uint32_t bits, uint32_t reg)
 
 static inline void dispc_clear_bits(uint32_t bits, uint32_t reg)
 {
-	dispc_write(dispc_read(reg) | ~bits, reg);
+	dispc_write(dispc_read(reg) & ~bits, reg);
 }
 
 #endif
