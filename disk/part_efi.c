@@ -190,6 +190,62 @@ int get_partition_info_efi(block_dev_desc_t * dev_desc, int part,
 	return 0;
 }
 
+int get_partition_info_efi_with_partnum(block_dev_desc_t * dev_desc, int part,
+		disk_partition_t * info, unsigned long total, unsigned long sdidx, int sdpart, disk_partition_t *sdinfo)
+{
+	gpt_header gpt_head;
+	gpt_entry **pgpt_pte = NULL;
+
+	/* "part" argument must be at least 1 */
+	if (!dev_desc || !info || part < 1) {
+		printf("%s: Invalid Argument(s)\n", __FUNCTION__);
+		return -1;
+	}
+
+	/* This function validates AND fills in the GPT header and PTE */
+	if (is_gpt_valid(dev_desc, GPT_PRIMARY_PARTITION_TABLE_LBA,
+			&(gpt_head), pgpt_pte) != 1) {
+		printf("%s: *** ERROR: Invalid Main GPT ***\n", __FUNCTION__);
+		if(is_gpt_valid(dev_desc, dev_desc->lba -1, &(gpt_head), pgpt_pte) != 1){
+			printf("%s: *** ERROR: Invalid alternate GPT ***\n", __FUNCTION__);
+			return -1;
+
+		}
+	}
+
+	/* The ulong casting limits the maximum disk size to 2 TB */
+	info->start = (ulong) le64_to_int((*pgpt_pte)[part - 1].starting_lba);
+	/* The ending LBA is inclusive, to calculate size, add 1 to it */
+	info->size = ((ulong)le64_to_int((*pgpt_pte)[part - 1].ending_lba) + 1)
+		     - info->start;
+	info->blksz = GPT_BLOCK_SIZE;
+
+	sprintf((char *)info->name, "%s%d", GPT_ENTRY_NAME, part);
+	sprintf((char *)info->type, "U-Boot");
+
+	debug("%s: start 0x%lX, size 0x%lX, name %s", __FUNCTION__,
+		info->start, info->size, info->name);
+
+	/* Remember to free pte */
+	if (*pgpt_pte != NULL) {
+		debug("%s: Freeing pgpt_pte\n", __FUNCTION__);
+		free(*pgpt_pte);
+	}
+
+	/* copy sd info */
+	if (sdidx < (le32_to_int(gpt_head.num_partition_entries))) {
+		sdinfo->start = (ulong) le64_to_int((*pgpt_pte)[sdpart - 1].starting_lba);
+		sdinfo->size = ((ulong)le64_to_int((*pgpt_pte)[sdpart - 1].ending_lba) + 1) - sdinfo->start;
+	}
+
+	if (total == 0)
+		return 0;
+	else if (total != le32_to_int(gpt_head.num_partition_entries))
+		return -1;
+	else
+		return 0;
+}
+
 int test_part_efi(block_dev_desc_t * dev_desc)
 {
 	legacy_mbr legacymbr;

@@ -104,6 +104,7 @@ block_dev_desc_t* mg_disk_get_dev(int dev);
 
 /* disk/part.c */
 int get_partition_info (block_dev_desc_t * dev_desc, int part, disk_partition_t *info);
+int get_partition_info_with_partnum (block_dev_desc_t * dev_desc, int part, disk_partition_t *info, unsigned long total, unsigned long sdidx, int sdpart, disk_partition_t *sdinfo);
 void print_part (block_dev_desc_t *dev_desc);
 void  init_part (block_dev_desc_t *dev_desc);
 void dev_print(block_dev_desc_t *dev_desc);

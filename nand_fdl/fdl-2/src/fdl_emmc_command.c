@@ -45,14 +45,14 @@ static int read_bkupnv_flag = 0;
 static int is_ProdInfo_flag = 0;
 static unsigned long is_factorydownload_flag = 0;
 static int read_prod_info_flag = 0;
-#ifdef CONFIG_SP8810EA
-static int need_earse_SD = 0;
-#endif
-#if defined CONFIG_TIGER
-unsigned char *g_eMMCBuf = (unsigned char*)0x82000000;
-#else
+
+static unsigned long has_sd = 0;
+static unsigned long point_sd = 0xffff;
+static unsigned long done_format_sd = 0;
+disk_partition_t sd_info;
+
+
 unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
-#endif
 unsigned char g_fix_nv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_fixbucknv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_prod_info_buf[PRODUCTINFO_SIZE + EFI_SECTOR_SIZE];
@@ -125,7 +125,7 @@ unsigned long addr2part(unsigned long custom)
 extern PARTITION_CFG g_sprd_emmc_partition_cfg[];
 PARTITION_CFG uefi_part_info[MAX_PARTITION_INFO];
 static int uefi_part_info_ok_flag = 0;
-int uefi_get_part_info(void)
+int uefi_get_part_info(unsigned long part_total)
 {
 	block_dev_desc_t *dev_desc = NULL;
 	disk_partition_t info;
@@ -141,9 +141,13 @@ int uefi_get_part_info(void)
 	for(i=0; i < MAX_PARTITION_INFO; i++){
 		if(g_sprd_emmc_partition_cfg[i].partition_index == 0)
 			break;
-		if (get_partition_info (dev_desc, g_sprd_emmc_partition_cfg[i].partition_index, &info)) {
+		if (part_total > 0) {
+			if (get_partition_info_with_partnum(dev_desc, g_sprd_emmc_partition_cfg[i].partition_index,&info, part_total, point_sd, g_sprd_emmc_partition_cfg[point_sd].partition_index, &sd_info)) {
+				return 0;
+			}
+		} else if (get_partition_info(dev_desc, g_sprd_emmc_partition_cfg[i].partition_index, &info))
 			return 0;
-		}
+
 		if(info.size <= 0 )
 			return 0;
 		uefi_part_info[i].partition_index = g_sprd_emmc_partition_cfg[i].partition_index;
@@ -168,56 +172,64 @@ unsigned long efi_covert_index(unsigned long npart)
 
 unsigned long efi_GetPartBaseSec(unsigned long Partition)
 {
-	uefi_get_part_info();
+	uefi_get_part_info(0);
 	return uefi_part_info[efi_covert_index(Partition)].partition_index;
 }
 
 unsigned long efi_GetPartSize(unsigned long Partition)
 {
-	uefi_get_part_info();
+	uefi_get_part_info(0);
 	return (EFI_SECTOR_SIZE * uefi_part_info[efi_covert_index(Partition)].partition_size);
 }
 
-int earse_externelSD_partition(void)
+int format_sd_partition(void)
 {
-	unsigned long part_size;
-	unsigned long sd_data_size;
-	unsigned long base_sector;
-
-	part_size = efi_GetPartSize(PARTITION_SD);
+	unsigned long part_size = 0;
+	unsigned long sd_data_size = 0;
+	unsigned long base_sector = 0;
 	g_dl_eMMCStatus.curUserPartition = PARTITION_SD;
-	sd_data_size = newfs_msdos_main(g_eMMCBuf, part_size);
+	if (!emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition)) {
+		return -1;
+	}
+
+	part_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
+	sd_data_size = newfs_msdos_main(g_eMMCBuf,part_size);
 	g_dl_eMMCStatus.curEMMCArea = PARTITION_USER;
 	base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
-
-	if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, base_sector,sd_data_size / EFI_SECTOR_SIZE, g_eMMCBuf)){
-			SEND_ERROR_RSP (BSL_WRITE_ERROR);
-			return 0;
+	if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, base_sector,sd_data_size / EFI_SECTOR_SIZE, g_eMMCBuf)) {
+		return -1;
 	}
+	return 0;
 }
 
 int FDL_Check_Partition_Table(void)
 {
-	int i;
+	int i = 0;
+	unsigned long parttotal = 0;
+
 	uefi_part_info_ok_flag = 0;
 
-	if (!uefi_get_part_info())
+	while (g_sprd_emmc_partition_cfg[parttotal].partition_index > 0) {
+		if (g_sprd_emmc_partition_cfg[parttotal].partition_index == PARTITION_SD) {
+			has_sd = 1;
+			point_sd = parttotal;
+			memset(&sd_info, 0, sizeof(disk_partition_t));
+		}
+		parttotal ++;
+	}
+
+	if (!uefi_get_part_info(parttotal))
 		return 0;
+
 	for (i=0; i < MAX_PARTITION_INFO; i++) {
 		if (g_sprd_emmc_partition_cfg[i].partition_index == 0)
 			break;
 		if (MAX_SIZE_FLAG == g_sprd_emmc_partition_cfg[i].partition_size)
 			continue;
-#ifdef CONFIG_SP8810EA
-		if (g_sprd_emmc_partition_cfg[i].partition_index == PARTITION_SD)
-			need_earse_SD = 1;
-#endif
-		if ((2 * g_sprd_emmc_partition_cfg[i].partition_size != uefi_part_info[i].partition_size) )
+		if(2 * g_sprd_emmc_partition_cfg[i].partition_size !=  uefi_part_info[i].partition_size) {
 			return 0;
+		}
 	}
-#ifdef CONFIG_SP8810EA
-	need_earse_SD = 0;
-#endif
 
 	return 1;
 }
@@ -773,6 +785,13 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 	//set_dl_op_val(0, 0, MIDSTDATA, FAIL, 4);
 	g_prevstatus = EMMC_SUCCESS;
 	FDL2_eMMC_SendRep (g_prevstatus);
+
+	if ((g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE) && (has_sd == 1) &&(done_format_sd == 0)) {
+		has_sd = 0;
+		if (format_sd_partition() == -1)
+			printf("format sd partition failed\n");
+		done_format_sd = 1;
+	}
 	return  1; 
 }
 
@@ -1099,19 +1118,14 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 
 int FDL2_eMMC_Repartition (PACKET_T *pakcet, void *arg)
 {
-	int i;
+	int i, ret = 0;
 	
 	for (i = 0; i < 3; i++) {
 		write_uefi_parition_table(g_sprd_emmc_partition_cfg);
 		if (FDL_Check_Partition_Table())
 		    break;
 	}
-#ifdef CONFIG_SP8810EA
-	if (need_earse_SD == 1) {
-		earse_externelSD_partition();
-		need_earse_SD = 0;
-	}
-#endif
+
 	if (i < 3) {
 		FDL2_eMMC_SendRep (EMMC_SUCCESS);
 		return 1;
