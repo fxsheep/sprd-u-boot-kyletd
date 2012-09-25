@@ -106,6 +106,7 @@ static void rgb_dispc_set_timing(struct sprdfb_device *dev)
 
 uint32_t rgb_calc_h_timing(struct timing_rgb *timing)
 {
+#if 0
 	uint32_t  clk_rate;
 	uint32_t  hsync, hbp, hfp;
 //	struct clk * clk = NULL;
@@ -149,6 +150,9 @@ uint32_t rgb_calc_h_timing(struct timing_rgb *timing)
 	}
 
 	return (hsync | (hbp << 8) | (hfp << 20));
+#else
+	return  (timing->hsync | (timing->hbp << 8) | (timing->hfp << 20));
+#endif
 }
 
 

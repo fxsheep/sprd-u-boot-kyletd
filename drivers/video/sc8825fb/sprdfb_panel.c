@@ -46,6 +46,16 @@ static struct panel_cfg lcd_panel[] = {
         .panel = &lcd_s6d0139_spec ,
         },
 };
+/*
+#elif defined CONFIG_TIGER
+extern struct panel_spec lcd_nt35516_mipi_spec; 
+static struct panel_cfg lcd_panel[] = {
+    [0]={
+        .lcd_id = 0x16,
+        .panel = &lcd_nt35516_mipi_spec ,
+        },
+};
+*/
 #else
 #ifdef CONFIG_LCD_788
 extern struct panel_spec lcd_panel_hx8357;
@@ -90,6 +100,13 @@ vidinfo_t panel_info = {
 };
 #endif
 
+#ifdef CONFIG_LCD_QHD
+vidinfo_t panel_info = {
+	.vl_col = 540,
+	.vl_bpix = 4,
+	.vl_row = 960,
+};
+#endif
 
 extern struct panel_if_ctrl sprdfb_mcu_ctrl;
 extern struct panel_if_ctrl sprdfb_rgb_ctrl;
@@ -101,7 +118,7 @@ void sprdfb_panel_remove(struct sprdfb_device *dev);
 static int32_t panel_reset_dispc(struct panel_spec *self)
 {
 	dispc_write(0, DISPC_RSTN);
-	udelay(100);
+	udelay(200);
 	dispc_write(1, DISPC_RSTN);
 
 	/* wait 10ms util the lcd is stable */
@@ -249,14 +266,18 @@ void sprdfb_panel_invalidate_rect(struct panel_spec *self,
 {
 	FB_PRINT("sprdfb: [%s]\n, (%d, %d, %d,%d)",__FUNCTION__, left, top, right, bottom);
 
-	self->ops->panel_invalidate_rect(self, left, top, right, bottom);
+	if(NULL != self->ops->panel_invalidate_rect){
+		self->ops->panel_invalidate_rect(self, left, top, right, bottom);
+	}
 }
 
 void sprdfb_panel_invalidate(struct panel_spec *self)
 {
 	FB_PRINT("sprdfb: [%s]\n",__FUNCTION__);
 
-	self->ops->panel_invalidate(self);
+	if(NULL != self->ops->panel_invalidate){
+		self->ops->panel_invalidate(self);
+	}
 }
 
 void sprdfb_panel_before_refresh(struct sprdfb_device *dev)

@@ -74,8 +74,10 @@ static void mipi_dispc_init_config(struct panel_spec *panel)
 	}
 
 	if(SPRDFB_MIPI_MODE_VIDEO == panel->info.mipi->work_mode){
-		/*always run mode*/
+#ifdef CONFIG_DPI_SINGLE_RUN
+		/*single run mode*/
 		reg_val |= (1<<3);
+#endif
 	}else{
 		/*enable te*/
 		reg_val |= (1<<8);
@@ -152,8 +154,8 @@ static void sprdfb_mipi_panel_mount(struct sprdfb_device *dev)
 		dev->panel->ops->panel_readid = mipi_readid;
 	}
 
-	dev->panel_timing.rgb_timing[RGB_LCD_H_TIMING] = rgb_calc_h_timing(dev->panel->info.rgb->timing);
-	dev->panel_timing.rgb_timing[RGB_LCD_V_TIMING] = rgb_calc_v_timing(dev->panel->info.rgb->timing);
+	dev->panel_timing.rgb_timing[RGB_LCD_H_TIMING] = rgb_calc_h_timing(dev->panel->info.mipi->timing);
+	dev->panel_timing.rgb_timing[RGB_LCD_V_TIMING] = rgb_calc_v_timing(dev->panel->info.mipi->timing);
 }
 
 static void sprdfb_mipi_panel_init(struct sprdfb_device *dev)

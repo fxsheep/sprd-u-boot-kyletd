@@ -94,6 +94,15 @@ typedef int32_t (*send_cmd_data_t)(uint32_t cmd, uint32_t data);
 typedef uint32_t (*read_data_t)(void);
 
 
+typedef int32_t (*mipi_set_cmd_mode_t)(void);
+typedef int32_t (*mipi_set_video_mode_t)(void);
+typedef int32_t (*mipi_gen_write_t)(uint8_t *param, uint16_t param_length);
+typedef int32_t (*mipi_gen_read_t)(uint8_t *param, uint16_t param_length, uint8_t bytes_to_read, uint8_t *read_buffer);
+typedef int32_t (*mipi_dcs_write_t)(uint8_t *param, uint16_t param_length);
+typedef int32_t (*mipi_dcs_read_t)(uint8_t command, uint8_t bytes_to_read, uint8_t *read_buffer);
+
+
+
 /* LCD operations */
 struct panel_operations {
 	int32_t (*panel_init)(struct panel_spec *self);
