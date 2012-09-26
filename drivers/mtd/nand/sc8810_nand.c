@@ -673,6 +673,7 @@ void nand_spl_hardware_config(struct nand_chip *this, u8 id[5])
 	}
 }
 
+#ifndef CONFIG_NAND_SPL
 void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5])
 {
 	int index;
@@ -710,6 +711,7 @@ void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5]
 	} else 
 		printk("The type of nand flash is not in table, so use default configuration!\n");
 }
+#endif
 
 int board_nand_init(struct nand_chip *this)
 {
@@ -775,6 +777,7 @@ static unsigned long nfc_read_status(void)
 	return status;
 }
 
+#ifndef CONFIG_NAND_SPL
 static int sprd_scan_one_block(int blk, int erasesize, int writesize)
 {
 	int i, cmd;
@@ -862,6 +865,7 @@ static unsigned long nand_ctl_erase_block(int blk, int erasesize, int writesize)
 	status = nfc_read_status();
 	return status;
 }
+#endif
 
 void read_chip_id(void)
 {
@@ -881,6 +885,7 @@ void read_chip_id(void)
 #endif
 }
 
+#ifndef CONFIG_NAND_SPL
 void nand_scan_patition(int blocks, int erasesize, int writesize)
 {
 	int blk;
@@ -900,4 +905,4 @@ void nand_scan_patition(int blocks, int erasesize, int writesize)
 		}
 	}
 }
-
+#endif

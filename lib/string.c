@@ -56,6 +56,7 @@ int strnicmp(const char *s1, const char *s2, size_t len)
 
 char * ___strtok;
 
+#ifndef CONFIG_NAND_SPL
 #ifndef __HAVE_ARCH_STRCPY
 /**
  * strcpy - Copy a %NUL terminated string
@@ -391,6 +392,7 @@ char *strswab(const char *s)
 	return (char *) s;
 }
 #endif
+#endif
 
 #ifndef __HAVE_ARCH_MEMSET
 /**
@@ -484,6 +486,7 @@ void * memcpy(void *dest, const void *src, size_t count)
 }
 #endif
 
+#ifndef CONFIG_NAND_SPL
 #ifndef __HAVE_ARCH_MEMMOVE
 /**
  * memmove - Copy one area of memory to another
@@ -602,4 +605,5 @@ void *memchr(const void *s, int c, size_t n)
 	return NULL;
 }
 
+#endif
 #endif

@@ -73,11 +73,11 @@ COMMON_LIB = $(addprefix $(OBJTREE)/common/,$(COMMON_OBJ))
 DRIVERS_LIB = $(OBJTREE)/drivers/serial/serial_sc8800x.o
 ARCH_LIB =
 ifndef CONFIG_SC8810
-CPU_OBJ = timer.o chip_cfg.o chip_phy_v3.o boot_mode.o watchdog_hal.o watchdog_phy_v3.o adi_drv.o mmu.o mmu_asm.o rtc-sprd.o
+CPU_OBJ = timer.o chip_cfg.o chip_phy_v3.o boot_mode.o watchdog_hal.o watchdog_phy_v3.o adi_drv.o mmu.o mmu_asm.o rtc-sprd.o sec_boot.o
 CPU_LIB = $(addprefix $(obj),$(CPU_OBJ))
 else
 
-CPU_OBJ = timer.o chip_cfg.o chip_phy_v3.o boot_mode.o watchdog_hal.o watchdog_phy_v3.o adi_drv.o mmu.o mmu_asm.o rtc-sprd.o
+CPU_OBJ = timer.o chip_cfg.o chip_phy_v3.o boot_mode.o watchdog_hal.o watchdog_phy_v3.o adi_drv.o mmu.o mmu_asm.o rtc-sprd.o sec_boot.o
 CPU_LIB = $(addprefix $(obj),$(CPU_OBJ))
 endif
 

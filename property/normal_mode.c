@@ -13,6 +13,7 @@
 #include <jffs2/jffs2.h>
 #include <boot_mode.h>
 #include <malloc.h>
+#include <asm/arch/secure_boot.h>
 
 #ifdef CONFIG_EMMC_BOOT
 #include "../disk/part_uefi.h"
@@ -25,6 +26,10 @@
 #endif
 #endif
 
+unsigned spl_data_buf[0x1000] __attribute__((align(4)))={0};
+unsigned harsh_data_buf[8]__attribute__((align(4)))={0};
+void *spl_data = spl_data_buf;
+void *harsh_data = harsh_data_buf;
 unsigned char raw_header[8192];
 static int flash_page_size = 0;
 
@@ -35,10 +40,7 @@ static int flash_page_size = 0;
 #define BACKUPFIXNV_PART "backupfixnv"
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
-
-#define DSP_SIZE			(3968 * 1024)
-#define VMJALUNA_SIZE		(384 * 1024)
-#define RUNTIMENV_SIZE		(256 * 1024)
+#define SPL_PART "spl"
 
 #ifdef CONFIG_TIGER
 #define DSP_ADR			0x80020000
@@ -380,6 +382,7 @@ int nv_write_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, 
 	return ret;
 }
 
+#if 0
 void dump_all_buffer(unsigned char *buf, unsigned long len)
 {
 	unsigned long row, col;
@@ -424,6 +427,7 @@ void dump_all_buffer(unsigned char *buf, unsigned long len)
 
 	printf("\n");
 }
+#endif
 
 #ifdef BOOTING_BACKUP_NVCALIBRATION
 void get_nvitem_from_hostpc(unsigned char *Buffer)
@@ -839,6 +843,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	else{
 		return;
 	}
+	secure_check(DSP_ADR, 0, DSP_ADR + DSP_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
                  
 #endif
 	////////////////////////////////////////////////////////////////
@@ -910,6 +915,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	else{
 		return;
 	}
+	secure_check(MODEM_ADR, 0, MODEM_ADR + MODEM_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
 	 
 
 	//array_value((unsigned char *)MODEM_ADR, MODEM_SIZE);
@@ -932,6 +938,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	else{
 		return;
 	}
+	secure_check(VMJALUNA_ADR, 0, VMJALUNA_ADR + VMJALUNA_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
 #endif
 
 	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
@@ -1019,6 +1026,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
     sprintf(&buf[str_len], " ram=256M");
 #endif
 
+#if !BOOT_NATIVE_LINUX
 	/* fixnv=0x????????,0x????????*/
 	str_len = strlen(buf);
 	sprintf(&buf[str_len], " fixnv=0x");
@@ -1048,6 +1056,25 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	sprintf(&buf[str_len], ",0x");
 	str_len = strlen(buf);
 	sprintf(&buf[str_len], "%x", RUNTIMENV_SIZE);
+#endif
+
+	size = CONFIG_SPL_LOAD_LEN; 
+	if(TRUE !=  Emmc_Read(PARTITION_BOOT1, 0, size/EMMC_SECTOR_SIZE, (uint8*)spl_data)){
+		printf("vmjaluna nand read error \n");
+		return;
+	}
+
+	if(harsh_data == NULL){
+		printf("harsh_data malloc failed\n");
+		return;
+	}
+	printf("spl_data adr 0x%x harsh_data adr 0x%x\n", spl_data, harsh_data);
+	ret = cal_md5(spl_data, CONFIG_SPL_LOAD_LEN, harsh_data);
+	if(ret){
+		str_len = strlen(buf);
+		sprintf(&buf[str_len], " securemd5=%08x%08x%08x%08x", *(uint32_t*)harsh_data, *(uint32_t*)(harsh_data+4),\
+			*(uint32_t*)(harsh_data+8), *(uint32_t*)(harsh_data+12));
+	}
 
     printf("pass cmdline: %s\n", buf);
     //lcd_printf(" pass cmdline : %s\n",buf);
@@ -1473,6 +1500,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		printf("dsp nand read error %d\n", ret);
 		return;
 	}
+	secure_check(DSP_ADR, 0, DSP_ADR + DSP_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
 #endif
 	////////////////////////////////////////////////////////////////
 	/* KERNEL_PART */
@@ -1554,6 +1582,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		return;
 	}
 
+	secure_check(MODEM_ADR, 0, MODEM_ADR + MODEM_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
 	//array_value((unsigned char *)MODEM_ADR, MODEM_SIZE);
 
 	////////////////////////////////////////////////////////////////
@@ -1580,6 +1609,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		printf("modem nand read error %d\n", ret);
 		return;
 	}
+	secure_check(VMJALUNA_ADR, 0, VMJALUNA_ADR + VMJALUNA_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
 #endif
 
 	//array_value((unsigned char *)VMJALUNA_ADR, 16 * 10);
@@ -1634,6 +1664,42 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 #else
     sprintf(&buf[str_len], " ram=256M");
 #endif
+	if(spl_data == NULL){
+		printf("spl_data malloc failed\n");
+		return;
+	}
+	ret = find_dev_and_part(SPL_PART, &dev, &pnum, &part);
+	if (ret) {
+		printf("No partition named %s\n", SPL_PART);
+		return;
+	} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
+		printf("Partition %s not a NAND device\n", SPL_PART);
+		return;
+	}
+	off = part->offset;
+	nand = &nand_info[dev->id->num];
+	flash_page_size = nand->writesize;
+	size = CONFIG_SPL_LOAD_LEN; 
+	ret = nand_read_offset_ret(nand, off, &size, (void*)spl_data, &off);
+	if(ret != 0) {
+		printf("spl nand read error %d\n", ret);
+		return;
+	}
+	if(size != CONFIG_SPL_LOAD_LEN){
+		printf("spl nand read length 0x%x != 0x%x\n", size, CONFIG_SPL_LOAD_LEN);
+		return;
+	}
+	if(harsh_data == NULL){
+		printf("harsh_data malloc failed\n");
+		return;
+	}
+	printf("spl_data adr 0x%x harsh_data adr 0x%x\n", spl_data, harsh_data);
+	ret = cal_md5(spl_data, CONFIG_SPL_LOAD_LEN, harsh_data);
+	if(ret){
+		str_len = strlen(buf);
+		sprintf(&buf[str_len], " securemd5=%08x%08x%08x%08x", *(uint32_t*)harsh_data, *(uint32_t*)(harsh_data+4),\
+			*(uint32_t*)(harsh_data+8), *(uint32_t*)(harsh_data+12));
+	}
     printf("pass cmdline: %s\n", buf);
     //lcd_printf(" pass cmdline : %s\n",buf);
     //lcd_display();

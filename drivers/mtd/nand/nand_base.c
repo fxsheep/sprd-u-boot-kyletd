@@ -979,6 +979,8 @@ static int nand_read_subpage(struct mtd_info *mtd, struct nand_chip *chip, uint3
  *
  * Not for syndrome calculating ecc controllers which need a special oob layout
  */
+static int is_nand_spl_read = 0;
+#define CONFIG_SYS_SPL_ECC_POS          8
 static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 				uint8_t *buf, int page)
 {
@@ -1000,15 +1002,23 @@ static int nand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 
 #ifdef NAND_DEBUG
 	printf("nand_read_page_hwecc next\n");
-	for(i=40;i<56;i++){
+	for(i=0;i<64;i++){
 		printf("%x ", chip->oob_poi[i]);
 		if(i!=0 && i%8==7)
 		  printf("\n");
 	}
 #endif
 
+	if (is_nand_spl_read){
+		int eccbytes = chip->ecc.bytes;
+		int spare_per_sct = mtd->oobsize / chip->ecc.steps;
+		for (i = 0; i < chip->ecc.steps; i ++){
+			memcpy(&(ecc_code[i*eccbytes]), &(chip->oob_poi[i * spare_per_sct + CONFIG_SYS_SPL_ECC_POS]), eccbytes);
+		}
+	}else{
 	for (i = 0; i < chip->ecc.total; i++)
 		ecc_code[i] = chip->oob_poi[eccpos[i]];
+	}
 
 	eccsteps = chip->ecc.steps;
 	p = buf;
@@ -1249,6 +1259,11 @@ int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 				sndcmd = 0;
 			}
 
+			if(page <= (0xc000 >> chip->page_shift)) {
+				is_nand_spl_read = 1;
+			}else{
+				is_nand_spl_read = 0;
+			}
 			/* Now read the page into the buffer */
 			if (unlikely(ops->mode == MTD_OOB_RAW))
 				ret = chip->ecc.read_page_raw(mtd, chip,

@@ -24,16 +24,17 @@ CONFIG_NAND_SPL	= y
 include $(TOPDIR)/config.mk
 include $(TOPDIR)/nand_spl/board/$(BOARDDIR)/config.mk
 
+nandobj	:= $(OBJTREE)/nand_spl/
 LDSCRIPT= $(TOPDIR)/nand_spl/board/$(BOARDDIR)/u-boot.lds
-LDFLAGS	= -Bstatic -T $(LDSCRIPT) -Ttext $(CONFIG_SYS_TEXT_BASE) $(PLATFORM_LDFLAGS)
+LDFLAGS	= -Bstatic -T $(nandobj)u-boot.lds -Ttext $(CONFIG_SYS_TEXT_BASE) $(PLATFORM_LDFLAGS)
 AFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL
 CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL -g
 
-SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o cpu_spec.o mmu_asm.o
+SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o cpu_spec.o
 ifdef CONFIG_EMMC_BOOT
-COBJS	= nand_boot.o mmc.o lowlevel_init.o div0.o adi_drv.o sdram.o mmu.o sdram_prod.o chip_cfg.o serial_sc8800x.o
+COBJS	= nand_boot.o mmc.o lowlevel_init.o div0.o adi_drv.o sdram.o sdram_prod.o chip_cfg.o sec_boot.o string.o serial_sc8800x.o timer.o
 else
-COBJS	= nand_boot.o nand_ecc.o sc8810_nand.o lowlevel_init.o div0.o adi_drv.o sdram.o mmu.o sdram_prod.o chip_cfg.o serial_sc8800x.o
+COBJS	= nand_boot.o nand_ecc.o sc8810_nand.o lowlevel_init.o div0.o adi_drv.o sdram.o sdram_prod.o chip_cfg.o sec_boot.o string.o serial_sc8800x.o timer.o
 endif
 
 #SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c
@@ -51,7 +52,6 @@ OBJS	:= $(addprefix $(obj),$(SOBJS) $(COBJS))
 __OBJS	:= $(SOBJS) $(COBJS)
 LNDIR	:= $(OBJTREE)/nand_spl/board/$(BOARDDIR)
 
-nandobj	:= $(OBJTREE)/nand_spl/
 
 ALL	= $(nandobj)u-boot-spl $(nandobj)u-boot-spl.bin $(nandobj)u-boot-spl-16k.bin
 
@@ -64,7 +64,7 @@ $(nandobj)u-boot-spl-16k.bin: $(nandobj)u-boot-spl
 $(nandobj)u-boot-spl.bin:	$(nandobj)u-boot-spl
 	$(OBJCOPY) ${OBJCFLAGS} -O binary $< $@
 
-$(nandobj)u-boot-spl:	$(OBJS) $(LDSCRIPT)
+$(nandobj)u-boot-spl:	$(OBJS) $(LDSCRIPT) $(nandobj)u-boot.lds
 	cd $(LNDIR) && $(LD) $(LDFLAGS) $(__OBJS) \
 		-Map $(nandobj)u-boot-spl.map \
 		-o $@
@@ -94,6 +94,10 @@ $(obj)%.o:	$(SRCTREE)/arch/arm/cpu/armv7/sc8810/%.S
 
 $(obj)%.o:	$(SRCTREE)/drivers/serial/%.c
 	$(CC) $(CFLAGS) -mlittle-endian -c -o $@ $<
+$(obj)%.o:	$(SRCTREE)/lib/%.c
+	$(CC) $(CFLAGS) -mlittle-endian -c -o $@ $<
+$(nandobj)u-boot.lds: $(LDSCRIPT)
+	$(CPP) $(CPPFLAGS) $(LDPPFLAGS) -ansi -D__ASSEMBLY__ -P - <$^ >$@
 ifdef CONFIG_EMMC_BOOT
 $(obj)%.o:	$(SRCTREE)/drivers/mmc/%.c
 	$(CC) $(CFLAGS) -mlittle-endian -c -o $@ $<

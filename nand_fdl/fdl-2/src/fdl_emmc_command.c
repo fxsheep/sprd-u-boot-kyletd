@@ -18,6 +18,7 @@
 #include <linux/mtd/nand.h>
 #include <jffs2/jffs2.h>
 #include <malloc.h>
+#include <asm/arch/secure_boot.h>
 
 #define EFI_SECTOR_SIZE 		(512)
 #define ERASE_SECTOR_SIZE		((64 * 1024) / EFI_SECTOR_SIZE)
@@ -239,9 +240,12 @@ int emmc_real_erase_partition(EFI_PARTITION_INDEX part)
 	unsigned long i, count, len,  base_sector;
 	uint8 curArea;
 
-	if (PARTITION_SPL_LOADER == part)
+	if (PARTITION_SPL_LOADER == part){
+		if(secureboot_enabled()){
+			return 1;
+		}
 		curArea = PARTITION_BOOT1;
-	else if (PARTITION_UBOOT == part)
+	}else if (PARTITION_UBOOT == part)
 		curArea = PARTITION_BOOT2;
 	else if (part >= MAX_PARTITION_INFO)
 		return 0;
@@ -274,9 +278,12 @@ int emmc_erase_partition(EFI_PARTITION_INDEX part, int fastEraseFlag)
 	unsigned long i, count, len,  base_sector;
 	uint8 curArea;
 
-	if (PARTITION_SPL_LOADER == part)
+	if (PARTITION_SPL_LOADER == part){
+		if(secureboot_enabled()){
+			return 1;
+		}
 		curArea = PARTITION_BOOT1;
-	else if (PARTITION_UBOOT == part)
+	}else if (PARTITION_UBOOT == part)
 		curArea = PARTITION_BOOT2;
 	else if (part >= MAX_PARTITION_INFO)
 		return 0;
@@ -328,12 +335,14 @@ int emmc_erase_allflash(void)
 	count = Emmc_GetCapacity(PARTITION_USER);
 	if (!Emmc_Write(PARTITION_USER, count - 1, 1, (unsigned char *)g_eMMCBuf))
 		 return 0;
-	count = Emmc_GetCapacity(PARTITION_BOOT1);
-	count = count / ERASE_SECTOR_SIZE;
-	for (i = 0; i < count; i++) {	
-		if (!Emmc_Write(PARTITION_BOOT1, i * ERASE_SECTOR_SIZE,
-			ERASE_SECTOR_SIZE, (unsigned char *)g_eMMCBuf))
-			 return 0;
+	if(!secureboot_enabled()){ // PARTITION_BOOT1 is for spl, if secure boot enabled, skip it
+		count = Emmc_GetCapacity(PARTITION_BOOT1);
+		count = count / ERASE_SECTOR_SIZE;
+		for (i = 0; i < count; i++) {	
+			if (!Emmc_Write(PARTITION_BOOT1, i * ERASE_SECTOR_SIZE,
+						ERASE_SECTOR_SIZE, (unsigned char *)g_eMMCBuf))
+				return 0;
+		}
 	}
 	
 	count = Emmc_GetCapacity(PARTITION_BOOT2);
@@ -513,6 +522,9 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 		g_sram_addr = (unsigned long)g_eMMCBuf;	
 		is_ProdInfo_flag = 1;
 	} else if (PARTITION_SPL_LOADER == g_dl_eMMCStatus.curUserPartition) {
+		if(secureboot_enabled()){
+			return 1;
+		}
 		g_dl_eMMCStatus.curEMMCArea = PARTITION_BOOT1;
 		g_dl_eMMCStatus.part_total_size = EFI_SECTOR_SIZE * Emmc_GetCapacity(PARTITION_BOOT1);
 		g_dl_eMMCStatus.base_sector =  0;
@@ -667,6 +679,9 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 				else
 					nSectorCount = g_status.unsave_recv_size / EFI_SECTOR_SIZE + 1;
 				if (PARTITION_SPL_LOADER == g_dl_eMMCStatus.curUserPartition) {
+					if(secureboot_enabled()){
+						return 1;
+					}
 					if (g_status.total_recv_size < SPL_CHECKSUM_LEN)
 						nSectorCount = SPL_CHECKSUM_LEN / EFI_SECTOR_SIZE;
 					splFillCheckData((unsigned int *) g_eMMCBuf, (int)g_status.total_recv_size);

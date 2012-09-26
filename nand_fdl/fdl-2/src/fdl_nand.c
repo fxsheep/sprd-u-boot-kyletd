@@ -13,6 +13,7 @@
 #include <jffs2/jffs2.h>
 #include <parsemtdparts.h>
 #include <asm/arch/cmd_def.h>
+#include <asm/arch/secure_boot.h>
 struct mtd_info *_local_mtd = 0;
 
 /*#define FDL2_DEBUG 1
@@ -95,8 +96,13 @@ int nand_erase_allflash(void)
 #if 0
 	nand_erase_options_t opts;
 	memset(&opts, 0, sizeof(opts));
-	opts.offset = 0;
-	opts.length = nand->size;
+	if(secureboot_enabled()){
+		opts.offset = 0xc000;
+		opts.length = nand->size - 0xc000;
+	}else{
+		opts.offset = 0;
+		opts.length = nand->size;
+	}
 	opts.jffs2 = 0;
 	opts.scrub = 1;
 	opts.quiet = 0;
@@ -679,6 +685,8 @@ int nand_write_fdl(unsigned int size, unsigned char *buf)
 
 #if (defined(CONFIG_NAND_SC8810) || defined(CONFIG_NAND_TIGER))//only for sc8810 to write spl
 	if(cur_write_pos < 0xc000) {
+		if(secureboot_enabled()) //if secure boot enabled, don't update spl
+			return NAND_SUCCESS;
 		return nand_write_spl(buf, nand);
 	}
 #endif

@@ -53,6 +53,7 @@ SECTIONS
 	.u_boot_cmd : { *(.u_boot_cmd) }
 	__u_boot_cmd_end = .;
 
+	. = CONFIG_SYS_NAND_U_BOOT_SIZE + CONFIG_SYS_TEXT_BASE;
 	. = ALIGN(4);
 
 	.rel.dyn : {
@@ -66,7 +67,7 @@ SECTIONS
 		*(.dynsym)
 	}
 
-	.bss __rel_dyn_start (OVERLAY) : {
+	.bss : {
 		__bss_start = .;
 		*(.bss)
 		 . = ALIGN(4);

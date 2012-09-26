@@ -90,11 +90,12 @@
 
 #define FIXNV_SIZE			(64 * 1024)
 #define PRODUCTINFO_SIZE	(3 * 1024)
-#ifdef MCP_F2R1
-#define MODEM_SIZE			(3500 * 1024)  	/* 3.5MB */
-#else
-#define MODEM_SIZE			(8 * 1024 * 1024)
-#endif
+#define MODEM_SIZE		(0x800000)
+#define DSP_SIZE        (0x3E0400) /* 3968K */
+#define VMJALUNA_SIZE       (0x64000) /* 400K */
+#define RUNTIMENV_SIZE      (256 * 1024)
+#define CONFIG_SPL_LOAD_LEN (0x4000)
+
 #define PRODUCTINFO_ADR		0x80490000
 
 /*#define CMDLINE_NEED_CONV */
@@ -110,14 +111,14 @@
 #define DYNAMIC_CRC_TABLE
 /* Start copying real U-boot from the second page */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
-#define CONFIG_SYS_NAND_U_BOOT_SIZE	0x60000
+#define CONFIG_SYS_NAND_U_BOOT_SIZE	0x64000
 #define RAM_TYPPE_IS_SDRAM	0
 //#define FPGA_TRACE_DOWNLOAD //for download image from trace
 
-#ifdef CONFIG_NAND_SPL
 /* Load U-Boot to this address */
 #define CONFIG_SYS_NAND_U_BOOT_DST	0x80f00000
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_NAND_U_BOOT_DST
+#ifdef CONFIG_NAND_SPL
 #define CONFIG_SYS_SDRAM_BASE 0x80000000
 #define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x4000)
 #else
@@ -322,6 +323,6 @@
 #define LOW_BAT_VOL_CHG        3300    //3.3V charger connect
 
 #define PWR_KEY_DETECT_CNT 12 /*this should match the count of boot_pwr_check() function */
-#define ALARM_LEAD_SET_MS 60 /* time set for alarm boot in advancd */
+#define ALARM_LEAD_SET_MS 0 /* time set for alarm boot in advancd */
 
 #endif /* __CONFIG_H */

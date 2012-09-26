@@ -1,4 +1,4 @@
-LOCAL_TOOLCHAIN := $(ANDROID_BUILD_TOP)/prebuilt/linux-x86/toolchain/arm-eabi-4.3.1/bin/arm-eabi-
+LOCAL_TOOLCHAIN := $(ANDROID_BUILD_TOP)/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
 UBOOT_OUT := $(TARGET_OUT_INTERMEDIATES)/u-boot
 #UBOOT_OUT := u-boot
 UBOOT_BUILT_SPL := $(UBOOT_OUT)/nand_spl/u-boot-spl-16k.bin

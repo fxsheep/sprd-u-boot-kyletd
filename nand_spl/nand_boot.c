@@ -25,12 +25,15 @@
 #ifdef CONFIG_EMMC_BOOT
 #include "../drivers/mmc/card_sdio.h"
 #endif
+#include <asm/arch/secure_boot.h>
 
 #define CONFIG_SYS_NAND_READ_DELAY \
 	{ volatile int dummy; int i; for (i=0; i<10000; i++) dummy = i; }
 
 #define CONFIG_SYS_NAND_BAD_BLOCK_POS	0
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE	1
+#define panic(x...) do{}while(0)
+#define printf(x...) do{}while(0)
 
 static int pageinblock = 0;
 
@@ -289,6 +292,7 @@ void nand_boot(void)
 	SPRD_EVM_TAG(3);
 #endif
 	uboot = (void *)CONFIG_SYS_NAND_U_BOOT_START;
+	secure_check(CONFIG_SYS_NAND_U_BOOT_START, 0, CONFIG_SYS_NAND_U_BOOT_START + CONFIG_SYS_NAND_U_BOOT_SIZE - VLR_INFO_OFF, INTER_RAM_BEGIN + CONFIG_SPL_LOAD_LEN - KEY_INFO_SIZ - CUSTOM_DATA_SIZ);
 	(*uboot)();
 }
 
@@ -361,6 +365,7 @@ void nand_boot(void)
 	SPRD_EVM_TAG(3);
 #endif
 	uboot = (void *)CONFIG_SYS_NAND_U_BOOT_START;
+	secure_check(CONFIG_SYS_NAND_U_BOOT_START, 0, CONFIG_SYS_NAND_U_BOOT_START + CONFIG_SYS_NAND_U_BOOT_SIZE - VLR_INFO_OFF, INTER_RAM_BEGIN + CONFIG_SPL_LOAD_LEN - KEY_INFO_SIZ - CUSTOM_DATA_SIZ);
 	(*uboot)();
 }
 #endif
