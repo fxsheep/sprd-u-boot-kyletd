@@ -800,13 +800,14 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 	//set_dl_op_val(0, 0, MIDSTDATA, FAIL, 4);
 	g_prevstatus = EMMC_SUCCESS;
 	FDL2_eMMC_SendRep (g_prevstatus);
-
+#if 0
 	if ((g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE) && (has_sd == 1) &&(done_format_sd == 0)) {
 		has_sd = 0;
 		if (format_sd_partition() == -1)
 			printf("format sd partition failed\n");
 		done_format_sd = 1;
 	}
+#endif
 	return  1; 
 }
 
@@ -1122,7 +1123,12 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 				return 0;
 			}
 		}
-
+		if ((g_dl_eMMCStatus.curUserPartition == PARTITION_PROD_INFO3) && (has_sd == 1) && (done_format_sd == 0)) {
+			has_sd = 0;
+			if (format_sd_partition() == -1)
+			printf("format sd partition failed\n");
+			done_format_sd = 1;
+		}
 		ret = NAND_SUCCESS;
 	}
 

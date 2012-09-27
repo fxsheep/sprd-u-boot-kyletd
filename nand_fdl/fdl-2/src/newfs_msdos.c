@@ -191,7 +191,6 @@ unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF, unsigned long part_siz
     unsigned sectorCount = 0;
     char buf[MAXPATHLEN];
     unsigned int fname_off = 0;	
-    struct timeval tv;
     struct bpb bpb;
     struct tm *tm;
     struct bs *bs;
@@ -217,8 +216,10 @@ unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF, unsigned long part_siz
     if (oflag)
 	bpb.hid = opt_o;
     if (!(opt_f || (opt_h && opt_u && opt_S && opt_s && oflag))) {
-	long delta;
+	//long delta;
 	getdiskinfo(part_size, &bpb);
+	bpb.spc = 8;
+	#if 0
         if (opt_s) {
             bpb.bsec = opt_s;
         }
@@ -239,6 +240,7 @@ unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF, unsigned long part_siz
 	    else
 		bpb.spc = 64;		/* otherwise 32k */
 	}
+	#endif
     }
 
     if (opt_f && fat == 32)
@@ -332,19 +334,6 @@ unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF, unsigned long part_siz
     }
     print_bpb(&bpb);
     if (!opt_N) {	
-	tv.tv_sec=1325376312;
-	tv.tv_usec=324709;
-	tm = malloc(sizeof(tm));
-	tm->tm_sec = 12;
-	tm->tm_min = 5;
-	tm->tm_hour = 8;
-	tm->tm_mday = 1;
-	tm->tm_mon = 0;
-	tm->tm_year = 112;
-	tm->tm_wday = 0;
-	tm->tm_yday = 0;
-	tm->tm_isdst = 0;
-	
 	img = malloc(bpb.bps);
 	dir = bpb.res + (bpb.spf ? bpb.spf : bpb.bspf) * bpb.nft;
 	for (lsn = 0; lsn < dir + (fat == 32 ? bpb.spc : rds); lsn++) {
@@ -386,15 +375,6 @@ unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF, unsigned long part_siz
 		mk1(bsx->sig, 0x29);
 		if (Iflag)
 		    x = opt_I;
-		else
-		    x = (((unsigned int)(1 + tm->tm_mon) << 8 |
-			  (unsigned int)tm->tm_mday) +
-			 ((unsigned int)tm->tm_sec << 8 |
-			  (unsigned int)(tv.tv_usec / 10))) << 16 |
-			((unsigned int)(1900 + tm->tm_year) +
-			 ((unsigned int)tm->tm_hour << 8 |
-			  (unsigned int)tm->tm_min));
-		
 		mk4(bsx->volid, 0);
 		sprintf(buf, "FAT%u", fat);
 		setstr(bsx->type, buf, sizeof(bsx->type));
@@ -427,22 +407,14 @@ unsigned int newfs_msdos_main(unsigned char *newfs_SDBUF, unsigned long part_siz
 	    } else if (lsn == dir && opt_L) {
 		de = (struct de *)img;
 		mk1(de->attr, 050);
-		
-		x = (unsigned int)tm->tm_hour << 11 |
-		    (unsigned int)tm->tm_min << 5 |
-		    (unsigned int)tm->tm_sec >> 1;
-		mk2(de->time, x);
-		x = (unsigned int)(tm->tm_year - 80) << 9 |
-		    (unsigned int)(tm->tm_mon + 1) << 5 |
-		    (unsigned int)tm->tm_mday;
-		mk2(de->date, x);
+		mk2(de->time, 0);
+		mk2(de->date, 0);
 	    }
  	    memcpy(fname + fname_off, img, bpb.bps);
 	    fname_off = fname_off + bpb.bps;
 	    sectorCount = sectorCount + bpb.bps;
         }
 	free(img);
-	free(tm);
 	}
 
         return sectorCount;
