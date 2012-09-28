@@ -1283,7 +1283,13 @@ LOCAL BOOLEAN _SetBusWidth(CARD_SDIO_HANDLE cardHandle,CARD_BUS_WIDTH_E width)
 			SDIO_Card_Pal_SetBusWidth(cardHandle->sdioPalHd,SDIO_CARD_PAL_4_BIT);
 		}
 		break;
-
+#if defined CONFIG_SC8825
+		case CARD_WIDTH_8_BIT:
+		{
+			SDIO_Card_Pal_SetBusWidth(cardHandle->sdioPalHd,SDIO_CARD_PAL_8_BIT);
+		}
+		break;
+#endif
 		default:
 		{
 			CARD_SDIO_ASSERT(0);	/*assert verified*/
@@ -1577,8 +1583,12 @@ PUBLIC BOOLEAN CARD_SDIO_InitCard(CARD_SDIO_HANDLE cardHandle, CARD_SPEED_MODE s
      
 	SDIO_Card_Pal_SetClk(cardHandle->sdioPalHd,SDIO_CARD_PAL_25MHz);
 	__udelay (100*1000);
+#if defined CONFIG_SC8825
+	busWidth = CARD_WIDTH_8_BIT;
+#else
 	busWidth = CARD_WIDTH_4_BIT;
-	if(FALSE == _SetBusWidth(cardHandle,CARD_WIDTH_4_BIT))
+#endif
+	if(FALSE == _SetBusWidth(cardHandle,busWidth))
 	{
 		return FALSE;
 	}
