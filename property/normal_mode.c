@@ -250,7 +250,7 @@ static int start_linux()
 	u32 parm_at = (u32)-1;
 	u32 machine_type;
 
-	machine_type = 0x7dd;         /* get machine type */
+	machine_type = machine_arch_type;         /* get machine type */
 
 	theKernel = (void (*)(int, int, u32))KERNEL_ADR; /* set the kernel address */
 
