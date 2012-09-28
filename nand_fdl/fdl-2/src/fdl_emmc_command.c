@@ -52,8 +52,11 @@ static unsigned long point_sd = 0xffff;
 static unsigned long done_format_sd = 0;
 disk_partition_t sd_info;
 
-
+#if defined (CONFIG_SC8825) || defined (CONFIG_TIGER)
+unsigned char *g_eMMCBuf = (unsigned char*)0x82000000;
+#else
 unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
+#endif
 unsigned char g_fix_nv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_fixbucknv_buf[FIXNV_SIZE + EFI_SECTOR_SIZE];
 unsigned char g_prod_info_buf[PRODUCTINFO_SIZE + EFI_SECTOR_SIZE];
@@ -452,8 +455,72 @@ void splFillCheckData(unsigned int * splBuf,  int len)
 #endif
 }
 
+#ifdef FPGA_TRACE_DOWNLOAD
+typedef struct
+{
+        unsigned short  type;
+        unsigned short  size;
+        char*           content;
+}trace_packet_body;
 
+typedef struct
+{
+    struct PACKET_tag *next;
+    int     pkt_state;
+    int     data_size;
+    int     ack_flag;
+    trace_packet_body packet_body;
+}TRACE_PACKET_T;
+uint32 fdl_emmc_dram_download(uint32 start_addr, char* mem_addr, uint32 size)
+{
+	uint32 wr_size=0;
+	char   tmp_buf[8];
+	TRACE_PACKET_T packet;
+	packet.next=NULL;
+	memset(&packet, 0, sizeof(packet));
+	printf("start_addr:%08x, mem_addr:%08x, size:%08x\r\n", start_addr, mem_addr, size);
+	packet.ack_flag=0;
+	packet.pkt_state=3;
+	packet.data_size=0xe;
+	packet.packet_body.type=0x100;
+	packet.packet_body.size=8;
+	packet.packet_body.content = tmp_buf;
+	(packet.packet_body.content)[0]=(start_addr>>24) & 0xff;
+	(packet.packet_body.content)[1]=(start_addr>>16) & 0xff;
+	(packet.packet_body.content)[2]=(start_addr>>8) & 0xff;
+	(packet.packet_body.content)[3]=(start_addr>>0) & 0xff;
+	(packet.packet_body.content)[4]=(size>>24) & 0xff;
+	(packet.packet_body.content)[5]=(size>>16) & 0xff;
+	(packet.packet_body.content)[6]=(size>>8) & 0xff;
+	(packet.packet_body.content)[7]=(size>>0) & 0xff;
+	printf("packet addr :%08x\r\n", &packet);
+	FDL2_eMMC_DataStart(&packet, NULL);
+	packet.packet_body.type    = 0x200;
+	for (wr_size=0; wr_size<size; )
+	{
+		if (size-wr_size>0x800)
+			packet.packet_body.size = 0x800;
+		else
+			packet.packet_body.size = size-wr_size;
+		packet.packet_body.content = mem_addr+wr_size;
+		packet.data_size = packet.packet_body.size+6;
+		wr_size += packet.packet_body.size;
+		FDL2_eMMC_DataMidst(&packet, NULL);
+	}
+	packet.data_size=6;
+	packet.packet_body.type   =0x300;
+	packet.packet_body.size   =0;
+	packet.packet_body.content= tmp_buf;
+	(packet.packet_body.content)[0]=0xff;
+	(packet.packet_body.content)[1]=0xfc;
+	FDL2_eMMC_DataEnd(&packet, NULL);
+}
+#endif
+#ifdef FPGA_TRACE_DOWNLOAD
+int FDL2_eMMC_DataStart (TRACE_PACKET_T *packet, void *arg)
+#else
 int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
+#endif
 {
 	unsigned long *data = (unsigned long *) (packet->packet_body.content);
 	unsigned long start_addr = *data;
@@ -466,7 +533,19 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 	is_ProdInfo_flag = 0;
 	is_nv_flag = 0;
 	g_dl_eMMCStatus.curUserPartition = addr2part(start_addr);
-
+#ifdef FPGA_TRACE_DOWNLOAD
+	printf("pkt_state:0x%x, data_size:0x%x, ack_flag=0x%x,packet_body.type:0x%x, packet_body.size:0x%x,packet_body.content[0]:%02x,[1]:%02x,[2]:%02x,[3]:%02x,[4]:%02x,[5]:%02x,[6]:%02x,[7]:%02x\r\n",
+		packet->pkt_state, packet->data_size, packet->ack_flag,
+		packet->packet_body.type, packet->packet_body.size,
+		packet->packet_body.content[0],
+		packet->packet_body.content[1],
+		packet->packet_body.content[2],
+		packet->packet_body.content[3],
+		packet->packet_body.content[4],
+		packet->packet_body.content[5],
+		packet->packet_body.content[6],
+		packet->packet_body.content[7]);
+#endif
 #ifndef DOWNLOAD_IMAGE_WITHOUT_SPARSE
 	if (size > EMMC_BUF_SIZE) {
 		printf("image file size : 0x%08x is bigger than EMMC_BUF_SIZE : 0x%08x\n", size, EMMC_BUF_SIZE);
@@ -574,7 +653,11 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 	return 1;
 }
 
+#ifdef FPGA_TRACE_DOWNLOAD
+int FDL2_eMMC_DataMidst(TRACE_PACKET_T *packet, void *arg)
+#else
 int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
+#endif
 {
 	unsigned long size, lastSize, nSectorCount;
 	unsigned long cnt, base_sector, trans_times, remain_block, each_write_block = 10000;
@@ -810,10 +893,22 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 #endif
 	return  1; 
 }
-
+#ifdef FPGA_TRACE_DOWNLOAD
+int FDL2_eMMC_DataEnd (TRACE_PACKET_T *packet, void *arg)
+#else
 int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
+#endif
 {
 	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, crc;
+#ifdef FPGA_TRACE_DOWNLOAD
+	printf("pkt_state:0x%x, data_size:0x%x, ack_flag=0x%x,packet_body.type:0x%x, packet_body.size:0x%x,packet_body.content[0]:%02x,[1]:%02x,[2]:%02x,[3]:%02x\r\n",
+		packet->pkt_state, packet->data_size, packet->ack_flag,
+		packet->packet_body.type, packet->packet_body.size,
+		packet->packet_body.content[0],
+		packet->packet_body.content[1],
+		packet->packet_body.content[2],
+		packet->packet_body.content[3]);
+#endif
 	if (is_nv_flag) {
 		fix_nv_checksum = Get_CheckSum((unsigned char *) g_eMMCBuf, g_status.total_recv_size);
 		fix_nv_checksum = EndianConv_32 (fix_nv_checksum);

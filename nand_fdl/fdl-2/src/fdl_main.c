@@ -50,9 +50,13 @@ static void write_bin2flash()
 	int buf_size;
 	int write_size;
 	unsigned char *pbuf;
+	uint32 begin_time,end_time;
 	for(pbin_table = (bin_table_t *)BIN_TABLE_ADDR; pbin_table->base_addr; pbin_table += 1) {
-		printf("write_bin2flash, base_addr=0x%x, bin_addr=0x%x,bin_size=%x\r\n",pbin_table->base_addr,
-			pbin_table->bin_addr,pbin_table->bin_size);
+		printf("write_bin2flash, base_addr=0x%x, bin_addr=0x%x,bin_size=%x\r\n",pbin_table->base_addr, pbin_table->bin_addr,pbin_table->bin_size);
+		begin_time = SCI_GetTickCount();
+#ifdef CONFIG_EMMC_BOOT
+		fdl_emmc_dram_download(pbin_table->base_addr, pbin_table->bin_addr, pbin_table->bin_size);
+#else
 		FDL2_DramStart(pbin_table->base_addr, pbin_table->bin_size);
 		pbuf = (unsigned char *)pbin_table->bin_addr;
 		buf_size = pbin_table->bin_size;
@@ -67,7 +71,9 @@ static void write_bin2flash()
 			buf_size  -= write_size;
 		}
 		FDL2_DramEnd();
-		printf("write_bin2flash, 0x%x, sucessfully\r\n",pbin_table->bin_addr);
+#endif
+		end_time = SCI_GetTickCount();
+		printf("write_bin2flash, 0x%x, sucessfully, cost time %d s !\r\n",pbin_table->bin_addr, (end_time-begin_time)/1000);
 	}
 }
 #endif
@@ -81,9 +87,9 @@ int main(void)
 	int err;
 	uint32 sigture_address;
 	unsigned int i, j;
-#ifndef CONFIG_TIGER
+
   	MMU_Init(0);
-#endif	
+
  	sigture_address = (uint32)FDL2_signature;
 
 #if defined(CHIP_ENDIAN_DEFAULT_LITTLE) && defined(CHIP_ENDIAN_BIG)    
@@ -108,23 +114,8 @@ int main(void)
 //        FDL_SendAckPacket (BSL_REP_ACK);
 	do {
 #ifdef CONFIG_EMMC_BOOT		
-		if(!FDL_BootIsEMMC()){
-#endif			
+		if(FDL_BootIsEMMC()){
 			/* Initialize NAND flash. */
-			err = nand_flash_init();
-			if ((NAND_SUCCESS != err) && (NAND_INCOMPATIBLE_PART != err)) {
-				FDL_SendAckPacket (convert_err (err));
-				break;
-			}
-#ifdef FPGA_TRACE_DOWNLOAD
-			if(NAND_SUCCESS == err)
-			{
-				write_bin2flash();
-			}
-			while(1);
-#endif			
-#ifdef CONFIG_EMMC_BOOT	
-		}else{
 			extern PARTITION_CFG g_sprd_emmc_partition_cfg[];
 			extern int mmc_legacy_init(int dev);
 			mmc_legacy_init(1);
@@ -133,7 +124,22 @@ int main(void)
 			}
 			err = EMMC_SUCCESS;
 		}		
+		else
 #endif               
+		{
+			err = nand_flash_init();
+			if ((NAND_SUCCESS != err) && (NAND_INCOMPATIBLE_PART != err)) {
+				FDL_SendAckPacket (convert_err (err));
+				break;
+			}
+		}
+#ifdef FPGA_TRACE_DOWNLOAD
+		if(!err)
+		{
+			write_bin2flash();
+		}
+		while(1);
+#else
 		/* Register command handler */
 		FDL_DlInit();
 #ifdef CONFIG_EMMC_BOOT	
@@ -163,7 +169,7 @@ int main(void)
 
         /* Start the download process. */
         FDL_DlEntry (DL_STAGE_CONNECTED);
-
+#endif
     } while (0);
 
     /* If we get here, there must be something wrong. */

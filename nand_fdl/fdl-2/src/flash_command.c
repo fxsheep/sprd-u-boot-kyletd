@@ -1096,6 +1096,7 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
     }
 }
 #ifdef FPGA_TRACE_DOWNLOAD
+#ifndef CONFIG_EMMC_BOOT
 int FDL2_DramStart (unsigned long base_addr, unsigned long size)
 {
     unsigned long start_addr = base_addr;
@@ -1421,6 +1422,7 @@ int FDL2_DramEnd ()
     	//FDL2_SendRep (g_prevstatus);
     	return (NAND_SUCCESS == g_prevstatus);
 }
+#endif
 #endif
 int FDL2_ReadFlash (PACKET_T *packet, void *arg)
 {

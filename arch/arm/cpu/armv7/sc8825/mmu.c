@@ -42,10 +42,14 @@ in 6800 serirs, maybe has little problem, have risk to overlap the memory!!!!
 Now, change to 0x008f0000, in reserved region.
 */
 
+#ifdef CONFIG_SC8825
+const uint32 const_MMUTableStartAddr       = 0x81600000 - 16*1024;
+const uint32 const_MMUTableStartAddrRemap1 = 0x81600000 - 16*1024;
+#else
 const uint32 const_MMUTableStartAddr       = 0x008f0000 ;//remap = 0,sdram from 0x0
 
 const uint32 const_MMUTableStartAddrRemap1 = 0x31600000 - 16*1024;//remap = 1,sdram from 0x3000,0000
-
+#endif
 //MMU_TABLE_ADDR must be aligned by 16K-Byte.
 #define MMU_TABLE_ADDR         ((const_MMUTableStartAddr) & 0xFFFFC000 )
 #define MMU_TABLE_ADDR_REMAP   ((const_MMUTableStartAddrRemap1) & 0xFFFFC000 )
@@ -92,6 +96,12 @@ void MMU_Init (unsigned pageBaseAddr)
     // Create page table 1mb entries
     for (i = 0; i < 0x1000; i++)
     {
+#ifdef CONFIG_SC8825
+	if (i>=0x800 && i<0xa00)
+	{
+            page_table[i] = (MMU_SD_CONST|MMU_AP_B11|MMU_C_BIT|MMU_B_BIT) + (i << 20);
+	}
+#else
 #ifdef CONFIG_SC8810 		  
        if (i < 0x100)
        {
@@ -127,6 +137,7 @@ void MMU_Init (unsigned pageBaseAddr)
         //else if ((i >= 0x700) && (i < 0x900))
         //    page_table[i] = 0x00000C12 + (i << 20);
         // No Access
+#endif
         else
         {
             page_table[i] = (MMU_SD_CONST|MMU_AP_B11) + (i << 20);
