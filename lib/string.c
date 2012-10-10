@@ -430,6 +430,7 @@ void * memset(void * s,int c,size_t count)
 }
 #endif
 
+#ifndef CONFIG_NAND_SPL
 #ifndef __HAVE_ARCH_BCOPY
 /**
  * bcopy - Copy one area of memory to another
@@ -452,6 +453,7 @@ char * bcopy(const char * src, char * dest, int count)
 
 	return dest;
 }
+#endif
 #endif
 
 #ifndef __HAVE_ARCH_MEMCPY

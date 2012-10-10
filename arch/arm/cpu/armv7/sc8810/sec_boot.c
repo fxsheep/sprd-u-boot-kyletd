@@ -76,7 +76,7 @@ typedef struct {
 	void (*MD5Final)(unsigned int *input, unsigned int inputLen, unsigned int *g_data_ptr);
 }harsh_func_t;
 
-const uint32_t __harsh_func_hack[] ={
+const uint32_t mf__harsh_func_hack[] ={
 	0x40006000,
 	0x40006658,
 	0x40006668,
@@ -86,6 +86,37 @@ const uint32_t __harsh_func_hack[] ={
 	0xffff26ec,
 	0xffff314c,
 };
+const uint32_t v0__harsh_func_hack[] ={
+	0x40006000,
+	0x40006658,
+	0x40006668,
+	0xffff1439,
+	0xffff14b5,
+	0xffff2638,
+	0xffff2720,
+	0xffff3180,
+};
+
+harsh_func_t * get_harsh_func(void)
+{
+	uint32_t chip_type = 0;
+	static harsh_func_t * harsh_func = NULL;
+	if(harsh_func != NULL)
+		return harsh_func;
+
+	chip_type = CHIP_REG_GET(CHIP_TYPE);
+
+	if(chip_type == CHIP_ID_VER_0)
+		harsh_func = (harsh_func_t *) v0__harsh_func_hack;
+	else if(chip_type == CHIP_ID_VER_MF)
+		harsh_func = (harsh_func_t *) mf__harsh_func_hack;
+	else {
+		/* not supported chip id */
+		while(1){}
+	}
+
+	return harsh_func;
+}
 
 /*
  * p 128B
@@ -102,7 +133,7 @@ void RSA_Decrypt(unsigned char *p, unsigned char *m, unsigned char *r2, unsigned
 	unsigned int _p[32] = {0};
 	unsigned int _r2[32] = {0};
 	int i = 0;
-	harsh_func_t *harsh = (harsh_func_t *)__harsh_func_hack;
+	harsh_func_t *harsh = get_harsh_func();
 
 	_e = MAKE_DWORD(e[0], e[1], e[2], e[3]);
 
@@ -124,19 +155,23 @@ void RSA_Decrypt(unsigned char *p, unsigned char *m, unsigned char *r2, unsigned
 
 int secureboot_enabled(void)
 {
-	harsh_func_t *harsh = (harsh_func_t *)__harsh_func_hack;
+#ifdef SECURE_BOOT_ENABLE
+	harsh_func_t *harsh = get_harsh_func();
 	return harsh->CheckSecureBootEnable();
+#else
+	return 0;
+#endif
 }
 unsigned int md5_buf[20] = {0};
 int harshVerify(uint8_t *data, uint32_t data_len, uint8_t *data_hash, uint8_t *data_key)
 {
 	int ret = 1;
-	harsh_func_t *harsh = (harsh_func_t *)__harsh_func_hack;
+	harsh_func_t *harsh = get_harsh_func();
 
 	//test_rsa();
 
-	printf("check secure boot enable %d\n", harsh->CheckSecureBootEnable());
-	if(!harsh->CheckSecureBootEnable()) return ret;
+	printf("check secure boot enable %d\n", secureboot_enabled());
+	if(!secureboot_enabled()) return ret;
 
 	if(!data_hash && !data_key) 
 		return harsh->HarshVerify(data, data_len >> 2);
@@ -186,12 +221,13 @@ void secure_check(uint8_t *data, uint32_t data_len, uint8_t *data_hash, uint8_t 
 #ifndef CONFIG_NAND_SPL
 int cal_md5(void *data, uint32_t orig_len, void *harsh_data)
 {
+#ifdef SECURE_BOOT_ENABLE
 	int i;
 	unsigned int *harsh_p = (unsigned int *)harsh_data;
-	harsh_func_t *harsh = (harsh_func_t *)__harsh_func_hack;
+	harsh_func_t *harsh = get_harsh_func();
 	uint32_t len = orig_len/4;
 
-	if(harsh->CheckSecureBootEnable()) return 0;
+	if(secureboot_enabled()) return 0;
 
 	harsh->MD5Init((unsigned int *)harsh_data);
 	harsh->MD5Final((unsigned int *)data, len, harsh_p);
@@ -201,6 +237,9 @@ int cal_md5(void *data, uint32_t orig_len, void *harsh_data)
 	}
 
 	return 1;
+#else
+	return 0;
+#endif
 }
 #endif
 

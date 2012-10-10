@@ -1933,54 +1933,6 @@ void sc8810_emc_Init()
 	
 #endif
 	ddr_init();
-	for(i = 0; i< 0x1f; i++){
-		REG8(i) = 0xa5;
-	}
-	for(i = 0; i< 0x1f; i++){
-		if(REG8(i) != 0xa5){
-			uart_trace('5');
-			uart_trace('b');
-			uart_trace('a');
-			uart_trace('d');
-			while(1);
-		}
-	}
-	for(i = 0; i< 0x1f; i++){
-		REG8(i) = 0x5a;
-	}
-	for(i = 0; i< 0x1f; i++){
-		if(REG8(i) != 0x5a){
-			uart_trace('6');
-			uart_trace('b');
-			uart_trace('a');
-			uart_trace('d');
-			while(1);
-		}
-	}
-	for(i = 0; i< 0x1f; i++){
-		REG32(4*i) = 0xa5a5a5a5;
-	}
-	for(i = 0; i< 0x1f; i++){
-		if(REG32(4*i) != 0xa5a5a5a5){
-			uart_trace('7');
-			uart_trace('b');
-			uart_trace('a');
-			uart_trace('d');
-			while(1);
-		}
-	}
-	for(i = 0; i< 0x1f; i++){
-		REG32(4*i) = 0x5a5a5a5a;
-	}
-	for(i = 0; i< 0x1f; i++){
-		if(REG32(4*i) != 0x5a5a5a5a){
-			uart_trace('8');
-			uart_trace('b');
-			uart_trace('a');
-			uart_trace('d');
-			while(1);
-		}
-	}
 }
 
 PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/

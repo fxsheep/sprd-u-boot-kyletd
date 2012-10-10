@@ -104,6 +104,9 @@ extern   "C"
 #define AHB_SDIO_CTRL_SLOT1 1
 #define AHB_SDIO_CTRL_SLAVE 2
 
+#define CHIP_ID_VER_0       (0x88100000UL)
+#define CHIP_ID_VER_MF      (0x88100040UL)
+
 
 /**----------------------------------------------------------------------------*
 **                             Data Prototype                                 **
