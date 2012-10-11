@@ -796,7 +796,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		}
 
 		/* write fixnv to yaffs2 format : backup */
-		char *backupfixnvpoint = "/backupfixv";
+		char *backupfixnvpoint = "/backupfixnv";
 		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
 
 		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
