@@ -1410,14 +1410,14 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	fixnv_right = 0;
 	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 	if(0 == nv_read_partition(p_block_dev, PARTITION_FIX_NV1, (char *)FIXNV_ADR, FIXNV_SIZE + 4)){
-		if (1 == nv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+		if (1 == fixnv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
 			fixnv_right = 1;//right
 	}
 	
     backupfixnv_right = 0;
 	memset((unsigned char *)RUNTIMENV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 	if(0 == nv_read_partition(p_block_dev, PARTITION_FIX_NV2, (char *)RUNTIMENV_ADR, FIXNV_SIZE + 4)){
-		if (1 == nv_is_correct_endflag((unsigned char *)RUNTIMENV_ADR, FIXNV_SIZE))
+		if (1 == fixnv_is_correct_endflag((unsigned char *)RUNTIMENV_ADR, FIXNV_SIZE))
 			backupfixnv_right = 1;//right
 	}
 	
