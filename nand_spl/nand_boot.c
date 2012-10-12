@@ -201,7 +201,7 @@ static int nand_read_page(struct mtd_info *mtd, int block, int page, uchar *dst)
 		ecc_code[i] = oob_data[(this->ecc.layout)->eccpos[i]];
 
 	p = dst;
-
+	eccsteps = mtd->writesize / eccsize;
 	for (i = 0 ; eccsteps; eccsteps--, i += eccbytes, p += eccsize) {
 		/* No chance to do something with the possible error message
 		 * from correct_data(). We just hope that all possible errors

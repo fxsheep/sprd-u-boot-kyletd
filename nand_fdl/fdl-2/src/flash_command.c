@@ -106,6 +106,11 @@ static unsigned long code_yaffs_buflen	= 0;
 static unsigned long code_yaffs_onewrite = 0;
 static unsigned char *g_BigBUF = NULL;
 #endif
+
+int orginal_right, backupfile_right;
+unsigned long orginal_index, backupfile_index;
+unsigned char *orginal, *backupfile;
+
 typedef struct _CUSTOM2LOG
 {
     unsigned long   custom;
@@ -278,25 +283,280 @@ void phy_partition_info(struct real_mtd_partition phy, int line)
 
 	return;
 }
+
+unsigned short calc_checksum(unsigned char *dat, unsigned long len)
+{
+	unsigned long checksum = 0;
+	unsigned short *pstart, *pend;
+	if (0 == (unsigned long)dat % 2)  {
+		pstart = (unsigned short *)dat;
+		pend = pstart + len / 2;
+		while (pstart < pend) {
+			checksum += *pstart;
+			pstart ++;
+		}
+		if (len % 2)
+			checksum += *(unsigned char *)pstart;
+		} else {
+		pstart = (unsigned char *)dat;
+		while (len > 1) {
+			checksum += ((*pstart) | ((*(pstart + 1)) << 8));
+			len -= 2;
+			pstart += 2;
+		}
+		if (len)
+			checksum += *pstart;
+	}
+	checksum = (checksum >> 16) + (checksum & 0xffff);
+	checksum += (checksum >> 16);
+	return (~checksum);
+}
+
+#define NV_MULTI_LANG_ID   (405)
+#define GSM_CALI_ITEM_ID   (0x2)
+#define GSM_IMEI_ITEM_ID   (0x5)
+#define XTD_CALI_ITEM_ID   (0x516)
+#define LTE_CALI_ITEM_ID   (0x9C4)
+#define BT_ITEM_ID         (0x191)
+
+#define BT_ADDR_LEN  6
+
+#define IMEI_LEN			(8)
+#define GSM_CALI_VER_A      0xFF0A
+#define GSM_CALI_VER_MIN    GSM_CALI_VER_A
+#define GSM_CALI_VER_MAX    GSM_CALI_VER_A
+
+#define NUM_TEMP_BANDS		(5)
+#define NUM_RAMP_RANGES		(16)		/* constant parameter numbers, 16 level */
+#define NUM_TX_LEVEL		(16)		/* 2db per step */
+#define NUM_RAMP_POINTS		(20)
+#define NUM_GSM_ARFCN_BANDS	(6)
+#define NUM_DCS_ARFCN_BANDS	(8)
+#define NUM_PCS_ARFCN_BANDS	(7)
+#define NUM_GSM850_ARFCN_BANDS	(6)
+#define MAX_COMPENSATE_POINT	(75)
+
+static unsigned long XCheckNVStruct(unsigned char *lpPhoBuf, unsigned long dwPhoSize)
+{
+	unsigned long dwOffset = 0, dwLength = 0, bRet;
+	unsigned char *lpCode = lpPhoBuf;
+	unsigned long dwCodeSize = dwPhoSize;
+	unsigned short wCurID;
+
+	dwOffset = 4;     /* Skip first four bytes,that is time stamp */
+    dwLength = 0;
+    unsigned char *pTemp = lpCode + dwOffset;
+
+	unsigned long bIMEI = 0;
+	unsigned long bGSMCali = 0;
+	unsigned short wGSMCaliVer = 0;
+    while (dwOffset < dwCodeSize) {
+	    wCurID = *(unsigned short *)pTemp;
+        pTemp += 2;
+
+        dwLength = *(unsigned short *)pTemp;
+		/* printf("wCurID = 0x%08x  dwLength = 0x%08x\n", wCurID, dwLength); */
+		if (wCurID == GSM_IMEI_ITEM_ID) {
+			if (dwLength != IMEI_LEN) {
+				return 0;
+			} else {
+				bIMEI = 1;
+			}
+		} else if (wCurID == GSM_CALI_ITEM_ID) {
+			wGSMCaliVer =  *(unsigned short *)(pTemp + 2); /* pTemp + 2: skip length */
+            /* printf("wGSMCaliVer = 0x%08x\n", wGSMCaliVer); */
+			if ((wGSMCaliVer > GSM_CALI_VER_MAX) || (wGSMCaliVer < GSM_CALI_VER_MIN)) {
+				return 0;
+			} else {
+				bGSMCali = 1;
+			}
+		}
+
+		/* 0xFFFF is end-flag in module (NV in phone device) */
+		if (wCurID == 0xFFFF) {
+			if (!bIMEI || !bGSMCali) {
+				return 0;
+			}
+			return 1;
+		}
+
+		if (wCurID == 0 || dwLength == 0) {
+			break;
+		}
+
+        pTemp += 2;
+        dwOffset += 4;
+        /* Must be four byte aligned */
+        bRet = dwLength % 4;
+        if (bRet != 0)
+                dwLength += 4 - bRet;
+        dwOffset += dwLength;
+        pTemp += dwLength;
+        /* (dwOffset == dwCodeSize) is end condition in File */
+		if (dwOffset == dwCodeSize) {
+			if(!bIMEI || !bGSMCali) {
+				return 0;
+			}
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+int nv_is_correct_endflag(unsigned char *array, unsigned long size)
+{
+	unsigned short sum = 0, *dataaddr;
+
+	if ((array[size - 4] == 0xff) && (array[size - 3] == 0xff) && (array[size - 2] == 0xff) \
+		&& (array[size - 1] == 0xff)) {
+		/* old version */
+		if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) \
+			&& (array[size + 3] == 0x5a)) {
+			/* check nv right or wrong */
+			if (XCheckNVStruct(array, size) == 0) {
+				printf("NV data is crashed!!!.\n");
+				return -1;
+			} else {
+				printf("NV data is right!!!.\n");
+				return 1;
+			}
+		} else
+			return -1;
+	} else {
+		/* new version */
+		sum = calc_checksum(array, size - 4);
+		dataaddr = (unsigned short *)(array + size - 4);
+
+		if (*dataaddr == sum) {
+			/* check nv right or wrong */
+			if (XCheckNVStruct(array, size) == 0) {
+				printf("NV data is crashed!!!.\n");
+				return -1;
+			} else {
+				printf("NV data is right!!!.\n");
+				return 1;
+			}
+		} else {
+			printf("NV data crc error\n");
+			return -1;
+		}
+	}
+}
+
+unsigned long get_nv_index(unsigned char *array, unsigned long size)
+{
+	unsigned long index = 0;
+	unsigned short sum = 0, *dataaddr;
+
+	if ((array[size - 4] == 0xff) && (array[size - 3] == 0xff) && (array[size - 2] == 0xff) \
+		&& (array[size - 1] == 0xff)) {
+		/* old version */
+		index = 1;
+	} else {
+		/* new version */
+		dataaddr = (unsigned short *)(array + size - 2);
+		index = (unsigned long)(*dataaddr);
+	}
+	return index;
+}
+
 /*
 * retval : -1 is wrong  ;  1 is correct
 */
 int nv_is_correct(unsigned char *array, unsigned long size)
 {
-	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a)) {
-		array[size] = 0xff; array[size + 1] = 0xff;
-		array[size + 2] = 0xff; array[size + 3] = 0xff;	
-		return 1;
-	} else
-		return -1;
+	unsigned short sum = 0, *dataaddr;
+
+	if ((array[size - 4] == 0xff) && (array[size - 3] == 0xff) && (array[size - 2] == 0xff) \
+		&& (array[size - 1] == 0xff)) {
+		/* old version */
+		if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) \
+			&& (array[size + 3] == 0x5a)) {
+			/* check nv right or wrong */
+			if (XCheckNVStruct(array, size) == 0) {
+				printf("NV data is crashed!!!.\n");
+				return -1;
+			} else {
+				printf("NV data is right!!!.\n");
+				array[size] = 0xff; array[size + 1] = 0xff;
+				array[size + 2] = 0xff; array[size + 3] = 0xff;
+				return 1;
+			}
+		} else
+			return -1;
+	} else {
+		/* new version */
+		sum = calc_checksum(array, size - 4);
+		dataaddr = (unsigned short *)(array + size - 4);
+
+		if (*dataaddr == sum) {
+			/* check nv right or wrong */
+			if (XCheckNVStruct(array, size) == 0) {
+				printf("NV data is crashed!!!.\n");
+				return -1;
+			} else {
+				printf("NV data is right!!!.\n");
+				array[size + 0] = 0xff; array[size + 1] = 0xff;
+				array[size + 2] = 0xff; array[size + 3] = 0xff;
+				array[size - 4] = 0xff; array[size - 3] = 0xff;
+				array[size - 2] = 0xff; array[size - 1] = 0xff;
+				return 1;
+			}
+		} else {
+			printf("NV data crc error\n");
+			return -1;
+		}
+	}
 }
 
-int nv_is_correct_endflag(unsigned char *array, unsigned long size)
+/* phasecheck : 0 --- 3071; crc : 3072 3073; index : 3074 3075
+/*
+* retval : -1 is wrong  ;  1 is correct
+*/
+int sn_is_correct(unsigned char *array, unsigned long size)
 {
-	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a))
-		return 1;
-	else
-		return -1;
+	unsigned short sum = 0, *dataaddr;
+
+	if (size == PRODUCTINFO_SIZE) {
+		sum = calc_checksum(array, size);
+		dataaddr = (unsigned short *)(array + size);
+		if (*dataaddr == sum) {
+			array[size] = 0xff; array[size + 1] = 0xff;
+			array[size + 2] = 0xff; array[size + 3] = 0xff;
+			return 1;
+		}
+	}
+	printf("phasecheck crc error\n");
+	return -1;
+}
+
+unsigned long get_productinfo_index(unsigned char *array)
+{
+	unsigned long index = 0;
+	unsigned short sum = 0, *dataaddr;
+
+	dataaddr = (unsigned short *)(array + PRODUCTINFO_SIZE + 2);
+	index = (unsigned long)(*dataaddr);
+	printf("index = %d\n", index);
+
+	return index;
+}
+
+int sn_is_correct_endflag(unsigned char *array, unsigned long size)
+{
+	unsigned short sum = 0, *dataaddr;
+
+	if (size == PRODUCTINFO_SIZE) {
+		sum = calc_checksum(array, size);
+		dataaddr = (unsigned short *)(array + size);
+		printf("sum = 0x%04x data = 0x%04x\n", sum, *dataaddr);
+		if (*dataaddr == sum)
+			return 1;
+	}
+
+	printf("phasecheck flage error\n");
+	return -1;
 }
 
 /*
@@ -339,6 +599,18 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 					read_bkupnv_flag = 2;//right
 			}
 			cmd_yaffs_umount(backupfixnvpoint);
+
+			//printf("read_nv_flag = %d  read_bkupnv_flag = %d\n", read_nv_flag, read_bkupnv_flag);
+			if ((read_nv_flag == 2) && (read_bkupnv_flag == 2)) {
+				/* check index */
+				orginal_index = get_nv_index((unsigned char *)g_fixnv_buf_yaffs, FIXNV_SIZE);
+				backupfile_index = get_nv_index((unsigned char *)g_fixnv_buf, FIXNV_SIZE);
+				printf("1orginal_index = %d  backupfile_index = %d\n", orginal_index, backupfile_index);
+				if (orginal_index != backupfile_index) {
+					read_nv_flag = 2;
+					read_bkupnv_flag = 1;
+				}
+			}
 
 			if ((read_nv_flag == 2) && (read_bkupnv_flag == 1)) {
 				printf("fixnv is right, but backupfixnv is wrong, so erase and recovery backupfixnv\n");
@@ -394,6 +666,7 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 		char *productinfopoint = "/productinfo";
 		/* char *productinfofilename = "/productinfo/dlstatus.txt"; */
 		char *productinfofilename = "/productinfo/productinfo.bin";
+		char *bkproductinfofilename = "/productinfo/productinfobkup.bin";
 		char *nvramfilename = "/productinfo/nvram";
 		char *amt0filename = "/productinfo/amt0";
 		char *amt2filename = "/productinfo/amt2";
@@ -406,16 +679,51 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 		if (file_in_productinfo_partition == 0x90000002) {
 			if (read_productinfo_flag == 0) {
 				memset(g_PhasecheckBUF, 0, 0x2000);
+				orginal = g_PhasecheckBUF;
+				backupfile = g_PhasecheckBUF + 0x1000;
 				/* read dlstatus */
 				cmd_yaffs_mount(productinfopoint);
 				ret = cmd_yaffs_ls_chk(productinfofilename);
-				if (ret > 0) {
-					cmd_yaffs_mread_file(productinfofilename, g_PhasecheckBUF);
-					read_productinfo_flag = 1;
+				if (ret == (PRODUCTINFO_SIZE + 4)) {
+					cmd_yaffs_mread_file(productinfofilename, (unsigned char *)orginal);
+					if (1 == sn_is_correct_endflag((unsigned char *)orginal, PRODUCTINFO_SIZE))
+						orginal_right = 1;//right
 				}
-				cmd_yaffs_umount(productinfopoint);
-			}
 
+				ret = cmd_yaffs_ls_chk(bkproductinfofilename);
+				if (ret == (PRODUCTINFO_SIZE + 4)) {
+					cmd_yaffs_mread_file(bkproductinfofilename, (unsigned char *)backupfile);
+					if (1 == sn_is_correct_endflag((unsigned char *)backupfile, PRODUCTINFO_SIZE))
+						backupfile_right = 1;//right
+				}
+
+				cmd_yaffs_umount(productinfopoint);
+				printf("orginal_right = %d backupfile_right = %d\n", orginal_right, backupfile_right);
+				if ((orginal_right == 1) && (backupfile_right == 1)) {
+					/* check index */
+					orginal_index = get_productinfo_index((unsigned char *)orginal);
+					backupfile_index = get_productinfo_index((unsigned char *)backupfile);
+					if (orginal_index != backupfile_index) {
+						orginal_right = 1;
+						backupfile_right = 0;
+					}
+				}
+				read_productinfo_flag = 1;//success
+				if ((orginal_right == 1) && (backupfile_right == 1)) {
+					sn_is_correct((unsigned char *)orginal, PRODUCTINFO_SIZE);
+				} else if ((orginal_right == 1) && (backupfile_right == 0)) {
+					printf("productinfo is right, but productinfobkup is wrong, so use productinfobkup\n");
+					sn_is_correct((unsigned char *)orginal, PRODUCTINFO_SIZE);
+				} else if ((orginal_right == 0) && (backupfile_right == 1)) {
+					printf("productinfobkup is right, but productinfo is wrong, so use productinfo\n");
+					sn_is_correct((unsigned char *)backupfile, PRODUCTINFO_SIZE);
+					memcpy(orginal, backupfile, PRODUCTINFO_SIZE + 4);
+				} else if ((orginal_right == 0) && (backupfile_right == 0)) {
+					printf("\n\nproductinfo and productinfobkup are all wrong or no phasecheck.\n\n");
+					memset(g_PhasecheckBUF, 0, 0x2000);
+					read_productinfo_flag = 0;
+				}
+			}
 			memcpy(buf, (unsigned char *)(g_PhasecheckBUF + off), size);
 
 			if (read_productinfo_flag == 1)
@@ -758,8 +1066,9 @@ int NandChangeBootloaderHeader(unsigned int *bl_start_addr)
 
 int FDL2_DataEnd (PACKET_T *packet, void *arg)
 {
-	unsigned long pos, size, ret;
+	unsigned long pos, size, ret, crc;
     	unsigned long i, fix_nv_size, fix_nv_checksum, ii, realii;
+	unsigned short sum = 0, *dataaddr;
 
 	set_dl_op_val(0, 0, ENDDATA, FAIL, 1);
     	if (CHECKSUM_OTHER_DATA != g_checksum) {
@@ -773,10 +1082,19 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		/* write fixnv to yaffs2 format : orginal */
 		char *fixnvpoint = "/fixnv";
 		char *fixnvfilename = "/fixnv/fixnv.bin";
+		char *backupfixnvpoint = "/backupfixnv";
+		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
 		
 		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
 		g_fixnv_buf[FIXNV_SIZE + 0] = g_fixnv_buf[FIXNV_SIZE + 1] = 0x5a;
 		g_fixnv_buf[FIXNV_SIZE + 2] = g_fixnv_buf[FIXNV_SIZE + 3] = 0x5a;
+
+		sum = calc_checksum(g_fixnv_buf, FIXNV_SIZE - 4);
+		dataaddr = (unsigned short *)(g_fixnv_buf + FIXNV_SIZE - 4);
+		*dataaddr = sum;
+		dataaddr = (unsigned short *)(g_fixnv_buf + FIXNV_SIZE - 2);
+		*dataaddr = 0;
+
 		/* erase fixnv partition */
 		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 		strcpy(phy_partition.name, "fixnv");
@@ -784,24 +1102,22 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		phy_partition_info(phy_partition, __LINE__);
 		g_prevstatus = ret;
 		if (ret == NAND_SUCCESS) {
+			printf("erase fixnv start\n");
 			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info, 0);
+			printf("\nerase fixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {
+				printf("write fixnv start\n");
 				cmd_yaffs_mount(fixnvpoint);
     				cmd_yaffs_mwrite_file(fixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
 				ret = cmd_yaffs_ls_chk(fixnvfilename);
 				cmd_yaffs_umount(fixnvpoint);
+				printf("write fixnv end\n");
 				g_prevstatus = NAND_SUCCESS;			
 			}
 		}
 
 		/* write fixnv to yaffs2 format : backup */
-		char *backupfixnvpoint = "/backupfixnv";
-		char *backupfixnvfilename = "/backupfixnv/fixnv.bin";
-
-		/* g_fixnv_buf : (FIXNV_SIZE + 4) instead of fix_nv_size */
-		g_fixnv_buf[FIXNV_SIZE + 0] = g_fixnv_buf[FIXNV_SIZE + 1] = 0x5a;
-		g_fixnv_buf[FIXNV_SIZE + 2] = g_fixnv_buf[FIXNV_SIZE + 3] = 0x5a;
 		/* erase backup fixnv partition */
 		memset(&phy_partition, 0, sizeof(struct real_mtd_partition));
 		strcpy(phy_partition.name, "backupfixnv");
@@ -809,7 +1125,9 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		phy_partition_info(phy_partition, __LINE__);
 		g_prevstatus = ret;
 		if (ret == NAND_SUCCESS) {
+			printf("erase backupfixnv start\n");
 			ret = nand_start_write (&phy_partition, fix_nv_size, &nand_page_oob_info, 0);
+			printf("\nerase backupfixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {
 				cmd_yaffs_mount(backupfixnvpoint);
@@ -844,6 +1162,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		/* write phasecheck to yaffs2 format */
 		char *productinfopoint = "/productinfo";
 		char *productinfofilename = "/productinfo/productinfo.bin";
+		char *bkproductinfofilename = "/productinfo/productinfobkup.bin";
 		char *nvramfilename = "/productinfo/nvram";
 		char *amt0filename = "/productinfo/amt0";
 		char *amt2filename = "/productinfo/amt2";
@@ -852,21 +1171,29 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 #ifdef CONFIG_BOARD_788
 		char *zteversionfilename = "/productinfo/ZTEversion";
 #endif
-	if (file_in_productinfo_partition == 0x90000002) {
+		if (file_in_productinfo_partition == 0x90000002) {
 			/* g_PhasecheckBUF : (PRODUCTINFO_SIZE + 4) instead of g_PhasecheckBUFDataSize */
-			g_PhasecheckBUF[PRODUCTINFO_SIZE + 0] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 1] = 0x5a;
-			g_PhasecheckBUF[PRODUCTINFO_SIZE + 2] = g_PhasecheckBUF[PRODUCTINFO_SIZE + 3] = 0x5a;
+			sum = calc_checksum(g_PhasecheckBUF, PRODUCTINFO_SIZE);
+			dataaddr = (unsigned short *)(g_PhasecheckBUF + PRODUCTINFO_SIZE);
+			*dataaddr = sum;
+			dataaddr = (unsigned short *)(g_PhasecheckBUF + PRODUCTINFO_SIZE + 2);
+			*dataaddr = 0;
+
 			cmd_yaffs_mount(productinfopoint);
     			cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
 			ret = cmd_yaffs_ls_chk(productinfofilename);
-			cmd_yaffs_umount(productinfopoint);
+			cmd_yaffs_mwrite_file(bkproductinfofilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
+			ret = cmd_yaffs_ls_chk(bkproductinfofilename);
+        		cmd_yaffs_umount(productinfopoint);
+
 			g_prevstatus = NAND_SUCCESS;
 			/* factorydownload tools */
 			is_factorydownload_tools = 1;
 			is_check_dlstatus = get_DL_Status();
 			if (is_check_dlstatus == 1) {
 				get_Dl_Erase_Address_Table(&Dl_Erase_Address);
-				get_Dl_Data_Address_Table(&Dl_Data_Address);			}
+				get_Dl_Data_Address_Table(&Dl_Data_Address);
+			}
 		} else if (file_in_productinfo_partition == 0x90000022) {
 			cmd_yaffs_mount(productinfopoint);
     			cmd_yaffs_mwrite_file(nvramfilename, g_PhasecheckBUF, PRODUCTINFO_SIZE);
