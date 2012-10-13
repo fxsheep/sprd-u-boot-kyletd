@@ -179,6 +179,10 @@ int yaffs_StartUp(void)
 	struct mtd_partition cur_partition;
 	int aaa;
 	char partname[255];
+	static int already_start_up = 0;
+	if(already_start_up){
+		return 0;
+	}
 
 	yaffs_Device *flashDev = calloc(1, sizeof(yaffs_Device));
 #ifdef  SPRD_MOUNT_PARTITION
@@ -586,6 +590,7 @@ int yaffs_StartUp(void)
 
 	yaffs_initialise(yaffsfs_config);
 
+	already_start_up = 1;
 	return 0;
 }
 
