@@ -1211,35 +1211,6 @@ NIOS2_GENERIC = nios2-generic
 $(NIOS2_GENERIC:%=%_config) : unconfig
 	@$(MKCONFIG) $@ nios2 nios2 nios2-generic altera
 
-bigphone_config	: unconfig
-	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
-	@$(MKCONFIG) $@ arm arm926ejs bigphone spreadtrum sc8800x
-
-openphone_config	: unconfig
-	@mkdir -p $(obj)include
-	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
-	@$(MKCONFIG) $@ arm arm926ejs openphone spreadtrum sc8800g
-
-sp6810a_config	: unconfig
-	@mkdir -p $(obj)include
-	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
-	@$(MKCONFIG) $@ arm arm926ejs sp6810a spreadtrum sc8800g
-
-sp6810a-f4r2_config	: unconfig
-	@mkdir -p $(obj)include
-	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
-	@$(MKCONFIG) $@ arm arm926ejs sp6810a spreadtrum sc8800g
-
-sp6810a-f2r1_config	: unconfig
-	@mkdir -p $(obj)include
-	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
-	@$(MKCONFIG) $@ arm arm926ejs sp6810a spreadtrum sc8800g
-
-sp8805ga_config	: unconfig
-	@mkdir -p $(obj)include
-	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
-	@$(MKCONFIG) $@ arm arm926ejs sp8805ga spreadtrum sc8800g
-
 sc8810_openphone_config	: unconfig
 	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
