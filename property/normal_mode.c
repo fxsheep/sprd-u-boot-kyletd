@@ -634,6 +634,7 @@ static int start_linux()
 }
 void lcd_display_logo(int backlight_set,ulong bmp_img,size_t size)
 {
+#ifdef CONFIG_SPLASH_SCREEN
 	extern int lcd_display_bitmap(ulong bmp_image, int x, int y);
 	extern void lcd_display(void);
 	extern void *lcd_base;
@@ -652,7 +653,8 @@ void lcd_display_logo(int backlight_set,ulong bmp_img,size_t size)
 		Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
 #endif
 		lcd_display();
-     }
+	}
+#endif
 }
 
 void creat_cmdline(char * cmdline,boot_img_hdr *hdr)
