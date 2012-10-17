@@ -106,7 +106,7 @@ harsh_func_t * get_harsh_func(void)
 
 	chip_type = CHIP_REG_GET(CHIP_TYPE);
 
-	if(chip_type == CHIP_ID_VER_0)
+	if(chip_type == CHIP_ID_VER_0 || chip_type == CHIP_ID_VER_1)
 		harsh_func = (harsh_func_t *) v0__harsh_func_hack;
 	else if(chip_type == CHIP_ID_VER_MF)
 		harsh_func = (harsh_func_t *) mf__harsh_func_hack;
