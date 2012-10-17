@@ -33,8 +33,6 @@ typedef struct _emmc_handle
 #define EMMC_BLOCK_SIZE 512
 u8 copybuf[COPY_BUF_SIZE];
 
-/* This will be malloc'ed with the size of blk_sz from the sparse file header */
-u8* zerobuf;
 static unsigned int g_buf_index = 0;
 static T_Emmc_Handle g_emmc_handle;
 
@@ -42,10 +40,35 @@ static T_Emmc_Handle g_emmc_handle;
 #define SPARSE_HEADER_LEN       (sizeof(sparse_header_t))
 #define CHUNK_HEADER_LEN (sizeof(chunk_header_t))
 
+
+/* modify for download very big size ext4 image */
+typedef enum EXT4_DL_STATUS_DEF
+{
+	START = 0,
+	END
+} EXT4_DL_STATUS_E;
+
+static sparse_header_t sparse_header;
+static EXT4_DL_STATUS_E download_status = END;
+static unsigned long current_chunks = 0;
+static u32 total_blocks = 0;
+static unsigned int gbufindex = 0;
+
 static int read_all(void *buf_src, u32 src_index, void *buf_dest, size_t len)
 {
+	/*if (gbufindex)
+		printf("%s g_buf_index = %d len = %d\n", __FUNCTION__, gbufindex + g_buf_index, len);
+	else
+		printf("%s g_buf_index = %d len = %d\n", __FUNCTION__, g_buf_index, len);*/
 	memcpy(buf_dest, (void*)((u32)buf_src + src_index), len);
 	g_buf_index += len;
+	return len;
+}
+
+static int preread_chunk(void *buf_src, u32 src_index, void *buf_dest, size_t len)
+{
+	memcpy(buf_dest, (void*)((u32)buf_src + src_index), len);
+
 	return len;
 }
 
@@ -53,12 +76,15 @@ static int write_all(T_Emmc_Handle *p_handle, void *buf, size_t len)
 {
 	u32 blocknum;
 	block_dev_desc_t *pdev = p_handle->pdev;
-	if(len%EMMC_BLOCK_SIZE){
-		blocknum = len/EMMC_BLOCK_SIZE + 1;
-	}else{
-		blocknum = len/EMMC_BLOCK_SIZE;
+
+	if (len % EMMC_BLOCK_SIZE) {
+		blocknum = len / EMMC_BLOCK_SIZE + 1;
+	} else {
+		blocknum = len / EMMC_BLOCK_SIZE;
 	}
-	if(pdev->block_write(pdev->dev, p_handle->startBlock + p_handle->offset,  blocknum, (unsigned char *)buf) == blocknum){
+
+	/*printf("startBlock = %d offset = %d blocknum = %d\n", p_handle->startBlock, p_handle->offset, blocknum);*/
+	if (pdev->block_write(pdev->dev, p_handle->startBlock + p_handle->offset, blocknum, (unsigned char *)buf) == blocknum) {
 		p_handle->offset += blocknum;
 		return len;	
 	}else{
@@ -154,14 +180,15 @@ int process_crc32_chunk(void *buf, u32 crc32)
 	return 0;
 }
 
-int write_simg2emmc(char* interface, int  dev, int part, u8* buf)
+/* -1 : error; x : buf is finished to write */
+int write_simg2emmc(char* interface, int  dev, int part, u8* buf, unsigned long length)
 {
 	unsigned int i;
-	sparse_header_t sparse_header;
+
 	chunk_header_t chunk_header;
 	u32 crc32 = 0;
-	u32 total_blocks = 0;
 	int ret;
+	unsigned int bufferindex = 0;
 	g_buf_index = 0;
 	
 	g_emmc_handle.pdev = get_dev(interface, dev);
@@ -174,31 +201,86 @@ int write_simg2emmc(char* interface, int  dev, int part, u8* buf)
 	g_emmc_handle.cardPartiton = 0;
 	
 	g_emmc_handle.startBlock = g_emmc_handle.info.start;
-	g_emmc_handle.offset = 0;
-	ret = read_all(buf, g_buf_index, &sparse_header, sizeof(sparse_header));
-	if (ret != sizeof(sparse_header)) {
-		printf("Error reading sparse file header\n");
-		goto fail;
-	}
-	if (sparse_header.magic != SPARSE_HEADER_MAGIC) {
-		printf("Bad magic\n");
-		goto fail;
+	//printf("download_status = %d  current_chunks = %d length = %d\n", download_status, current_chunks, length);
+	if (download_status == END) {
+		current_chunks = 0;
+		total_blocks = 0;
+		g_emmc_handle.offset = 0;
+		gbufindex = 0;
+		memset(&sparse_header, 0, sizeof(sparse_header_t));
+		ret = read_all(buf, g_buf_index, &sparse_header, sizeof(sparse_header));
+		//printf("sparse_header file_hdr_sz = %d chunk_hdr_sz = %d blk_sz = %d total_blks = %d total_chunks = %d\n", sparse_header.file_hdr_sz, sparse_header.chunk_hdr_sz, sparse_header.blk_sz, sparse_header.total_blks, sparse_header.total_chunks);
+		if (ret != sizeof(sparse_header)) {
+			printf("Error reading sparse file header\n");
+			goto fail;
+		}
+		if (sparse_header.magic != SPARSE_HEADER_MAGIC) {
+			printf("Bad magic\n");
+			goto fail;
+		}
+
+		if (sparse_header.major_version != SPARSE_HEADER_MAJOR_VER) {
+			printf("Unknown major version number\n");
+			goto fail;
+		}
+
+		if (sparse_header.file_hdr_sz > SPARSE_HEADER_LEN) {
+			/* Skip the remaining bytes in a header that is longer than
+		 	* we expected.
+			 */
+			g_buf_index += (sparse_header.file_hdr_sz - SPARSE_HEADER_LEN);
+		}
+		download_status = START;
 	}
 
-	if (sparse_header.major_version != SPARSE_HEADER_MAJOR_VER) {
-		printf("Unknown major version number\n");
-		goto fail;
-	}
+	for (i=current_chunks; i<sparse_header.total_chunks; i++) {
+		/////////////////////////////////////////////////////////////////////////////////
+		memset(&chunk_header, 0, sizeof(chunk_header_t));
+		bufferindex = g_buf_index;
+		if ((bufferindex + sizeof(chunk_header)) > length) {
+			current_chunks = i;
+			break;
+		}
 
-	if (sparse_header.file_hdr_sz > SPARSE_HEADER_LEN) {
-		/* Skip the remaining bytes in a header that is longer than
-		 * we expected.
-		 */
-		g_buf_index += (sparse_header.file_hdr_sz - SPARSE_HEADER_LEN);
-	}
+		preread_chunk((void*)buf, bufferindex, &chunk_header, sizeof(chunk_header));
 
-	for (i=0; i<sparse_header.total_chunks; i++) {
+		/*if (gbufindex)
+			printf("i = %d bufferindex = %d chunk_type = 0x%04x chunk_sz = %d total_sz = %d  currentoffset = %d\n", i, gbufindex + bufferindex, chunk_header.chunk_type, chunk_header.chunk_sz, chunk_header.total_sz, g_emmc_handle.offset * EMMC_BLOCK_SIZE);
+		else
+			printf("i = %d bufferindex = %d chunk_type = 0x%04x chunk_sz = %d total_sz = %d  currentoffset = %d\n", i, bufferindex, chunk_header.chunk_type, chunk_header.chunk_sz, chunk_header.total_sz, g_emmc_handle.offset * EMMC_BLOCK_SIZE);*/
+
+		if (sparse_header.chunk_hdr_sz > CHUNK_HEADER_LEN) {
+			bufferindex += sparse_header.chunk_hdr_sz - CHUNK_HEADER_LEN;
+		}
+		ret = 0;
+		switch (chunk_header.chunk_type) {
+			case CHUNK_TYPE_RAW:
+			case CHUNK_TYPE_FILL:
+			case CHUNK_TYPE_DONT_CARE:
+			case CHUNK_TYPE_CRC32:
+			if ((bufferindex + chunk_header.total_sz) > length) {
+				printf("type : 0x%04x exceed  %d : %d\n", chunk_header.chunk_type, bufferindex + chunk_header.total_sz, length);
+				ret = 1;
+			}
+			break;
+			default:
+			printf("Unknown chunk type 0x%4.4x\n", chunk_header.chunk_type);
+		}
+
+		if (ret == 1) {
+			current_chunks = i;
+			break;
+		}
+		/////////////////////////////////////////////////////////////////////////////////
+
+		memset(&chunk_header, 0, sizeof(chunk_header_t));
 		ret = read_all((void*)buf, g_buf_index, &chunk_header, sizeof(chunk_header));
+
+		/*if (gbufindex)
+			printf("i = %d g_buf_index = %d chunk_type = 0x%04x chunk_sz = %d total_sz = %d currentoffset = %d\n", i, gbufindex + g_buf_index, chunk_header.chunk_type, chunk_header.chunk_sz, chunk_header.total_sz, g_emmc_handle.offset * EMMC_BLOCK_SIZE);
+		else
+			printf("i = %d g_buf_index = %d chunk_type = 0x%04x chunk_sz = %d total_sz = %d currentoffset = %d\n", i, g_buf_index, chunk_header.chunk_type, chunk_header.chunk_sz, chunk_header.total_sz, g_emmc_handle.offset * EMMC_BLOCK_SIZE);*/
+
 		if (ret != sizeof(chunk_header)) {
 			printf("Error reading chunk header\n");
 			goto fail;
@@ -248,12 +330,19 @@ int write_simg2emmc(char* interface, int  dev, int part, u8* buf)
 
 	}
 
+	//printf("offset = %d g_buf_index = %d  length = %d  Wrote %d blocks, expected to write %d blocks\n", g_emmc_handle.offset, g_buf_index, length, total_blocks, sparse_header.total_blks);
 	if (sparse_header.total_blks != total_blocks) {
-		printf("Wrote %d blocks, expected to write %d blocks\n",
-			 total_blocks, sparse_header.total_blks);
-		goto fail;
+		gbufindex += g_buf_index;
+		return g_buf_index;
+	} else {
+		download_status = END;
+		current_chunks = 0;
+		g_emmc_handle.offset = 0;
+		total_blocks = 0;
+		gbufindex = 0;
+		return 0;
 	}
-	return 0;
+
 fail:
 	return -1;
 }

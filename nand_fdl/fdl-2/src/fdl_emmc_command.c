@@ -369,6 +369,21 @@ int eMMC_nv_is_correct(unsigned char *array, unsigned long size)
 		return -1;
 }
 
+int movebuf2buf(unsigned char *dst, unsigned char *src, int len)
+{
+	if (len <= 0)
+		return 0;
+
+	while (len > 0) {
+		*dst = *src;
+		dst ++;
+		src ++;
+		len --;
+	}
+
+	return 1;
+}
+
 int eMMC_prodinfo_is_correct(unsigned char *array, unsigned long size)
 {
 	unsigned long crc;
@@ -547,7 +562,9 @@ int FDL2_eMMC_DataStart (PACKET_T *packet, void *arg)
 		packet->packet_body.content[7]);
 #endif
 #ifndef DOWNLOAD_IMAGE_WITHOUT_SPARSE
-	if (size > EMMC_BUF_SIZE) {
+	if (((g_dl_eMMCStatus.curUserPartition != PARTITION_SYSTEM) && \
+		(g_dl_eMMCStatus.curUserPartition != PARTITION_USER_DAT) && \
+		(g_dl_eMMCStatus.curUserPartition != PARTITION_CACHE)) && (size > EMMC_BUF_SIZE)) {
 		printf("image file size : 0x%08x is bigger than EMMC_BUF_SIZE : 0x%08x\n", size, EMMC_BUF_SIZE);
 		FDL2_eMMC_SendRep (EMMC_INVALID_SIZE);
 		return 0;
@@ -662,6 +679,7 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 	unsigned long size, lastSize, nSectorCount;
 	unsigned long cnt, base_sector, trans_times, remain_block, each_write_block = 10000;
 	unsigned char *point;
+	int retval;
 
 	/* The previous download step failed. */
 	if ((EMMC_SUCCESS != g_prevstatus) || (g_dl_eMMCStatus.isLastPakFlag)) {
@@ -697,12 +715,21 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 				nSectorCount = EMMC_BUF_SIZE / EFI_SECTOR_SIZE + 1;
 #ifdef DOWNLOAD_IMAGE_WITHOUT_SPARSE
 			if ((g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
-					|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
-					if (write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, g_eMMCBuf) != 0) {
-						g_status.unsave_recv_size = 0;
-						SEND_ERROR_RSP (BSL_WRITE_ERROR);
-						return 0;
-					}
+				|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
+				retval = write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, 
+				g_eMMCBuf, EMMC_BUF_SIZE);
+				if (retval == -1) {
+					g_status.unsave_recv_size = 0;
+					SEND_ERROR_RSP (BSL_WRITE_ERROR);
+					return 0;
+				} else if (retval > 0) {
+					g_status.unsave_recv_size = EMMC_BUF_SIZE - retval;
+					movebuf2buf(g_eMMCBuf, g_eMMCBuf + retval, EMMC_BUF_SIZE - retval);
+					g_sram_addr = (unsigned long)g_eMMCBuf;
+				} else {
+					g_status.unsave_recv_size = 0;
+					g_sram_addr = (unsigned long)g_eMMCBuf;
+				}
 			} else if (g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM) {
 				base_sector = g_dl_eMMCStatus.base_sector;
 				point = g_eMMCBuf;
@@ -735,25 +762,46 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 					SEND_ERROR_RSP (BSL_WRITE_ERROR);
 					return 0;
 			}
+
+			g_status.unsave_recv_size = 0;
+			g_dl_eMMCStatus.base_sector += EMMC_BUF_SIZE / EFI_SECTOR_SIZE;
+			g_sram_addr = (unsigned long)g_eMMCBuf;
+
 #else
 			if ((g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM) \
-					|| (g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
-					|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
-					if (write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, g_eMMCBuf) != 0) {
-						g_status.unsave_recv_size = 0;
-						SEND_ERROR_RSP (BSL_WRITE_ERROR);
-						return 0;
-					}
+				|| (g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
+				|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
+				retval = write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, 
+					g_eMMCBuf, EMMC_BUF_SIZE);
+				if (retval == -1) {
+					g_status.unsave_recv_size = 0;
+					SEND_ERROR_RSP (BSL_WRITE_ERROR);
+					return 0;
+				}
 			} else if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector, 
 				EMMC_BUF_SIZE / EFI_SECTOR_SIZE, (unsigned char *)g_eMMCBuf)) {
 			 	g_status.unsave_recv_size = 0;
 				SEND_ERROR_RSP (BSL_WRITE_ERROR);
 				return 0;
 			}
+
+			if ((g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM) \
+				|| (g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
+				|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
+				if (retval > 0) {
+					g_status.unsave_recv_size = EMMC_BUF_SIZE - retval;
+					movebuf2buf(g_eMMCBuf, g_eMMCBuf + retval, EMMC_BUF_SIZE - retval);
+					g_sram_addr = (unsigned long)g_eMMCBuf;
+				} else {
+					g_status.unsave_recv_size = 0;
+					g_sram_addr = (unsigned long)g_eMMCBuf;
+				}
+			} else {
+				g_status.unsave_recv_size = 0;
+				g_dl_eMMCStatus.base_sector += EMMC_BUF_SIZE / EFI_SECTOR_SIZE;
+				g_sram_addr = (unsigned long)g_eMMCBuf;
+			}
 #endif
-			g_status.unsave_recv_size = 0;
-			g_dl_eMMCStatus.base_sector += EMMC_BUF_SIZE / EFI_SECTOR_SIZE;
-			g_sram_addr = (unsigned long)g_eMMCBuf;
 		} else if (g_status.total_recv_size == g_status.total_size) {
 			g_status.unsave_recv_size += size;
 			if (g_status.unsave_recv_size != 0) {
@@ -772,10 +820,19 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 #ifdef DOWNLOAD_IMAGE_WITHOUT_SPARSE
 				if ((g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
 					|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
-					if (write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, g_eMMCBuf) != 0) {
+					retval = write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, 
+						g_eMMCBuf, g_status.unsave_recv_size);
+					if (retval == -1) {
 						g_status.unsave_recv_size = 0;
 						SEND_ERROR_RSP (BSL_WRITE_ERROR);
 						return 0;
+					} else if (retval > 0) {
+						movebuf2buf(g_eMMCBuf, g_eMMCBuf + retval, g_status.unsave_recv_size - retval);
+						g_status.unsave_recv_size -= retval;
+						g_sram_addr = (unsigned long)g_eMMCBuf;
+					} else {
+						g_status.unsave_recv_size = 0;
+						g_sram_addr = (unsigned long)g_eMMCBuf;
 					}
 				} else if (g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM) {
 					base_sector = g_dl_eMMCStatus.base_sector;
@@ -808,11 +865,15 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 						SEND_ERROR_RSP (BSL_WRITE_ERROR);
 						return 0;
 				}
+
+				g_status.unsave_recv_size = 0;
 #else
 				if ((g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM) \
 					|| (g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
 					|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
-					if (write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, g_eMMCBuf) != 0) {
+					retval = write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, 
+						g_eMMCBuf, g_status.unsave_recv_size);
+					if (retval == -1) {
 						g_status.unsave_recv_size = 0;
 						SEND_ERROR_RSP (BSL_WRITE_ERROR);
 						return 0;
@@ -823,8 +884,22 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 						SEND_ERROR_RSP (BSL_WRITE_ERROR);
 						return 0;
 				}
+
+				if ((g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM) \
+					|| (g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
+					|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
+					if (retval > 0) {
+						movebuf2buf(g_eMMCBuf, g_eMMCBuf + retval, g_status.unsave_recv_size - retval);
+						g_status.unsave_recv_size -= retval;
+						g_sram_addr = (unsigned long)g_eMMCBuf;
+					} else {
+						g_status.unsave_recv_size = 0;
+						g_sram_addr = (unsigned long)g_eMMCBuf;
+					}
+				} else {
+					g_status.unsave_recv_size = 0;
+				}
 #endif
-				g_status.unsave_recv_size = 0;	 
 			} //if (g_status.unsave_recv_size != 0)
 		} else //else if (g_status.total_recv_size == g_status.total_size)
 			g_status.unsave_recv_size += size;		
@@ -864,20 +939,53 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 			base_sector += remain_block;
 			point += EFI_SECTOR_SIZE * remain_block;
 		}
-#else
-		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,
-			EMMC_BUF_SIZE / EFI_SECTOR_SIZE, (unsigned char *)g_eMMCBuf)) {
-			g_status.unsave_recv_size = 0;
-			SEND_ERROR_RSP (BSL_WRITE_ERROR);
-			return 0;
-		}
-#endif
+
 		g_status.unsave_recv_size = size - lastSize;
 		g_sram_addr = (unsigned long)g_eMMCBuf;
    		memcpy((unsigned char *)g_sram_addr, 
 			(char *)(&packet->packet_body.content[lastSize]), g_status.unsave_recv_size);
 		g_sram_addr += g_status.unsave_recv_size;
 		g_dl_eMMCStatus.base_sector += EMMC_BUF_SIZE / EFI_SECTOR_SIZE;
+#else
+		if ((g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM) \
+			|| (g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
+			|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
+			retval = write_simg2emmc("mmc", 1, g_dl_eMMCStatus.curUserPartition, g_eMMCBuf, EMMC_BUF_SIZE);
+			if (retval == -1) {
+				g_status.unsave_recv_size = 0;
+				SEND_ERROR_RSP (BSL_WRITE_ERROR);
+				return 0;
+			}
+		} else if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector, EMMC_BUF_SIZE / EFI_SECTOR_SIZE, (unsigned char *)g_eMMCBuf)) {
+		 	g_status.unsave_recv_size = 0;
+			SEND_ERROR_RSP (BSL_WRITE_ERROR);
+			return 0;
+		}
+
+		if ((g_dl_eMMCStatus.curUserPartition == PARTITION_SYSTEM) \
+			|| (g_dl_eMMCStatus.curUserPartition == PARTITION_USER_DAT) \
+			|| (g_dl_eMMCStatus.curUserPartition == PARTITION_CACHE)) {
+			if (retval > 0) {
+				g_status.unsave_recv_size = EMMC_BUF_SIZE - retval;
+				movebuf2buf(g_eMMCBuf, g_eMMCBuf + retval, EMMC_BUF_SIZE - retval);
+				g_sram_addr = (unsigned long)(g_eMMCBuf + g_status.unsave_recv_size);
+				memcpy((unsigned char *)g_sram_addr, (char *)(&packet->packet_body.content[lastSize]), size - lastSize);
+				g_status.unsave_recv_size += size - lastSize;
+				g_sram_addr = (unsigned long)(g_eMMCBuf + g_status.unsave_recv_size);
+			} else {
+				g_status.unsave_recv_size = size - lastSize;
+				g_sram_addr = (unsigned long)g_eMMCBuf;
+				memcpy((unsigned char *)g_sram_addr, (char *)(&packet->packet_body.content[lastSize]), g_status.unsave_recv_size);
+				g_sram_addr += g_status.unsave_recv_size;
+			}
+		} else {
+			g_status.unsave_recv_size = size - lastSize;
+			g_sram_addr = (unsigned long)g_eMMCBuf;
+			memcpy((unsigned char *)g_sram_addr, (char *)(&packet->packet_body.content[lastSize]), g_status.unsave_recv_size);
+			g_sram_addr += g_status.unsave_recv_size;
+			g_dl_eMMCStatus.base_sector += EMMC_BUF_SIZE / EFI_SECTOR_SIZE;
+		}
+#endif
 	 }
 
 	//set_dl_op_val(0, 0, MIDSTDATA, FAIL, 4);
@@ -1186,6 +1294,7 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 	unsigned long addr = *data;
 	unsigned long size = * (data + 1);
 	int           ret = EMMC_SUCCESS;
+	int retval;
 	unsigned long part_size;
 	addr = EndianConv_32 (addr);
 	size = EndianConv_32 (size);
@@ -1213,15 +1322,18 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 		if (g_dl_eMMCStatus.curUserPartition == PARTITION_PROD_INFO3) {
 			part_size = efi_GetPartSize(PARTITION_PROD_INFO3);
 			make_ext4fs_main(g_eMMCBuf, part_size);
-			if (write_simg2emmc("mmc", 1, PARTITION_PROD_INFO3, g_eMMCBuf) != 0) {
+
+			retval = write_simg2emmc("mmc", 1, PARTITION_PROD_INFO3, g_eMMCBuf, EMMC_BUF_SIZE);
+			if (retval == -1) {
 				SEND_ERROR_RSP (BSL_WRITE_ERROR);
 				return 0;
 			}
 		}
 		if ((g_dl_eMMCStatus.curUserPartition == PARTITION_PROD_INFO3) && (has_sd == 1) && (done_format_sd == 0)) {
 			has_sd = 0;
+			printf("formating sd partition, waiting for a while!\n");
 			if (format_sd_partition() == -1)
-			printf("format sd partition failed\n");
+				printf("format sd partition failed\n");
 			done_format_sd = 1;
 		}
 		ret = NAND_SUCCESS;

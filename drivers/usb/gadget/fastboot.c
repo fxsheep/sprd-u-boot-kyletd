@@ -490,7 +490,8 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 		|| (_sprd_emmc_partition[pnum].partition_index == PARTITION_USER_DAT) \
 		|| (_sprd_emmc_partition[pnum].partition_index == PARTITION_CACHE)){
 		//Flash system&userdata - RAW ext4 img with sprase
-		if (write_simg2emmc("mmc", 1, _sprd_emmc_partition[pnum].partition_index, data) != 0){
+		/* richardfeng add size to the function */
+		if (write_simg2emmc("mmc", 1, _sprd_emmc_partition[pnum].partition_index, data, size) != 0){
 			fastboot_fail("eMMC WRITE_ERROR!");
 			return;
 		}
