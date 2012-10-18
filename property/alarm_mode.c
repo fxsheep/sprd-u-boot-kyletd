@@ -83,7 +83,12 @@ int alarm_flag_check(void)
 	time = time - now_rtc;
 	time1 = time1 - now_rtc;
 	if((time < time_lead +180) && (time > time_lead -10))
-		ret = 1;
+	{
+		if((time1 < time_lead +180) && (time1 > time_lead -10)&& (time -time1>50))
+			ret = 2;
+		else
+			ret = 1;
+	}
 	else if((time1 < time_lead +180) && (time1 > time_lead -10))
 		ret =2;
 	else{
