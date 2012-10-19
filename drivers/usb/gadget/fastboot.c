@@ -56,6 +56,15 @@
 #define CHECKSUM_START_OFFSET	0x28
 #define MAGIC_DATA_SAVE_OFFSET	(0x20/4)
 #define CHECKSUM_SAVE_OFFSET	(0x24/4)
+PARTITION_CFG uefi_part_info[MAX_PARTITION_INFO];
+#define EFI_SECTOR_SIZE 		(512)
+#define ERASE_SECTOR_SIZE		((64 * 1024) / EFI_SECTOR_SIZE)
+#define EMMC_BUF_SIZE			(((216 * 1024 * 1024) / EFI_SECTOR_SIZE) * EFI_SECTOR_SIZE)
+#if defined (CONFIG_SC8825) || defined (CONFIG_TIGER)
+unsigned char *g_eMMCBuf = (unsigned char*)0x82000000;
+#else
+unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
+#endif
 
 typedef struct
 {
@@ -541,12 +550,18 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
 
 	fastboot_okay("");
 }
+
 void cmd_erase(const char *arg, void *data, unsigned sz)
 {
 	u8 pnum = 0;
 	unsigned int nblocknum;
 	int pos;
+	unsigned long len;
+	unsigned long count;
+	int i;
+	size_t size;
 
+	memset(g_eMMCBuf, 0xff, EMMC_BUF_SIZE);
 	//Seek partition form _sprd_emmc_partition table
 	for (pos = 0; pos < (sizeof(_sprd_emmc_partition) / sizeof(eMMC_Parttion)); pos++){
 		if (!strcmp(_sprd_emmc_partition[pos].partition_str, arg))
@@ -558,7 +573,48 @@ void cmd_erase(const char *arg, void *data, unsigned sz)
 		fastboot_fail("unknown partition name");
 		return;
 	}
+
+	block_dev_desc_t *pdev;
+	disk_partition_t info;
+
+	pdev = get_dev("mmc", 1);
+	if (pdev == NULL) {
+		fastboot_fail("Block device not supported!");
+		return;
+	}
+	if (get_partition_info(pdev, _sprd_emmc_partition[pnum].partition_index, &info)){
+		fastboot_fail("eMMC get partition ERROR!");
+		return;
+	}
+
+	size = info.size;
 	
+	if (size < EMMC_BUF_SIZE) {
+		if(size%512)
+			nblocknum = size/512 + 1;
+		else
+			nblocknum = size/512;
+		if(!Emmc_Write(_sprd_emmc_partition[pnum].partition_type, info.start,  nblocknum, (unsigned char *)g_eMMCBuf)){
+			fastboot_fail("eMMC WRITE_ERROR!");
+			return;
+		}
+	}
+	else {
+		count = size / (EMMC_BUF_SIZE / EFI_SECTOR_SIZE);
+		for (i = 0; i < count; i++) {
+			if (!Emmc_Write(_sprd_emmc_partition[pnum].partition_type, info.start + i * (EMMC_BUF_SIZE / EFI_SECTOR_SIZE),
+				EMMC_BUF_SIZE / EFI_SECTOR_SIZE, (unsigned char *)g_eMMCBuf))
+				fastboot_fail("eMMC ERASE_ERROR!");
+				return 0;
+		}
+
+		count = len % (EMMC_BUF_SIZE / EFI_SECTOR_SIZE);
+		if (count) {
+			if (!Emmc_Write(_sprd_emmc_partition[pnum].partition_type, info.start + i * (EMMC_BUF_SIZE / EFI_SECTOR_SIZE),
+				count, (unsigned char *)g_eMMCBuf))
+				return 0;
+			}
+	}
 	fastboot_okay("");
 }
 
