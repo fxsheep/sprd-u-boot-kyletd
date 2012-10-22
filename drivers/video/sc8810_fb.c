@@ -35,7 +35,7 @@
 #include <asm/arch/regs_global.h>
 #include <asm/arch/regs_cpc.h>
 #include <asm/arch/ldo.h>
-
+#include "sprdfb_panel.c"
 #define mdelay(a) udelay(a * 1000)
 #define printk printf
 
@@ -79,84 +79,9 @@ struct sc8810fb_info {
 	uint32_t gram_timing;
 };
 
-struct lcd_cfg{
-	uint32_t lcd_id;
-	struct lcd_spec* panel;
-};
 
 
-#ifdef CONFIG_SC8810_OPENPHONE
-
-extern struct lcd_spec lcd_panel_hx8357;
-static struct lcd_cfg lcd_panel[] = {
-	[0]={
-		.lcd_id = 0x57,
-		.panel = &lcd_panel_hx8357,
-		},
-};
-#elif defined CONFIG_LCD_QVGA
-extern struct lcd_spec lcd_panel_ili9341s;
-static struct lcd_cfg lcd_panel[] = {
-    [0]={
-        .lcd_id = 0x61,
-        .panel = &lcd_panel_ili9341s,
-        },
-};
-#elif defined CONFIG_MACH_AMAZING
-extern struct lcd_spec lcd_panel_ili9486;
-static struct lcd_cfg lcd_panel[] = {
-	[0]={
-		.lcd_id = 0x5BBC,
-		.panel = &lcd_panel_ili9486,
-	},
-};
-
-#else
-#ifdef CONFIG_LCD_788
-
-//#define  LCD_PANEL_ID_RM61581_TRULY	(0x6158|0xA1)  //ÐÅÀû
-#define  LCD_PANEL_ID_RM61581_TRULY	(0x6158|0x00)  //ÐÅÀû(ÔÝÎ´ÉÕÂ¼)
-#define  LCD_PANEL_ID_HX8357			(0x8357|0x00)  //Á¢µÂ
-//#define  LCD_PANEL_ID_HX8357_YUSHUN			(0x8357|0xA0) //ÓîË³
-//#define  LCD_PANEL_ID_RM61581_JINGDONGFANG	(0x6158|0xA0) //¾©¶«·½
-
-extern  struct lcd_spec lcd_panel_hx8357;
-extern  struct lcd_spec lcd_panel_eR6158_truly;
-//extern  struct lcd_spec lcd_panel_hx8357_yushun;
-//extern  struct lcd_spec lcd_panel_eR6158;//¾©¶«·½
-static struct lcd_cfg lcd_panel[] = {
-
-        [0]={
-		.lcd_id = LCD_PANEL_ID_RM61581_TRULY,
-		.panel = &lcd_panel_eR6158_truly,
-		},
-
-        [1]={
-		.lcd_id = LCD_PANEL_ID_HX8357,
-		.panel = &lcd_panel_hx8357,
-		},
-#if 0
-        [2]={
-		.lcd_id = LCD_PANEL_ID_HX8357_YUSHUN,
-		.panel = &lcd_panel_hx8357_yushun,
-		},
-
-        [3]={
-		.lcd_id = LCD_PANEL_ID_RM61581_JINGDONGFANG,
-		.panel = &lcd_panel_eR6158,
-		},
-#endif
-};
-#else                
-extern struct lcd_spec lcd_panel_hx8369;
-static struct lcd_cfg lcd_panel[] = {
-	[0]={
-		.lcd_id = 0x69,
-		.panel = &lcd_panel_hx8369,
-		},
-};
-#endif
-#endif
+extern void FB_LDO_TurnOnLDO();
 
 #ifdef CONFIG_LCD_WVGA
 vidinfo_t panel_info = {
@@ -669,48 +594,6 @@ void LCD_SetBackLightBrightness( unsigned long  value)
 	LCD_SetPwmRatio(duty_mod);
 }
 
-
-void set_backlight(uint32_t value)
-{
-#ifdef CONFIG_SC8810_OPENPHONE
-	ANA_REG_AND(WHTLED_CTL, ~(WHTLED_PD_SET | WHTLED_PD_RST));
-	ANA_REG_OR(WHTLED_CTL,  WHTLED_PD_RST);
-	ANA_REG_MSK_OR (WHTLED_CTL, ( (value << WHTLED_V_SHIFT) &WHTLED_V_MSK), WHTLED_V_MSK);
-#elif CONFIG_MACH_CORI
-    __raw_bits_or((1<<5),  0x8B000008);
-    __raw_bits_or((1<<10), 0x8A000384);
-    __raw_bits_or((1<<10), 0x8A000388);
-    __raw_bits_or((1<<10), 0x8A000380);
-#elif CONFIG_MACH_AMAZING
-    __raw_bits_or((1<<5),  0x8B000008);
-    __raw_bits_or((1<<10), 0x8A000384);
-    __raw_bits_or((1<<10), 0x8A000388);
-    __raw_bits_or((1<<10), 0x8A000380);
-#else
-	//if (gpio_request(143, "LCD_BL")) {
-	//	FB_PRINT("Failed ro request LCD_BL GPIO_%d \n",
-	//		143);
-	//	return -ENODEV;
-	//}
-	//gpio_direction_output(143, 1);
-	//gpio_set_value(143, 1);
-	//__raw_bits_or((1<<5),  0x8B000008);
-	//__raw_bits_or((1<<15), 0x8A000384);
-	//__raw_bits_or((1<<15), 0x8A000388);
-	//__raw_bits_or((1<<15), 0x8A000380);
-#ifndef CONFIG_SP8810EA
-	LCD_SetBackLightBrightness(value);
-#else
-    __raw_writel(0x101, 0x8C0003e0);
-    __raw_bits_or((1<<5),  0x8B000008);
-    __raw_bits_or((1<<15), 0x8A000384);
-    __raw_bits_or((1<<15), 0x8A000388);
-    __raw_bits_or((1<<15), 0x8A000380);
-#endif
-
-#endif
-}
-
 static struct sc8810fb_info sc8810fb = {0};
 
 static uint32_t lcd_id_to_kernel = 0;
@@ -775,20 +658,7 @@ static int sc8810fb_probe(void * lcdbase)
 
 	FB_PRINT("[%s]\n", __FUNCTION__);
 
-#ifdef CONFIG_MACH_CORI        
-    LDO_SetVoltLevel(LDO_LDO_SIM3, LDO_VOLT_LEVEL1);
-    LDO_TurnOnLDO(LDO_LDO_SIM3);
-    LDO_SetVoltLevel(LDO_LDO_VDD28, LDO_VOLT_LEVEL3);
-    LDO_TurnOnLDO(LDO_LDO_VDD28);
-#endif
-
-#ifdef CONFIG_MACH_AMAZING 
-    LDO_SetVoltLevel(LDO_LDO_SIM3, LDO_VOLT_LEVEL1);
-    LDO_TurnOnLDO(LDO_LDO_SIM3);
-    LDO_SetVoltLevel(LDO_LDO_VDD28, LDO_VOLT_LEVEL3);
-    LDO_TurnOnLDO(LDO_LDO_VDD28);
-#endif
-
+	FB_LDO_TurnOnLDO();
 	fb->ops = &lcm_mcu_ops;
 	//we maybe readid ,so hardware should be init
 	hw_early_init(fb);
