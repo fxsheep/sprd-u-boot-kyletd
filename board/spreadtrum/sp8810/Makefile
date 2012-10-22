@@ -25,7 +25,7 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(BOARD).o
 
-COBJS	:= openphone.o sprd_kp.o lcd_hx8369.o
+COBJS	:= openphone.o sprd_kp.o lcd_config.o
 SOBJS	:= 
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
