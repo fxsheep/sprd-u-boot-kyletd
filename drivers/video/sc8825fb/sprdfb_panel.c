@@ -48,11 +48,20 @@ static struct panel_cfg lcd_panel[] = {
 };
 /*
 #elif defined CONFIG_TIGER
-extern struct panel_spec lcd_nt35516_mipi_spec; 
+extern struct panel_spec lcd_nt35516_mipi_spec;
 static struct panel_cfg lcd_panel[] = {
     [0]={
         .lcd_id = 0x16,
         .panel = &lcd_nt35516_mipi_spec ,
+        },
+};
+
+#elif defined CONFIG_LCD_QHD
+extern struct panel_spec lcd_nt35516_rgb_spi_spec;
+static struct panel_cfg lcd_panel[] = {
+    [0]={
+        .lcd_id = 0x16,
+        .panel = &lcd_nt35516_rgb_spi_spec ,
         },
 };
 */

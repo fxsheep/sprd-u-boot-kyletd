@@ -84,7 +84,8 @@ extern   "C"
 #define GEN0_EPT_EN                     BIT_15
 #define GEN0_SIM1_EN                    BIT_16
 #define GEN0_SPI_EN                     BIT_17
-//reserved
+#define GEN0_SPI0_EN                    BIT_17
+#define GEN0_SPI1_EN                    BIT_18
 #define GEN0_SYST_EN                    BIT_19
 #define GEN0_UART0_EN                   BIT_20
 #define GEN0_UART1_EN                   BIT_21
@@ -95,6 +96,10 @@ extern   "C"
 #define GEN0_KPD_RTC_EN                 BIT_26
 #define GEN0_SYST_RTC_EN                BIT_27
 #define GEN0_TMR_RTC_EN                 BIT_28
+#define GEN0_I2C0_EN                    GEN0_I2C_EN
+#define GEN0_I2C1_EN                    BIT_29
+#define GEN0_I2C2_EN                    BIT_30
+#define GEN0_I2C3_EN                    BIT_31
 //reserved
 
 /*

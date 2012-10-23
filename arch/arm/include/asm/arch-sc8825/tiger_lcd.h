@@ -17,6 +17,8 @@
 #ifndef _TIGER_LCD_H_
 #define _TIGER_LCD_H_
 
+#include <asm/arch/sci_types.h>
+
 #include <linux/types.h>
 #include <common.h>
 
@@ -101,7 +103,15 @@ typedef int32_t (*mipi_gen_read_t)(uint8_t *param, uint16_t param_length, uint8_
 typedef int32_t (*mipi_dcs_write_t)(uint8_t *param, uint16_t param_length);
 typedef int32_t (*mipi_dcs_read_t)(uint8_t command, uint8_t bytes_to_read, uint8_t *read_buffer);
 
+typedef int32_t (*i2c_write_8bits_t)(uint8_t addr, uint8_t reg, uint8_t val);
+typedef int32_t (*i2c_read_8bits_t)(uint8_t addr, uint8_t reg, uint8_t *val);
+typedef int32_t (*i2c_write_16bits_t)(uint8_t addr, uint16_t reg, BOOLEAN reg_is_8bit, uint16_t val, BOOLEAN val_is_8bit);
+typedef int32_t (*i2c_read_16bits_t)(uint8_t addr, uint16_t reg, BOOLEAN reg_is_8bit, uint16_t *val, BOOLEAN val_is_8bit);
+typedef int32_t (*i2c_write_burst_t)(uint8_t addr, uint8_t* buf, int num);
 
+typedef void (*spi_send_cmd_t)(uint32_t cmd);
+typedef void (*spi_send_data_t)(uint32_t data);
+typedef void (*spi_read_t)(uint32_t *data);
 
 /* LCD operations */
 struct panel_operations {
@@ -155,17 +165,17 @@ struct ops_mcu {
 };
 
 struct ops_i2c {
-	int32_t (*i2c_write_8bits)(uint8_t reg, uint8_t val);
-	int32_t (*i2c_read_8bits)(uint8_t reg, uint8_t *val);
-	int32_t (*i2c_write_16bits)(uint16_t reg, uint16_t reg_is_8bit, uint16_t val, uint16_t val_is_8bit);
-	int32_t (*i2c_read_16bits)(uint16_t reg, uint16_t reg_is_8bit, uint16_t *val, uint16_t val_is_8bit);
-	int32_t (*i2c_write_burst)(uint8_t* buf, int num);
+	int32_t (*i2c_write_8bits)(uint8_t addr, uint8_t reg, uint8_t val);
+	int32_t (*i2c_read_8bits)(uint8_t addr, uint8_t reg, uint8_t *val);
+	int32_t (*i2c_write_16bits)(uint8_t addr, uint16_t reg, BOOLEAN reg_is_8bit, uint16_t val, BOOLEAN val_is_8bit);
+	int32_t (*i2c_read_16bits)(uint8_t addr, uint16_t reg, BOOLEAN reg_is_8bit, uint16_t *val, BOOLEAN val_is_8bit);
+	int32_t (*i2c_write_burst)(uint8_t addr, uint8_t* buf, int num);
 };
 
 struct ops_spi{
-	int32_t (*spi_send_cmd)(uint32_t cmd);
-	int32_t (*spi_send_data)(uint32_t cmd, uint32_t data);
-	int32_t (*spi_read)(uint32_t cmd, uint32_t *data);
+	void (*spi_send_cmd)(uint32_t cmd);
+	void (*spi_send_data)(uint32_t data);
+	void (*spi_read)(uint32_t *data);
 };
 
 struct ops_mipi{
@@ -185,7 +195,6 @@ struct i2c_info{
 struct spi_info{
 	struct ops_spi *ops;
 };
-
 
 struct info_mipi {
 	uint16_t work_mode; /*command_mode, video_mode*/

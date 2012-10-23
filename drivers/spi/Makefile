@@ -36,6 +36,7 @@ COBJS-$(CONFIG_MPC52XX_SPI) += mpc52xx_spi.o
 COBJS-$(CONFIG_MPC8XXX_SPI) += mpc8xxx_spi.o
 COBJS-$(CONFIG_MXC_SPI) += mxc_spi.o
 COBJS-$(CONFIG_SOFT_SPI) += soft_spi.o
+COBJS-$(CONFIG_SC8825_SPI) += sc8825_spi.o
 
 COBJS	:= $(COBJS-y)
 SRCS	:= $(COBJS:.o=.c)
