@@ -1274,6 +1274,26 @@ sp8825_config	: unconfig
 	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sp8825 spreadtrum sc8825
+
+sp8825ea_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sp8825ea spreadtrum sc8825
+
+sp8825ea_native_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sp8825ea spreadtrum sc8825
+
+sp8825eb_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sp8825eb spreadtrum sc8825
+
+sp8825eb_native_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sp8825eb spreadtrum sc8825
 #########################################################################
 #########################################################################
 
