@@ -22,14 +22,13 @@ int nv_erase_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part)
 
 	if (!get_partition_info(p_block_dev, part, &info)) {
 		memset(tmpbuf, 0xff, info.size * EMMC_SECTOR_SIZE);
-		printf("%s %d part = %d  info.start = 0x%08x  info.size = 0x%08x\n", __FUNCTION__, __LINE__, part, info.start, info.size);
+		//printf("part = %d  info.start = 0x%08x  info.size = 0x%08x\n", part, info.start, info.size);
 		if (TRUE !=  Emmc_Write(PARTITION_USER, info.start, info.size, (unsigned char *)tmpbuf)) {
 			printf("emmc image erase error \n");
 			ret = 1; /* fail */
 		}
 	}
 
-	printf("%s %d ret = %d\n", __FUNCTION__, __LINE__, ret);
 	return ret;
 }
 
@@ -61,6 +60,51 @@ unsigned long char2u32(unsigned char *buf, int offset)
 	return ret;
 }
 
+int prodinfo_read_partition_flag(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, int offset, char *buf, int len)
+{
+	disk_partition_t info;
+	unsigned long size = (len +(EMMC_SECTOR_SIZE - 1)) & (~(EMMC_SECTOR_SIZE - 1));
+	int ret = 0; /* success */
+	unsigned long crc;
+	unsigned long offset_block = offset / EMMC_SECTOR_SIZE;
+
+	if (!get_partition_info(p_block_dev, part, &info)) {
+		if (TRUE !=  Emmc_Read(PARTITION_USER, info.start + offset_block, size / EMMC_SECTOR_SIZE, (uint8*)buf)) {
+			printf("emmc image read error : %d\n", offset);
+			ret = 1; /* fail */
+		}
+	} else
+		ret = 1;
+
+	if (ret == 1)
+		return ret;
+
+	crc = crc32b(0xffffffff, buf, len);
+
+	if (offset == 0) {
+		/* phasecheck */
+		if ((buf[PRODUCTINFO_SIZE + 7] == (crc & 0xff)) \
+			&& (buf[PRODUCTINFO_SIZE + 6] == ((crc & (0xff << 8)) >> 8)) \
+			&& (buf[PRODUCTINFO_SIZE + 5] == ((crc & (0xff << 16)) >> 16)) \
+			&& (buf[PRODUCTINFO_SIZE + 4] == ((crc & (0xff << 24)) >> 24))) {
+			ret = 0;
+		} else
+			ret = 1;
+	} else if ((offset == 4096) || (offset == 8192) || (offset == 12288)) {
+		/* factorymode or alarm mode */
+		if ((buf[PRODUCTINFO_SIZE + 11] == (crc & 0xff)) \
+			&& (buf[PRODUCTINFO_SIZE + 10] == ((crc & (0xff << 8)) >> 8)) \
+			&& (buf[PRODUCTINFO_SIZE + 9] == ((crc & (0xff << 16)) >> 16)) \
+			&& (buf[PRODUCTINFO_SIZE + 8] == ((crc & (0xff << 24)) >> 24))) {
+			ret = 0;
+		} else
+			ret = 1;
+	} else
+		ret = 1;
+
+	return ret;
+}
+
 int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, int offset, char *buf, int len)
 {
 	disk_partition_t info;
@@ -81,7 +125,6 @@ int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX p
 		return ret;
 
 	crc = crc32b(0xffffffff, buf, len);
-	/* dump_all_buffer(buf, size); */
 	if (offset == 0) {
 		/* phasecheck */
 		if ((buf[PRODUCTINFO_SIZE + 7] == (crc & 0xff)) \
@@ -92,6 +135,11 @@ int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX p
 				buf[PRODUCTINFO_SIZE + 6] = 0xff;
 				buf[PRODUCTINFO_SIZE + 5] = 0xff;
 				buf[PRODUCTINFO_SIZE + 4] = 0xff;
+				/* clear 5a flag */
+				buf[PRODUCTINFO_SIZE] = 0xff;
+				buf[PRODUCTINFO_SIZE + 1] = 0xff;
+				buf[PRODUCTINFO_SIZE + 2] = 0xff;
+				buf[PRODUCTINFO_SIZE + 3] = 0xff;
 		} else
 			ret = 1;
 	} else if ((offset == 4096) || (offset == 8192) || (offset == 12288)) {
@@ -290,7 +338,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	int ret;
 	size_t size;
 	loff_t off = 0;
-	int fixnv_right, backupfixnv_right;
+	int orginal_right, backupfile_right;
+	unsigned long orginal_index, backupfile_index;
 	nand_erase_options_t opts;
 	char * mtdpart_def = NULL;
 	disk_partition_t info;
@@ -535,29 +584,39 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 #if !(BOOT_NATIVE_LINUX)
 #if 1
 	/* recovery damaged fixnv or backupfixnv */
-	fixnv_right = 0;
+	orginal_right = 0;
 	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 	if(0 == nv_read_partition(p_block_dev, PARTITION_FIX_NV1, (char *)FIXNV_ADR, FIXNV_SIZE + 4)){
 		if (1 == fixnv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
-			fixnv_right = 1;//right
+			orginal_right = 1;//right
 	}
 
-    backupfixnv_right = 0;
+    backupfile_right = 0;
 	memset((unsigned char *)RUNTIMENV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 	if(0 == nv_read_partition(p_block_dev, PARTITION_FIX_NV2, (char *)RUNTIMENV_ADR, FIXNV_SIZE + 4)){
 		if (1 == fixnv_is_correct_endflag((unsigned char *)RUNTIMENV_ADR, FIXNV_SIZE))
-			backupfixnv_right = 1;//right
+			backupfile_right = 1;//right
 	}
 
-    if ((fixnv_right == 1) && (backupfixnv_right == 0)) {
+	if ((orginal_right == 1) && (backupfile_right == 1)) {
+		/* check index */
+		orginal_index = get_nv_index((unsigned char *)FIXNV_ADR, FIXNV_SIZE);
+		backupfile_index = get_nv_index((unsigned char *)RUNTIMENV_ADR, FIXNV_SIZE);
+		if (orginal_index != backupfile_index) {
+			orginal_right = 1;
+			backupfile_right = 0;
+		}
+	}
+
+    if ((orginal_right == 1) && (backupfile_right == 0)) {
 		printf("fixnv is right, but backupfixnv is wrong, so erase and recovery backupfixnv\n");
 		nv_erase_partition(p_block_dev, PARTITION_FIX_NV2);
 		nv_write_partition(p_block_dev, PARTITION_FIX_NV2, (char *)FIXNV_ADR, (FIXNV_SIZE + 4));
-	} else if ((fixnv_right == 0) && (backupfixnv_right == 1)) {
+	} else if ((orginal_right == 0) && (backupfile_right == 1)) {
 		printf("backupfixnv is right, but fixnv is wrong, so erase and recovery fixnv\n");
 		nv_erase_partition(p_block_dev, PARTITION_FIX_NV1);
 		nv_write_partition(p_block_dev, PARTITION_FIX_NV1, (char *)RUNTIMENV_ADR, (FIXNV_SIZE + 4));
-	} else if ((fixnv_right == 0) && (backupfixnv_right == 0)) {
+	} else if ((orginal_right == 0) && (backupfile_right == 0)) {
 		printf("\n\nfixnv and backupfixnv are all wrong.\n\n");
 	}
 	///////////////////////////////////////////////////////////////////////
@@ -565,31 +624,74 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	printf("Reading fixnv to 0x%08x\n", FIXNV_ADR);
 	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 	/* fixnv */
-	if(nv_read_partition(p_block_dev, PARTITION_FIX_NV2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0) {
-		if (-1 == nv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
-			printf("nv is wrong, can not run here!\n");
-	} else
-		printf("nv is wrong, can not run here!\n");
+	if (nv_read_partition(p_block_dev, PARTITION_FIX_NV1, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0) {
+		if (-1 == fixnv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+			printf("nv is wrong, read backup nv\n");
+			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+			if (nv_read_partition(p_block_dev, PARTITION_FIX_NV2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0) {
+				if (-1 == fixnv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+					printf("nv and backup nv are all wrong!\n");
+				}
+			} else {
+				printf("read backup nv fail\n");
+				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+				printf("nv and backup nv are all wrong!\n");
+			}
+		}
+	} else {
+		printf("read nv fail, read backup nv\n");
+		if (nv_read_partition(p_block_dev, PARTITION_FIX_NV2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0) {
+			if (-1 == fixnv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
+				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+				printf("nv and backup nv are all wrong!\n");
+			}
+		} else {
+			printf("read backup nv fail\n");
+			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+			printf("nv and backup nv are all wrong!\n");
+		}
+	}
 	//array_value((unsigned char *)FIXNV_ADR, FIXNV_SIZE);
 
 	///////////////////////////////////////////////////////////////////////
 	/* PRODUCTINFO_PART */
+	orginal_right = 0;
+	memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE);
+	if(prodinfo_read_partition_flag(p_block_dev, PARTITION_PROD_INFO1, 0, (char *)PRODUCTINFO_ADR,
+		PRODUCTINFO_SIZE + 4) == 0){
+		orginal_right = 1;
+	}
+
+	backupfile_right = 0;
+	memset((unsigned char *)RUNTIMENV_ADR, 0xff, PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE);
+	if(prodinfo_read_partition_flag(p_block_dev, PARTITION_PROD_INFO2, 0, (char *)RUNTIMENV_ADR,
+		PRODUCTINFO_SIZE + 4) == 0){
+			backupfile_right = 1;
+	}
+
+	if ((orginal_right == 1) && (backupfile_right == 0)) {
+		printf("productinfo is right, but productinfobkup is wrong, so recovery productinfobkup\n");
+		nv_erase_partition(p_block_dev, PARTITION_PROD_INFO2);
+		nv_write_partition(p_block_dev, PARTITION_PROD_INFO2, (char *)PRODUCTINFO_ADR, (PRODUCTINFO_SIZE + 8));
+	} else if ((orginal_right == 0) && (backupfile_right == 1)) {
+		printf("productinfobkup is right, but productinfo is wrong, so recovery productinfo\n");
+		nv_erase_partition(p_block_dev, PARTITION_PROD_INFO1);
+		nv_write_partition(p_block_dev, PARTITION_PROD_INFO1, (char *)RUNTIMENV_ADR, (PRODUCTINFO_SIZE + 8));
+	} else if ((orginal_right == 0) && (backupfile_right == 0)) {
+		printf("\n\nproductinfo and productinfobkup are all wrong or no phasecheck.\n\n");
+	}
+
 	printf("Reading productinfo to 0x%08x\n", PRODUCTINFO_ADR);
 	memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE +  EMMC_SECTOR_SIZE);
-	if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, 0, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
-		if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE)) {
-			memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
-			if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO2, 0, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0){
-				if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE))
-					memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
-			} else
-				memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
-		}
+	if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, 0, (char *)PRODUCTINFO_ADR, 
+		PRODUCTINFO_SIZE + 4) == 0){
+		printf("productinfo is right\n");
 	} else {
 		memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
-		if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO1, 0, (char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE + 4) == 0) {
-			if (-1 == nv_is_correct((unsigned char *)PRODUCTINFO_ADR, PRODUCTINFO_SIZE))
-				memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
+		if(prodinfo_read_partition(p_block_dev, PARTITION_PROD_INFO2, 0, (char *)PRODUCTINFO_ADR, 
+			PRODUCTINFO_SIZE + 4) == 0) {
+			printf("productbackinfo is right\n");
 		} else
 			memset((unsigned char *)PRODUCTINFO_ADR, 0xff, PRODUCTINFO_SIZE + EMMC_SECTOR_SIZE);
 	}
@@ -597,15 +699,43 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	eng_phasechecktest((unsigned char *)PRODUCTINFO_ADR, SP09_MAX_PHASE_BUFF_SIZE);
 
 	/* RUNTIMEVN_PART */
+	orginal_right = 0;
+	memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
+	if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV1, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE) == 0) {
+		if (1 == runtimenv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+			orginal_right = 1;//right
+		}
+	}
+
+	backupfile_right = 0;
+	memset((unsigned char *)DSP_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
+	if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV2, (char *)DSP_ADR, RUNTIMENV_SIZE) == 0) {
+		if (1 == runtimenv_is_correct((unsigned char *)DSP_ADR, RUNTIMENV_SIZE)) {
+			backupfile_right = 1;//right
+		}
+	}
+
+	if ((orginal_right == 1) && (backupfile_right == 0)) {
+		printf("runtimenv is right, but runtimenvbkup is wrong, so recovery runtimenvbkup\n");
+		nv_erase_partition(p_block_dev, PARTITION_RUNTIME_NV2);
+		nv_write_partition(p_block_dev, PARTITION_RUNTIME_NV2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE);
+	} else if ((orginal_right == 0) && (backupfile_right == 1)) {
+		printf("productinfobkup is right, but productinfo is wrong, so recovery productinfo\n");
+		nv_erase_partition(p_block_dev, PARTITION_RUNTIME_NV1);
+		nv_write_partition(p_block_dev, PARTITION_RUNTIME_NV1, (char *)DSP_ADR, RUNTIMENV_SIZE);
+	} else if ((orginal_right == 0) && (backupfile_right == 0)) {
+		printf("\n\nruntimenv and runtimenvbkup are all wrong or no runtimenv.\n\n");
+	}
+
 	printf("Reading runtimenv to 0x%08x\n", RUNTIMENV_ADR);
 	/* runtimenv */
 	memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
-	if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV1, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0) {
-		if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+	if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV1, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE) == 0) {
+		if (-1 == runtimenv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 			/* file isn't right and read backup file */
 			memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
-			if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0) {
-				if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+			if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE) == 0) {
+				if (-1 == runtimenv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 					/* file isn't right */
 					memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
 				}
@@ -614,10 +744,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	} else {
 		/* file don't exist and read backup file */
 		memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + EMMC_SECTOR_SIZE);
-		if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE + 4) == 0){
-			if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+		if(nv_read_partition(p_block_dev, PARTITION_RUNTIME_NV2, (char *)RUNTIMENV_ADR, RUNTIMENV_SIZE) == 0){
+			if (-1 == runtimenv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 				/* file isn't right */
-				memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE + 4);
+				memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE);
 			}
 		}
 	}

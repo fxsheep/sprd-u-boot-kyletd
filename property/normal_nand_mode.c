@@ -182,12 +182,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	}
 	cmd_yaffs_umount(backupfixnvpoint);
 
-	printf("orginal_right = %d  backupfile_right = %d\n", orginal_right, backupfile_right);
 	if ((orginal_right == 1) && (backupfile_right == 1)) {
 		/* check index */
 		orginal_index = get_nv_index((unsigned char *)FIXNV_ADR, FIXNV_SIZE);
 		backupfile_index = get_nv_index((unsigned char *)RUNTIMENV_ADR, FIXNV_SIZE);
-		printf("1orginal_index = %d  backupfile_index = %d\n", orginal_index, backupfile_index);
 		if (orginal_index != backupfile_index) {
 			orginal_right = 1;
 			backupfile_right = 0;
@@ -373,7 +371,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			backupfile_right = 1;//right
 	}
 	cmd_yaffs_umount(runtimenvpoint);
-	printf("orginal_right = %d  backupfile_right = %d\n", orginal_right, backupfile_right);
+
 	if ((orginal_right == 1) && (backupfile_right == 0)) {
 		printf("runtimenv is right, but runtimenvbkup is wrong, so recovery runtimenvbkup\n");
 		cmd_yaffs_mount(runtimenvpoint);
@@ -403,7 +401,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			ret = cmd_yaffs_ls_chk(runtimenvfilename2);
 			if (ret == RUNTIMENV_SIZE) {
 				cmd_yaffs_mread_file(runtimenvfilename2, (unsigned char *)RUNTIMENV_ADR);
-				if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+				if (-1 == runtimenv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 					/* file isn't right */
 					memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE);
 				}
@@ -415,7 +413,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		ret = cmd_yaffs_ls_chk(runtimenvfilename2);
 		if (ret == RUNTIMENV_SIZE) {
 			cmd_yaffs_mread_file(runtimenvfilename2, (unsigned char *)RUNTIMENV_ADR);
-			if (-1 == nv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
+			if (-1 == runtimenv_is_correct((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE)) {
 				/* file isn't right */
 				memset((unsigned char *)RUNTIMENV_ADR, 0xff, RUNTIMENV_SIZE);
 			}

@@ -344,25 +344,6 @@ unsigned long get_nv_index(unsigned char *array, unsigned long size)
 	return index;
 }
 
-/*
-* retval : -1 is wrong  ;  1 is correct
-*/
-int nv_is_correct(unsigned char *array, unsigned long size)
-{
-	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a)) {
-		/* check nv right or wrong */
-		if (XCheckNVStruct(array, size) == 0) {
-			printf("NV data is crashed!!!.\n");
-			return -1;
-		} else {
-			printf("NV data is right!!!.\n");
-			array[size] = 0xff; array[size + 1] = 0xff;
-			array[size + 2] = 0xff; array[size + 3] = 0xff;
-			return 1;
-		}
-	} else
-		return -1;
-}
 /* check runtimenv */
 unsigned long check_npb(struct nv_dev dev, unsigned long size)
 {
@@ -545,6 +526,34 @@ unsigned long XCheckRunningNVStruct(unsigned char *lpPhoBuf, unsigned long dwPho
 	ret = check_items(&dev);
 
 	return ret;
+}
+
+void dump_all_buffer(unsigned char *buf, unsigned long len)
+{
+	unsigned long row, col;
+	unsigned long offset;
+	unsigned long total_row, remain_col;
+	unsigned long flag = 1;
+
+	total_row = len / 16;
+	remain_col = len - total_row * 16;
+    offset = 0;
+	for (row = 0; row < total_row; row ++) {
+		printf("%08xh: ", offset );
+		for (col = 0; col < 16; col ++)
+			printf("%02x ", buf[offset + col]);
+		printf("\n");
+        offset += 16;
+	}
+
+	if (remain_col > 0) {
+		printf("%08xh: ", offset);
+		for (col = 0; col < remain_col; col ++)
+			printf("%02x ", buf[offset + col]);
+		printf("\n");
+	}
+
+	printf("\n");
 }
 
 

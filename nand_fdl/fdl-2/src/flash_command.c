@@ -107,9 +107,9 @@ static unsigned long code_yaffs_onewrite = 0;
 static unsigned char *g_BigBUF = NULL;
 #endif
 
-int orginal_right, backupfile_right;
-unsigned long orginal_index, backupfile_index;
-unsigned char *orginal, *backupfile;
+static int orginal_right, backupfile_right;
+static unsigned long orginal_index, backupfile_index;
+static unsigned char *orginal, *backupfile;
 
 typedef struct _CUSTOM2LOG
 {
@@ -284,7 +284,7 @@ void phy_partition_info(struct real_mtd_partition phy, int line)
 	return;
 }
 
-unsigned short calc_checksum(unsigned char *dat, unsigned long len)
+static unsigned short calc_checksum(unsigned char *dat, unsigned long len)
 {
 	unsigned long checksum = 0;
 	unsigned short *pstart, *pend;
@@ -444,7 +444,7 @@ int nv_is_correct_endflag(unsigned char *array, unsigned long size)
 	}
 }
 
-unsigned long get_nv_index(unsigned char *array, unsigned long size)
+static unsigned long get_nv_index(unsigned char *array, unsigned long size)
 {
 	unsigned long index = 0;
 	unsigned short sum = 0, *dataaddr;
@@ -464,7 +464,7 @@ unsigned long get_nv_index(unsigned char *array, unsigned long size)
 /*
 * retval : -1 is wrong  ;  1 is correct
 */
-int nv_is_correct(unsigned char *array, unsigned long size)
+static int nv_is_correct(unsigned char *array, unsigned long size)
 {
 	unsigned short sum = 0, *dataaddr;
 
@@ -538,7 +538,6 @@ unsigned long get_productinfo_index(unsigned char *array)
 
 	dataaddr = (unsigned short *)(array + PRODUCTINFO_SIZE + 2);
 	index = (unsigned long)(*dataaddr);
-	printf("index = %d\n", index);
 
 	return index;
 }
@@ -550,7 +549,6 @@ int sn_is_correct_endflag(unsigned char *array, unsigned long size)
 	if (size == PRODUCTINFO_SIZE) {
 		sum = calc_checksum(array, size);
 		dataaddr = (unsigned short *)(array + size);
-		printf("sum = 0x%04x data = 0x%04x\n", sum, *dataaddr);
 		if (*dataaddr == sum)
 			return 1;
 	}
@@ -600,12 +598,10 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 			}
 			cmd_yaffs_umount(backupfixnvpoint);
 
-			//printf("read_nv_flag = %d  read_bkupnv_flag = %d\n", read_nv_flag, read_bkupnv_flag);
 			if ((read_nv_flag == 2) && (read_bkupnv_flag == 2)) {
 				/* check index */
 				orginal_index = get_nv_index((unsigned char *)g_fixnv_buf_yaffs, FIXNV_SIZE);
 				backupfile_index = get_nv_index((unsigned char *)g_fixnv_buf, FIXNV_SIZE);
-				printf("1orginal_index = %d  backupfile_index = %d\n", orginal_index, backupfile_index);
 				if (orginal_index != backupfile_index) {
 					read_nv_flag = 2;
 					read_bkupnv_flag = 1;
@@ -698,7 +694,6 @@ int nand_read_fdl_yaffs(struct real_mtd_partition *phypart, unsigned int off, un
 				}
 
 				cmd_yaffs_umount(productinfopoint);
-				printf("orginal_right = %d backupfile_right = %d\n", orginal_right, backupfile_right);
 				if ((orginal_right == 1) && (backupfile_right == 1)) {
 					/* check index */
 					orginal_index = get_productinfo_index((unsigned char *)orginal);
@@ -1529,7 +1524,7 @@ int FDL2_DramMidst (unsigned char *pbuf, unsigned long size)
     }
 
    // size = packet->packet_body.size;
-	printf("size = %d  recv_size = %d   total_size = %d\n", size, g_status.recv_size, g_status.total_size);
+	//printf("size = %d  recv_size = %d   total_size = %d\n", size, g_status.recv_size, g_status.total_size);
     if ( (g_status.recv_size + size) > g_status.total_size)
     {
         g_prevstatus = NAND_INVALID_SIZE;

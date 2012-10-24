@@ -47,6 +47,8 @@ static int is_ProdInfo_flag = 0;
 static unsigned long is_factorydownload_flag = 0;
 static int read_prod_info_flag = 0;
 
+static unsigned long orginal_index, backupfile_index;
+
 static unsigned long has_sd = 0;
 static unsigned long point_sd = 0xffff;
 static unsigned long done_format_sd = 0;
@@ -129,6 +131,127 @@ unsigned long addr2part(unsigned long custom)
 extern PARTITION_CFG g_sprd_emmc_partition_cfg[];
 PARTITION_CFG uefi_part_info[MAX_PARTITION_INFO];
 static int uefi_part_info_ok_flag = 0;
+
+static unsigned short calc_checksum(unsigned char *dat, unsigned long len)
+{
+	unsigned long checksum = 0;
+	unsigned short *pstart, *pend;
+	if (0 == (unsigned long)dat % 2)  {
+		pstart = (unsigned short *)dat;
+		pend = pstart + len / 2;
+		while (pstart < pend) {
+			checksum += *pstart;
+			pstart ++;
+		}
+		if (len % 2)
+			checksum += *(unsigned char *)pstart;
+		} else {
+		pstart = (unsigned char *)dat;
+		while (len > 1) {
+			checksum += ((*pstart) | ((*(pstart + 1)) << 8));
+			len -= 2;
+			pstart += 2;
+		}
+		if (len)
+			checksum += *pstart;
+	}
+	checksum = (checksum >> 16) + (checksum & 0xffff);
+	checksum += (checksum >> 16);
+	return (~checksum);
+}
+
+#define NV_MULTI_LANG_ID   (405)
+#define GSM_CALI_ITEM_ID   (0x2)
+#define GSM_IMEI_ITEM_ID   (0x5)
+#define XTD_CALI_ITEM_ID   (0x516)
+#define LTE_CALI_ITEM_ID   (0x9C4)
+#define BT_ITEM_ID         (0x191)
+
+#define BT_ADDR_LEN  6
+
+#define IMEI_LEN			(8)
+#define GSM_CALI_VER_A      0xFF0A
+#define GSM_CALI_VER_MIN    GSM_CALI_VER_A
+#define GSM_CALI_VER_MAX    GSM_CALI_VER_A
+
+#define NUM_TEMP_BANDS		(5)
+#define NUM_RAMP_RANGES		(16)		/* constant parameter numbers, 16 level */
+#define NUM_TX_LEVEL		(16)		/* 2db per step */
+#define NUM_RAMP_POINTS		(20)
+#define NUM_GSM_ARFCN_BANDS	(6)
+#define NUM_DCS_ARFCN_BANDS	(8)
+#define NUM_PCS_ARFCN_BANDS	(7)
+#define NUM_GSM850_ARFCN_BANDS	(6)
+#define MAX_COMPENSATE_POINT	(75)
+
+static unsigned long XCheckNVStruct(unsigned char *lpPhoBuf, unsigned long dwPhoSize)
+{
+	unsigned long dwOffset = 0, dwLength = 0, bRet;
+	unsigned char *lpCode = lpPhoBuf;
+	unsigned long dwCodeSize = dwPhoSize;
+	unsigned short wCurID;
+
+	dwOffset = 4;     /* Skip first four bytes,that is time stamp */
+    dwLength = 0;
+    unsigned char *pTemp = lpCode + dwOffset;
+
+	unsigned long bIMEI = 0;
+	unsigned long bGSMCali = 0;
+	unsigned short wGSMCaliVer = 0;
+    while (dwOffset < dwCodeSize) {
+	    wCurID = *(unsigned short *)pTemp;
+        pTemp += 2;
+
+        dwLength = *(unsigned short *)pTemp;
+		/* printf("wCurID = 0x%08x  dwLength = 0x%08x\n", wCurID, dwLength); */
+		if (wCurID == GSM_IMEI_ITEM_ID) {
+			if (dwLength != IMEI_LEN) {
+				return 0;
+			} else {
+				bIMEI = 1;
+			}
+		} else if (wCurID == GSM_CALI_ITEM_ID) {
+			wGSMCaliVer =  *(unsigned short *)(pTemp + 2); /* pTemp + 2: skip length */
+            /* printf("wGSMCaliVer = 0x%08x\n", wGSMCaliVer); */
+			if ((wGSMCaliVer > GSM_CALI_VER_MAX) || (wGSMCaliVer < GSM_CALI_VER_MIN)) {
+				return 0;
+			} else {
+				bGSMCali = 1;
+			}
+		}
+
+		/* 0xFFFF is end-flag in module (NV in phone device) */
+		if (wCurID == 0xFFFF) {
+			if (!bIMEI || !bGSMCali) {
+				return 0;
+			}
+			return 1;
+		}
+
+		if (wCurID == 0 || dwLength == 0) {
+			break;
+		}
+
+        pTemp += 2;
+        dwOffset += 4;
+        /* Must be four byte aligned */
+        bRet = dwLength % 4;
+        if (bRet != 0)
+                dwLength += 4 - bRet;
+        dwOffset += dwLength;
+        pTemp += dwLength;
+        /* (dwOffset == dwCodeSize) is end condition in File */
+		if (dwOffset == dwCodeSize) {
+			if(!bIMEI || !bGSMCali) {
+				return 0;
+			}
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 int uefi_get_part_info(unsigned long part_total)
 {
 	block_dev_desc_t *dev_desc = NULL;
@@ -361,12 +484,108 @@ int emmc_erase_allflash(void)
 
 int eMMC_nv_is_correct(unsigned char *array, unsigned long size)
 {
-	if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) && (array[size + 3] == 0x5a)) {
-		array[size] = 0xff; array[size + 1] = 0xff;
-		array[size + 2] = 0xff; array[size + 3] = 0xff;	
-		return 1;
-	} else
-		return -1;
+	unsigned short sum = 0, *dataaddr;
+
+	if ((array[size - 4] == 0xff) && (array[size - 3] == 0xff) && (array[size - 2] == 0xff) \
+		&& (array[size - 1] == 0xff)) {
+		/* old version */
+		if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) \
+			&& (array[size + 3] == 0x5a)) {
+			/* check nv right or wrong */
+			if (XCheckNVStruct(array, size) == 0) {
+				printf("NV data is crashed!!!.\n");
+				return -1;
+			} else {
+				printf("NV data is right!!!.\n");
+				return 1;
+			}
+		} else
+			return -1;
+	} else {
+		/* new version */
+		sum = calc_checksum(array, size - 4);
+		dataaddr = (unsigned short *)(array + size - 4);
+
+		if (*dataaddr == sum) {
+			/* check nv right or wrong */
+			if (XCheckNVStruct(array, size) == 0) {
+				printf("NV data is crashed!!!.\n");
+				return -1;
+			} else {
+				printf("NV data is right!!!.\n");
+				return 1;
+			}
+		} else {
+			printf("NV data crc error\n");
+			return -1;
+		}
+	}
+}
+
+static unsigned long get_nv_index(unsigned char *array, unsigned long size)
+{
+	unsigned long index = 0;
+	unsigned short sum = 0, *dataaddr;
+
+	if ((array[size - 4] == 0xff) && (array[size - 3] == 0xff) && (array[size - 2] == 0xff) \
+		&& (array[size - 1] == 0xff)) {
+		/* old version */
+		index = 1;
+	} else {
+		/* new version */
+		dataaddr = (unsigned short *)(array + size - 2);
+		index = (unsigned long)(*dataaddr);
+	}
+	return index;
+}
+
+/*
+* retval : -1 is wrong  ;  1 is correct
+*/
+static int nv_is_correct(unsigned char *array, unsigned long size)
+{
+	unsigned short sum = 0, *dataaddr;
+
+	if ((array[size - 4] == 0xff) && (array[size - 3] == 0xff) && (array[size - 2] == 0xff) \
+		&& (array[size - 1] == 0xff)) {
+		/* old version */
+		if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) \
+			&& (array[size + 3] == 0x5a)) {
+			/* check nv right or wrong */
+			if (XCheckNVStruct(array, size) == 0) {
+				printf("NV data is crashed!!!.\n");
+				return -1;
+			} else {
+				printf("NV data is right!!!.\n");
+				array[size] = 0xff; array[size + 1] = 0xff;
+				array[size + 2] = 0xff; array[size + 3] = 0xff;
+				return 1;
+			}
+		} else
+			return -1;
+	} else {
+		/* new version */
+		sum = calc_checksum(array, size - 4);
+		dataaddr = (unsigned short *)(array + size - 4);
+
+		if (*dataaddr == sum) {
+			/* check nv right or wrong */
+			if (XCheckNVStruct(array, size) == 0) {
+				printf("NV data is crashed!!!.\n");
+				return -1;
+			} else {
+				printf("NV data is right!!!.\n");
+				array[size + 0] = 0xff; array[size + 1] = 0xff;
+				array[size + 2] = 0xff; array[size + 3] = 0xff;
+				array[size - 4] = 0xff; array[size - 3] = 0xff;
+				array[size - 2] = 0xff; array[size - 1] = 0xff;
+				return 1;
+			}
+		} else {
+			printf("NV data crc error\n");
+			return -1;
+		}
+	}
 }
 
 int movebuf2buf(unsigned char *dst, unsigned char *src, int len)
@@ -394,18 +613,13 @@ int eMMC_prodinfo_is_correct(unsigned char *array, unsigned long size)
 		&& (array[PRODUCTINFO_SIZE + 6] == ((crc & (0xff << 8)) >> 8)) \
 		&& (array[PRODUCTINFO_SIZE + 5] == ((crc & (0xff << 16)) >> 16)) \
 		&& (array[PRODUCTINFO_SIZE + 4] == ((crc & (0xff << 24)) >> 24))) {
-		
-		if ((array[size] == 0x5a) && (array[size + 1] == 0x5a) && (array[size + 2] == 0x5a) \
-			&& (array[size + 3] == 0x5a)) {
-			array[size] = 0xff; array[size + 1] = 0xff;
-			array[size + 2] = 0xff; array[size + 3] = 0xff;
-			array[size + 4] = 0xff; array[size + 5] = 0xff;
-			array[size + 6] = 0xff; array[size + 7] = 0xff;	
-			return 1;
-		} else
-			return -1;
+		array[size] = 0xff; array[size + 1] = 0xff;
+		array[size + 2] = 0xff; array[size + 3] = 0xff;
+		array[size + 4] = 0xff; array[size + 5] = 0xff;
+		array[size + 6] = 0xff; array[size + 7] = 0xff;
+		return 1;
 	} else
-		return -1;
+		return 0;
 }
 
 #define MAGIC_DATA	0xAA55A5A5
@@ -1008,6 +1222,8 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 #endif
 {
 	unsigned long  fix_nv_checksum, nSectorCount, nSectorBase, crc;
+	unsigned short sum = 0, *dataaddr;
+
 #ifdef FPGA_TRACE_DOWNLOAD
 	printf("pkt_state:0x%x, data_size:0x%x, ack_flag=0x%x,packet_body.type:0x%x, packet_body.size:0x%x,packet_body.content[0]:%02x,[1]:%02x,[2]:%02x,[3]:%02x\r\n",
 		packet->pkt_state, packet->data_size, packet->ack_flag,
@@ -1026,15 +1242,23 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 			return 0;
 	        }
 
-		g_eMMCBuf[FIXNV_SIZE + 0] = g_eMMCBuf[FIXNV_SIZE + 1] = 0x5a;
-		g_eMMCBuf[FIXNV_SIZE + 2] = g_eMMCBuf[FIXNV_SIZE + 3] = 0x5a;
-
 		if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
 			nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
 		else
 			nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+
 		memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
-		memcpy(g_fix_nv_buf, g_eMMCBuf, FIXNV_SIZE + EFI_SECTOR_SIZE);
+		memcpy(g_fix_nv_buf, g_eMMCBuf, FIXNV_SIZE);
+
+		g_fix_nv_buf[FIXNV_SIZE + 0] = g_fix_nv_buf[FIXNV_SIZE + 1] = 0x5a;
+		g_fix_nv_buf[FIXNV_SIZE + 2] = g_fix_nv_buf[FIXNV_SIZE + 3] = 0x5a;
+
+		sum = calc_checksum(g_fix_nv_buf, FIXNV_SIZE - 4);
+		dataaddr = (unsigned short *)(g_fix_nv_buf + FIXNV_SIZE - 4);
+		*dataaddr = sum;
+		dataaddr = (unsigned short *)(g_fix_nv_buf + FIXNV_SIZE - 2);
+		*dataaddr = 0;
+
 		emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition);
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector,
 			nSectorCount, (unsigned char *)g_fix_nv_buf)) {
@@ -1042,8 +1266,9 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);
 			return 0;
 		}
+
 		memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
-		memcpy(g_fixbucknv_buf, g_fix_nv_buf, FIXNV_SIZE + EFI_SECTOR_SIZE);
+		memcpy(g_fixbucknv_buf, g_fix_nv_buf, FIXNV_SIZE + 4);
 		nSectorBase = efi_GetPartBaseSec(PARTITION_FIX_NV2);
 		emmc_real_erase_partition(PARTITION_FIX_NV2);		
 		if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, nSectorBase, nSectorCount, 
@@ -1054,6 +1279,7 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 		}
 	} else if (is_ProdInfo_flag) {
 		is_factorydownload_flag = 1;
+		/* 5a is defined by raw data */
 		g_eMMCBuf[PRODUCTINFO_SIZE + 0] = g_eMMCBuf[PRODUCTINFO_SIZE + 1] = 0x5a;
 		g_eMMCBuf[PRODUCTINFO_SIZE + 2] = g_eMMCBuf[PRODUCTINFO_SIZE + 3] = 0x5a;
 
@@ -1093,8 +1319,6 @@ int FDL2_eMMC_DataEnd (PACKET_T *packet, void *arg)
 	g_status.total_size  = 0;	
     	return 1;
 }
-
-
 
 int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 {
@@ -1184,7 +1408,8 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 	  }
 
 	if (is_nv_flag) {
-		if (read_nv_flag == 0) {
+		if ((read_nv_flag == 0) && (read_bkupnv_flag == 0)) {
+			read_nv_flag = 1;//wrong
 			memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
 			if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
 			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
@@ -1195,13 +1420,10 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 			if (!Emmc_Read(g_dl_eMMCStatus.curEMMCArea, g_dl_eMMCStatus.base_sector + nSectorOffset,  					nSectorCount, (unsigned char *)g_fix_nv_buf)) {
 				memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
 			}
-			read_nv_flag = 1;
-			read_nv_check = 0;
-			if (eMMC_nv_is_correct(g_fix_nv_buf, FIXNV_SIZE))
-				read_nv_check = FIX_NV_IS_OK;				
-		}
+			if (eMMC_nv_is_correct(g_fix_nv_buf, FIXNV_SIZE) == 1)
+				read_nv_flag = 2;//right				
 
-		if (read_bkupnv_flag == 0) {
+			read_bkupnv_flag = 1;//wrong
 			memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
 			if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
 			 	nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
@@ -1212,16 +1434,61 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 			if (!Emmc_Read(g_dl_eMMCStatus.curEMMCArea, base_sector + nSectorOffset,  					nSectorCount, (unsigned char *)g_fixbucknv_buf)) {
 				memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + EFI_SECTOR_SIZE);
 			}
-			read_bkupnv_flag = 1;
-			if (eMMC_nv_is_correct(g_fixbucknv_buf, FIXNV_SIZE))
-				read_nv_check = FIX_BACKUP_NV_IS_OK;				
-		}
+			if (eMMC_nv_is_correct(g_fixbucknv_buf, FIXNV_SIZE) == 1)
+				read_bkupnv_flag = 2;//right
+
+			if ((read_nv_flag == 2) && (read_bkupnv_flag == 2)) {
+				/* check index */
+				orginal_index = get_nv_index((unsigned char *)g_fix_nv_buf, FIXNV_SIZE);
+				backupfile_index = get_nv_index((unsigned char *)g_fixbucknv_buf, FIXNV_SIZE);
+				if (orginal_index != backupfile_index) {
+					read_nv_flag = 2;
+					read_bkupnv_flag = 1;
+				}
+			}
+
+			if ((read_nv_flag == 2) && (read_bkupnv_flag == 1)) {
+				printf("fixnv is right, but backupfixnv is wrong, so erase and recovery backupfixnv\n");
+				base_sector = efi_GetPartBaseSec(PARTITION_FIX_NV2);
+				if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
+			 		nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
+				else
+			 		nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+				emmc_real_erase_partition(PARTITION_FIX_NV2);
+				if (!Emmc_Write(PARTITION_USER, base_sector, nSectorCount, (unsigned char *)g_fix_nv_buf)) {
+					//The fixnv checksum is error.
+					SEND_ERROR_RSP (BSL_WRITE_ERROR);
+					return 0;
+				}
+				printf("write backupfixnv end\n");
+			} else if ((read_nv_flag == 1) && (read_bkupnv_flag == 2)) {
+				printf("backupfixnv is right, but fixnv is wrong, so erase and recovery fixnv\n");
+				base_sector = efi_GetPartBaseSec(PARTITION_FIX_NV1);
+				if (0 == ((FIXNV_SIZE + 4) % EFI_SECTOR_SIZE))
+			 		nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE;
+				else
+			 		nSectorCount = (FIXNV_SIZE + 4) / EFI_SECTOR_SIZE + 1;
+				emmc_real_erase_partition(PARTITION_FIX_NV1);
+				if (!Emmc_Write(PARTITION_USER, base_sector, nSectorCount, (unsigned char *)g_fixbucknv_buf)) {
+					//The fixnv checksum is error.
+					SEND_ERROR_RSP (BSL_WRITE_ERROR);
+					return 0;
+				}
+				printf("write fixnv end\n");
+				memcpy((unsigned char *)g_fix_nv_buf, (unsigned char *)g_fixbucknv_buf, (FIXNV_SIZE + 4));
+			} else if ((read_nv_flag == 1) && (read_bkupnv_flag == 1)) {
+				printf("\n\nfixnv and backupfixnv are all wrong.\n\n");
+				memset(g_fix_nv_buf, 0xff, FIXNV_SIZE + 4);
+			} else if ((read_nv_flag == 2) && (read_bkupnv_flag == 2))
+				printf("fixnv and backupfixnv are all right.\n");
+
+			nv_is_correct(g_fix_nv_buf, FIXNV_SIZE);
+			memset(g_fixbucknv_buf, 0xff, FIXNV_SIZE + 4);
+		} //if ((read_nv_flag == 0) && (read_bkupnv_flag == 0))
 
 		ret = EMMC_SUCCESS;
-		if (read_nv_check == FIX_NV_IS_OK)
+		if ((read_nv_flag == 2) || (read_bkupnv_flag == 2))
 			memcpy(packet->packet_body.content, (unsigned char *)(g_fix_nv_buf + off), size);
-		else if (read_nv_check == FIX_BACKUP_NV_IS_OK)
-			memcpy(packet->packet_body.content, (unsigned char *)(g_fixbucknv_buf + off), size);
 		else {
 			SEND_ERROR_RSP(BSL_EEROR_CHECKSUM);				
 			return 0;
@@ -1244,7 +1511,8 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 				read_prod_info_flag = 0;
 			} else
 				read_prod_info_flag = 1;
-			
+
+			read_prod_info_flag = 0;
 			if (!read_prod_info_flag) {
 				memset(g_prod_info_buf, 0xff, PRODUCTINFO_SIZE + EFI_SECTOR_SIZE);
 				base_sector = efi_GetPartBaseSec(PARTITION_PROD_INFO2);
@@ -1263,7 +1531,8 @@ int FDL2_eMMC_Read(PACKET_T *packet, void *arg)
 		if (read_prod_info_flag) {
 			memcpy(packet->packet_body.content, (unsigned char *)(g_prod_info_buf + off), size);
 			ret = EMMC_SUCCESS;
-		}
+		} else
+			ret = EMMC_SYSTEM_ERROR;
 	} else {
 		if (0 == (size % EFI_SECTOR_SIZE))
 			 nSectorCount = size / EFI_SECTOR_SIZE;
