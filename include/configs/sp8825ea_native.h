@@ -171,10 +171,10 @@
 #define CONFIG_CONS_INDEX	1	/* use UART0 for console */
 #define CONFIG_BAUDRATE		115200	/* Default baud rate */
 #define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
-/*
+
 #define CONFIG_SC8825_SPI
 #define CONFIG_SC8825_I2C
-*/
+
 /*
  * Flash & Environment
  */
@@ -301,11 +301,11 @@
 */
 #define CONFIG_LCD
 #ifdef  CONFIG_LCD
-//#define CONFIG_SPLASH_SCREEN
+#define CONFIG_SPLASH_SCREEN
 #define LCD_BPP LCD_COLOR16
 //#define CONFIG_LCD_HVGA   1
-#define CONFIG_LCD_WVGA   1
-//#define CONFIG_LCD_QHD 1
+//#define CONFIG_LCD_WVGA   1
+#define CONFIG_LCD_QHD 1
 //#define CONFIG_LCD_INFO
 //#define LCD_TEST_PATTERN
 //#define CONFIG_LCD_LOGO

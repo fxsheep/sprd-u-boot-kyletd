@@ -29,7 +29,35 @@ static struct panel_cfg lcd_panel[] = {
 		.panel = &lcd_panel_hx8357,
 		},
 };
-#elif defined CONFIG_LCD_QVGA
+
+#elif defined CONFIG_SC8825EA
+extern struct panel_spec lcd_nt35516_mipi_spec;
+static struct panel_cfg lcd_panel[] = {
+    [0]={
+        .lcd_id = 0x16,
+        .panel = &lcd_nt35516_mipi_spec ,
+        },
+};
+
+#elif defined CONFIG_SC8825EB
+extern struct panel_spec lcd_nt35516_mcu_spec;
+static struct panel_cfg lcd_panel[] = {
+    [0]={
+        .lcd_id = 0x16,
+        .panel = &lcd_nt35516_mcu_spec ,
+        },
+};
+
+#elif defined CONFIG_LCD_788
+extern struct panel_spec lcd_panel_hx8357;
+static struct panel_cfg lcd_panel[] = {
+    [0]={
+        .lcd_id = 0x57,
+        .panel = &lcd_panel_hx8357,
+        },
+};
+#else
+#ifdef CONFIG_LCD_QVGA
 /*
 extern struct panel_spec lcd_panel_ili9341s;
 static struct panel_cfg lcd_panel[] = {
@@ -44,34 +72,6 @@ static struct panel_cfg lcd_panel[] = {
     [0]={
         .lcd_id = 0x139,
         .panel = &lcd_s6d0139_spec ,
-        },
-};
-/*
-#elif defined CONFIG_TIGER
-extern struct panel_spec lcd_nt35516_mipi_spec;
-static struct panel_cfg lcd_panel[] = {
-    [0]={
-        .lcd_id = 0x16,
-        .panel = &lcd_nt35516_mipi_spec ,
-        },
-};
-
-#elif defined CONFIG_LCD_QHD
-extern struct panel_spec lcd_nt35516_rgb_spi_spec;
-static struct panel_cfg lcd_panel[] = {
-    [0]={
-        .lcd_id = 0x16,
-        .panel = &lcd_nt35516_rgb_spi_spec ,
-        },
-};
-*/
-#else
-#ifdef CONFIG_LCD_788
-extern struct panel_spec lcd_panel_hx8357;
-static struct panel_cfg lcd_panel[] = {
-    [0]={
-        .lcd_id = 0x57,
-        .panel = &lcd_panel_hx8357,
         },
 };
 #else
