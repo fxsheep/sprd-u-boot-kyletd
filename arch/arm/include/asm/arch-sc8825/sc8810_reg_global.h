@@ -46,6 +46,7 @@ extern   "C"
 #define GR_ARM_BOOT_ADDR                (GREG_BASE + 0x0030)
 #define GR_STC_STATE                    (GREG_BASE + 0x0034)
 //reserved
+#define GR_DPLL_MN			(GREG_BASE + 0x0040)
 #define GR_BUSCLK                       (GREG_BASE + 0x0044)    ////GR_BUSCLK_ALM
 #define GR_ARCH_CTL                     (GREG_BASE + 0x0048)
 #define GR_SOFT_RST                     (GREG_BASE + 0x004C)

@@ -18,10 +18,10 @@
 #include <asm/arch/bits.h>
 #include <asm/arch/regs_global.h>
 
-#define SPRD_ADI_BASE	0x82000000
-#define SPRD_ADI_PHYS    0x82000000
+#define SPRD_ADI_BASE	0x42000000
+#define SPRD_ADI_PHYS    0x42000000
 
-#define  ADI_BASE            0x82000000
+#define  ADI_BASE            0x42000000
 
 #define  ADI_BASE_ADDR          ADI_BASE
 #define  ADI_CLK_DIV            (ADI_BASE + 0x0 )

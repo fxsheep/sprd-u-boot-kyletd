@@ -345,11 +345,11 @@ typedef enum
 }SDIO_CARD_PAL_PWR_E;
 
 
-#if defined (CONFIG_TIGER)
+#if defined (CONFIG_SC8825)
 LDO_CTL_T ldo_ctl_data_sdio3 =
     {
-        LDO_LDO_SDIO3,  ANA_LDO_PD_CTL1, BIT_4,  BIT_5,  ANA_LDO_VCTL4,  BIT_4,BIT_5,
-        ANA_LDO_VCTL4,  BIT_6, BIT_7, NULL,   LDO_VOLT_LEVEL_FAULT_MAX,     NULL
+        LDO_LDO_SDIO3,  ANA_LDO_PD_CTL1, BIT_4,  BIT_5,  ANA_LDO_VCTL4,  BIT_4, BIT_5,
+        ANA_LDO_VCTL4,  BIT_7, BIT_6, NULL,   LDO_VOLT_LEVEL_FAULT_MAX,     NULL
     };
 LDO_CTL_T ldo_ctl_data_vdd30 =
     {

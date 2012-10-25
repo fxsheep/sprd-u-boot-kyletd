@@ -60,7 +60,7 @@
 
 #define CONFIG_RAM512M
 
-//#define CONFIG_EMMC_BOOT
+#define CONFIG_EMMC_BOOT
 
 #ifdef  CONFIG_EMMC_BOOT
 #define	CONFIG_MMC

@@ -71,8 +71,8 @@ extern   "C"
 #define    RFT_WR_PRI           12
 #define    PD_WR_PRI            14
 
-#define ANA_REG_ADDR_START      0x82000040
-#define ANA_REG_ADDR_END        0x82000780
+#define ANA_REG_ADDR_START      0x42000040
+#define ANA_REG_ADDR_END        0x42000780
 
 /**----------------------------------------------------------------------------*
 **                             Data Prototype                                 **

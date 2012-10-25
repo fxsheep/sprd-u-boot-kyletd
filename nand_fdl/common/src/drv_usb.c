@@ -78,7 +78,7 @@ void EPI0_config (uint32 transfer_size, uint32 packet_count, BOOLEAN is_dma, uin
 
     if (is_dma)
     {
-#ifdef CONFIG_SC8810
+#if defined CONFIG_SC8810 || defined CONFIG_SC8825
 	Dcache_CleanRegion((unsigned int)(buffer), transfer_size);
 #endif
 	* (volatile uint32 *) USB_DIEPDMA (0) = (uint32) buffer;//lint !e718
@@ -169,7 +169,7 @@ LOCAL void usb_start_transfer (USB_EP_NUM_E ep_num, BOOLEAN dir, uint32 transfer
 
         if (is_dma)
         {                
-#ifdef CONFIG_SC8810
+#if defined CONFIG_SC8810 || defined CONFIG_SC8825
 		Dcache_CleanRegion((unsigned int)buffer,  transfer_size);
 #endif
 		* (volatile uint32 *) USB_DIEPDMA (ep_num) = (uint32) buffer;

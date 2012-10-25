@@ -44,6 +44,7 @@ extern   "C"
 #define AHB_CTL4                (AHB_REG_BASE + 0x2C)
 #define AHB_ENDIAN_SEL          (AHB_REG_BASE + 0x30)
 #define AHB_STS                 (AHB_REG_BASE + 0x34)
+#define AHB_CA5_CFG             (AHB_REG_BASE + 0x38)
 #define DSP_BOOT_EN             (AHB_REG_BASE + 0x84)
 #define DSP_BOOT_VEC            (AHB_REG_BASE + 0x88)
 #define DSP_RST                 (AHB_REG_BASE + 0x8C)

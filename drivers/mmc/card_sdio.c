@@ -1575,12 +1575,13 @@ PUBLIC BOOLEAN CARD_SDIO_InitCard(CARD_SDIO_HANDLE cardHandle, CARD_SPEED_MODE s
 	{
 		return FALSE;
 	}*/
+#ifndef CONFIG_SC8825
         MMC_SWITCH(cardHandle, EXT_CSD_HS_TIMING_INDEX, 1);
          if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
 	{
 		return FALSE;
 	}
-     
+#endif     
 	SDIO_Card_Pal_SetClk(cardHandle->sdioPalHd,SDIO_CARD_PAL_25MHz);
 	__udelay (100*1000);
 #if defined CONFIG_SC8825

@@ -120,7 +120,11 @@ int main(void)
 			extern int mmc_legacy_init(int dev);
 			mmc_legacy_init(1);
 			if (!FDL_Check_Partition_Table()) {
+				#ifdef CONFIG_SC8825 // JUST FOR TEST , DELETE IT LATER
+				write_uefi_parition_table(g_sprd_emmc_partition_cfg);
+				#else				
 				FDL_SendAckPacket (convert_err (NAND_INCOMPATIBLE_PART));
+				#endif
 			}
 			err = EMMC_SUCCESS;
 		}		

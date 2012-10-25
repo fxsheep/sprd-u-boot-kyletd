@@ -444,8 +444,8 @@ static struct ldo_ctl_info ldo_ctl_data[] =
 		.b0 = BIT_4,
 		.b0_rst = BIT_5,
 		.level_reg_b1 = ANA_LDO_VCTL4,
-		.b1 = BIT_6,
-		.b1_rst = BIT_7,
+		.b1_rst = BIT_6,
+		.b1 = BIT_7,
 		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
 	},
 	{

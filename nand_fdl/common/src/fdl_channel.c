@@ -22,9 +22,6 @@ PUBLIC struct FDL_ChannelHandler *FDL_ChannelGet()
     char ch;
 
     struct FDL_ChannelHandler *channel;
-#ifdef CONFIG_TIGER
-    channel = &gUart0Channel;
-#else
     bootMode = FDL_GetBootMode();
 
     switch (bootMode)
@@ -42,6 +39,5 @@ PUBLIC struct FDL_ChannelHandler *FDL_ChannelGet()
             channel = &gUSBChannel;
             break;
     }
-#endif
     return channel;
 }

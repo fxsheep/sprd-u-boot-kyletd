@@ -512,7 +512,23 @@ PUBLIC BOOLEAN SDIO_Card_Pal_SetClk (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_C
                 SDHOST_SD_Clk_Freq_Set (handle->sdio_port,400000);
             }
             break;
-
+#ifdef CONFIG_SC8825
+		case SDIO_CARD_PAL_1MHz:
+                SDHOST_SD_Clk_Freq_Set (handle->sdio_port,1000000);
+				break;
+		case SDIO_CARD_PAL_2MHz:
+                SDHOST_SD_Clk_Freq_Set (handle->sdio_port,2000000);
+				break;
+		case SDIO_CARD_PAL_4MHz:
+                SDHOST_SD_Clk_Freq_Set (handle->sdio_port,4000000);
+				break;
+		case SDIO_CARD_PAL_8MHz:
+                SDHOST_SD_Clk_Freq_Set (handle->sdio_port,8000000);
+				break;
+		case SDIO_CARD_PAL_12MHz:
+                SDHOST_SD_Clk_Freq_Set (handle->sdio_port,12000000);
+				break;
+#endif				
         case SDIO_CARD_PAL_20MHz:
             {
                 SDHOST_SD_Clk_Freq_Set (handle->sdio_port,20000000);

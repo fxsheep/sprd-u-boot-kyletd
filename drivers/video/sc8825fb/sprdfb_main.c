@@ -93,6 +93,15 @@ void LCD_SetBackLightBrightness( unsigned long  value)
 
 void set_backlight(uint32_t value)
 {
+#if defined (CONFIG_SP8825) || defined (CONFIG_SP8825EA) || defined (CONFIG_SP8825EB)
+ 	__raw_writel(0x101, 0x4C000138);
+	__raw_bits_or((1<<5), 0x4B000008);
+	__raw_bits_or((1<<8), 0x4A000384);
+	__raw_bits_or((1<<8), 0x4A000388);
+	__raw_bits_or((1<<8), 0x4A000380);
+#endif
+
+
 #ifdef CONFIG_SC8810_OPENPHONE
 	ANA_REG_AND(WHTLED_CTL, ~(WHTLED_PD_SET | WHTLED_PD_RST));
 	ANA_REG_OR(WHTLED_CTL,  WHTLED_PD_RST);

@@ -76,7 +76,19 @@ extern   "C"
 #define ARM_CLK_256M       256000000
 #define ARM_CLK_384M       384000000
 #define ARM_CLK_400M       400000000
+#define ARM_CLK_500M       500000000
 #define ARM_CLK_512M       512000000
+#define ARM_CLK_600M       600000000
+#define ARM_CLK_800M       800000000
+#define ARM_CLK_870M       870000000
+#define ARM_CLK_900M       900000000
+#define ARM_CLK_1000M      1000000000
+#define ARM_CLK_1100M      1100000000
+#define ARM_CLK_1200M      1200000000
+#define ARM_CLK_1300M      1300000000
+#define ARM_CLK_1400M      1400000000
+#define ARM_CLK_1500M      1500000000
+#define ARM_CLK_1600M      1600000000
 
 /**---------------------------------------------------------------------------*
  **                         Constant Variables                                *

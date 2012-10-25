@@ -671,8 +671,8 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
     SDHOST_PRINT ( ("   clkDiv: %d",clkDiv));
 
     tmpReg = sdhost_handler->host_cfg->HOST_CTL1;
-    tmpReg &= (~ (0xff<<8));
-#if defined (CONFIG_TIGER)
+#if defined (CONFIG_SC8825)
+    tmpReg &= (~ (0x3ff<<6));
     if (512 < clkDiv)
     {
         clkDiv = 1024;
@@ -684,6 +684,7 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
         tmpReg |= (0x1 << 6);
     }
 #else    
+    tmpReg &= (~ (0xff<<8));
     if (256 < clkDiv)
     {
         SDHOST_PRINT ( ("   clkDiv: %d is too big!!!!!",clkDiv));
