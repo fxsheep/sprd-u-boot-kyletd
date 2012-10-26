@@ -556,7 +556,12 @@ void board_init_r (gd_t *id, ulong dest_addr)
 	/* must do this after the framebuffer is allocated */
 	drv_vfd_init();
 #endif /* CONFIG_VFD */
-#ifndef CONFIG_TIGER
+
+/*tempaily use for tiger to avoid died as refreshing LCD*/
+#ifdef CONFIG_TIGER
+	drv_lcd_init ();
+#else
+
 	/* IP Address */
 	gd->bd->bi_ip_addr = getenv_IPaddr ("ipaddr");
 

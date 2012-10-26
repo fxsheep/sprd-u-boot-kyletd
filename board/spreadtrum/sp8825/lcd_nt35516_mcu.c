@@ -19,7 +19,7 @@
 
 #define printk printf
 
-//#define  LCD_DEBUG
+#define  LCD_DEBUG
 #ifdef LCD_DEBUG
 #define LCD_PRINT printk
 #else
@@ -625,6 +625,7 @@ static struct info_mcu lcd_nt35516_info = {
 };
 
 //lcd_panel_nt35516
+
 struct panel_spec lcd_nt35516_mcu_spec = {
 	.width = 540,
 	.height = 960,
