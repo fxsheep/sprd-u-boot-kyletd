@@ -41,6 +41,10 @@ COBJS	= lowlevel_init.o sprd_tiger_nand_boot.o nand_ecc.o tiger_nand.o div0.o ad
 endif
 endif
 
+ifdef CONFIG_SC8825
+COBJS   += mcu.o
+endif
+
 #SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c
 SRCS	:= $(SRCTREE)/arch/arm/cpu/armv7/start.S
 SRCS	+= $(SRCTREE)/arch/arm/cpu/armv7/sc8825/lowlevel_init.c
