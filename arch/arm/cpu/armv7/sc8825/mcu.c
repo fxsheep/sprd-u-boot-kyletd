@@ -142,7 +142,7 @@ uint32 GetMPllClk (void)
 
 uint32 SetMPllClk (uint32 clk)
 {
-    uint32 M, N, ret;
+    uint32 M, N, ret=1;
     clk /= 1000000;
     M = 4;
     N = clk/M;
@@ -152,7 +152,7 @@ uint32 SetMPllClk (uint32 clk)
     if (!SET_MPLL_M(M))
     {       
         SET_MPLL_N(N);
-        ret = 1;
+        ret = 0;
     }
     REG32(GR_GEN1) &= ~BIT_9;       // MPLL Write Dis
     return ret;
@@ -215,6 +215,8 @@ uint32 AhbClkConfig(uint32 ahb_clk)
 	
     ahb_arm_clk = REG32(AHB_ARM_CLK);
     div = mcu_clk/ahb_clk;
+    if (div*ahb_clk != mcu_clk)
+        div++;
     ahb_arm_clk &= ~(0x07<<4);
     ahb_arm_clk |= ((div-1)&0x7)<<4; //ahb clock
     REG32(AHB_ARM_CLK) = ahb_arm_clk;
@@ -237,10 +239,22 @@ uint32 AxiClkConfig()
     return 0;
 }
 
+uint32 ArmClkPeriSet()
+{
+    uint32 ahb_arm_clk;
+    ahb_arm_clk  = REG32(AHB_ARM_CLK);
+    ahb_arm_clk &= ~(7<<20);
+    ahb_arm_clk |= 1<<20;
+    REG32(AHB_ARM_CLK) = ahb_arm_clk;
+    return 0;
+}
+
 uint32 McuClkConfig(uint32 mcu_clk)
 {
     if (SetMPllClk(mcu_clk))
         return -1;
+    if (mcu_clk > ARM_CLK_800M)
+        ArmClkPeriSet();
     return 0;
 }
 
@@ -270,9 +284,9 @@ uint32 MCU_Init()
 
     //clk_type = ARM1000_EMC50_AHB200;
     //clk_type = ARM1000_EMC100_AHB200;
-    //clk_type = ARM1000_EMC100_AHB200;
+    clk_type = ARM1000_EMC100_AHB200;
     //clk_type = ARM1000_EMC400_AHB200;
-    clk_type = ARM800_EMC100_AHB200;
+    //clk_type = ARM800_EMC100_AHB200;
     //clk_type = ARM800_EMC200_AHB200;
     //clk_type = ARM800_EMC400_AHB200;
 
