@@ -869,7 +869,11 @@ void dwc_otg_core_dev_init(dwc_otg_core_if_t * core_if)
 
 	/* Restart the Phy Clock */
 	dwc_write_reg32(core_if->pcgcctl, 0);
-
+#ifdef CONFIG_USB_CORE_IP_293A
+	dctl.d32 = dwc_read_reg32(&dev_if->dev_global_regs->dctl);
+	dctl.b.sftdiscon = 0;
+	dwc_write_reg32(&dev_if->dev_global_regs->dctl, dctl.d32);
+#endif
 	/* Device configuration register */
 	init_devspd(core_if);
 	dcfg.d32 = dwc_read_reg32(&dev_if->dev_global_regs->dcfg);
