@@ -26,7 +26,11 @@
 //  Debug Function
 /*-----------------------------------------*/
 #define SDIO_CARD_PAL_ASSERT SCI_ASSERT
+#if defined CONFIG_SC8825 && defined CONFIG_UBOOT_DEBUG
+#define SDIO_CARD_PRINT(x) printf x
+#else
 #define SDIO_CARD_PRINT(x) SCI_TRACE_LOW x
+#endif
 /*-----------------------------------------*/
 //  IRQ Function
 /*-----------------------------------------*/
@@ -442,7 +446,11 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_
             {
                 SDHOST_RST(handle->sdio_port, RST_MODULE);
                 SDHOST_Cfg_BusWidth (handle->sdio_port,SDIO_1BIT_WIDTH);
+#if defined CONFIG_SC8825
+                SDHOST_Cfg_SpeedMode (handle->sdio_port, EMMC_SDR12);
+#else
                 SDHOST_Cfg_SpeedMode (handle->sdio_port,SDIO_LOWSPEED);
+#endif
                 SDHOST_Cfg_Voltage (handle->sdio_port,VOL_3_0);
 
                 SDHOST_SD_POWER (handle->sdio_port,POWR_ON);
@@ -629,7 +637,28 @@ PUBLIC BOOLEAN SDIO_Card_Pal_SetSpeedMode (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD
         (SDIO_CARD_PAL_MAGICNUM == handle->MagicNum)
         && (TRUE == handle->flag)
     );
-
+#if defined CONFIG_SC8825
+	switch (speedMode)
+	{
+		case EMMC_SPEED_SDR12:
+			SDHOST_Cfg_SpeedMode (handle->sdio_port,EMMC_SDR12);
+			break;
+		case EMMC_SPEED_SDR25:
+			SDHOST_Cfg_SpeedMode (handle->sdio_port,EMMC_SDR25);
+			break;
+		case EMMC_SPEED_SDR50:
+			SDHOST_Cfg_SpeedMode (handle->sdio_port,EMMC_SDR50);
+			break;
+		case EMMC_SPEED_SDR104:
+			SDHOST_Cfg_SpeedMode (handle->sdio_port,EMMC_SDR104);
+			break;
+		case EMMC_SPEED_DDR50:
+			SDHOST_Cfg_SpeedMode (handle->sdio_port,EMMC_DDR50);
+			break;
+		default:
+			return FALSE;
+	}
+#else
 #ifdef DUAL_TCARD_SUPPORT
     switch(handle->sdio_No)
     {
@@ -680,6 +709,7 @@ PUBLIC BOOLEAN SDIO_Card_Pal_SetSpeedMode (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD
     /*if(CHIP_GetAhbClk() < 96000000)
         return FALSE;
     else  */
+#endif
         return TRUE;
 
 }

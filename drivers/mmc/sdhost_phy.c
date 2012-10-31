@@ -37,12 +37,14 @@
 //#include "clock_drvapi.h"
 #endif
 //#include "Ref_outport.h"
-#if defined (CONFIG_SC8810) || defined (CONFIG_TIGER)
+#if defined (CONFIG_SC8810) || defined (CONFIG_SC8825)
 #define PLATFORM_SC8800G
 #endif
-
+#if defined CONFIG_SC8825 && defined CONFIG_UBOOT_DEBUG
+#define SDHOST_PRINT(x) printf x
+#else
 #define SDHOST_PRINT(x) SCI_TRACE_LOW x
-
+#endif
 /*****************************************************************************/
 //  Description:   Handle of sdhost
 //  Author: Jason.wu
@@ -218,6 +220,34 @@ PUBLIC void SDHOST_Cfg_BusWidth (SDHOST_HANDLE sdhost_handler,SDHOST_BIT_WIDTH_E
 //      NONE
 //  Note:
 /*****************************************************************************/
+#if defined CONFIG_SC8825
+PUBLIC void SDHOST_Cfg_SpeedMode (SDHOST_HANDLE sdhost_handler,SDHOST_SPEED_E speed)
+{
+	uint32 tmpReg = sdhost_handler->host_cfg->HOST_CTL2;
+	SCI_ASSERT (TRUE == _RegisterVerifyHOST (sdhost_handler));/*assert verified*/
+	tmpReg &= ~(7<<16);
+	switch (speed)
+	{
+	case EMMC_SDR12:
+		break;
+	case EMMC_SDR25:
+		tmpReg |= 1<<16;
+		break;
+	case EMMC_SDR50:
+		tmpReg |= 2<<16;
+		break;
+	case EMMC_SDR104:
+		tmpReg |= 3<<16;
+		break;
+	case EMMC_DDR50:
+		tmpReg |= 4<<16;
+		break;	
+	default:
+		return;
+	}
+	sdhost_handler->host_cfg->HOST_CTL2 = tmpReg;
+}	
+#else
 PUBLIC void SDHOST_Cfg_SpeedMode (SDHOST_HANDLE sdhost_handler,SDHOST_SPEED_E speed)
 {
     uint32 tmpReg =  sdhost_handler->host_cfg->HOST_CTL0;
@@ -249,7 +279,7 @@ PUBLIC void SDHOST_Cfg_SpeedMode (SDHOST_HANDLE sdhost_handler,SDHOST_SPEED_E sp
 
     sdhost_handler->host_cfg->HOST_CTL0 = tmpReg;
 }
-
+#endif
 
 /*
 typedef enum
@@ -662,27 +692,23 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
 
     //SDCLK Frequency Select ,Configure SDCLK select
     clkDiv = sdhost_handler->baseClock/sdio_clk;
-
+#if defined CONFIG_SC8825
+    clkDiv /= 2;
+#endif
     if (0 != sdhost_handler->baseClock%sdio_clk)
     {
         clkDiv++;
     }
 
-    SDHOST_PRINT ( ("   clkDiv: %d",clkDiv));
+    SDHOST_PRINT ( ("   clkDiv: %d, sdio_clk:%d, baseClock:%d\n",clkDiv, sdio_clk, sdhost_handler->baseClock));
 
     tmpReg = sdhost_handler->host_cfg->HOST_CTL1;
 #if defined (CONFIG_SC8825)
+    clkDiv--;
     tmpReg &= (~ (0x3ff<<6));
-    if (512 < clkDiv)
-    {
-        clkDiv = 1024;
-        tmpReg |= (0x2 << 6);
-    }
-    else if (256 < clkDiv)
-    {
-        clkDiv = 512;
-        tmpReg |= (0x1 << 6);
-    }
+    tmpReg |= clkDiv&(0x3<<6);
+    tmpReg |= (clkDiv&0xff)<<8;
+    sdhost_handler->sdClock = sdhost_handler->baseClock/(2*(clkDiv+1));
 #else    
     tmpReg &= (~ (0xff<<8));
     if (256 < clkDiv)
@@ -690,7 +716,6 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
         SDHOST_PRINT ( ("   clkDiv: %d is too big!!!!!",clkDiv));
         SCI_ASSERT (0);/*assert to do*/
     }
-#endif
     else if (128 < clkDiv)
     {
         clkDiv = 256;
@@ -740,10 +765,10 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
     {
         SCI_ASSERT (0);/*assert to do*/
     }
+    sdhost_handler->sdClock = sdhost_handler->baseClock/clkDiv;
+#endif
 
     sdhost_handler->host_cfg->HOST_CTL1 = tmpReg;
-    sdhost_handler->sdClock = sdhost_handler->baseClock/clkDiv;
-
     SDHOST_PRINT ( ("sd clk: %d KHz.",sdhost_handler->sdClock/1000));
 
     return sdhost_handler->sdClock;

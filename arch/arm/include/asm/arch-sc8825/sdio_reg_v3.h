@@ -148,7 +148,11 @@ typedef struct SDIO_REG_CFG_TAG
     volatile uint32 INT_STA;
     volatile uint32 INT_STA_EN;
     volatile uint32 INT_SIG_EN;
+#ifdef CONFIG_SC8825
+    volatile uint32 HOST_CTL2;
+#else
     volatile uint32 CMD12_ERR_STA;
+#endif
     volatile uint32 CAPBILITY;
     volatile uint32 CAPBILITY_RES;
     volatile uint32 CURR_CAPBILITY;

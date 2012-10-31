@@ -1534,11 +1534,11 @@ PUBLIC BOOLEAN CARD_SDIO_InitCard(CARD_SDIO_HANDLE cardHandle, CARD_SPEED_MODE s
        CARD_SDIO_ReadExtCSD(cardHandle);
       if(CARD_MMC_441_HIGHCAP == cardHandle->vertion)
 	{
-	  cardHandle->Capacity = (((uint32)s_extcsdbuf[215])<<24)+ (((uint32)s_extcsdbuf[214])<<16)+ (((uint32)s_extcsdbuf[213])<<8)+ ((uint32)s_extcsdbuf[212]); //unit is 512 byte
+	cardHandle->Capacity = (((uint32)s_extcsdbuf[215])<<24)+ (((uint32)s_extcsdbuf[214])<<16)+ (((uint32)s_extcsdbuf[213])<<8)+ ((uint32)s_extcsdbuf[212]); //unit is 512 byte
 	}
-	  extcsd_Part_Config = s_extcsdbuf[179];
-	 cardHandle->Rpmb_Capacity = s_extcsdbuf[168]*256; //128/512 ==256 ,unit is 512 byte  
-       if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
+	extcsd_Part_Config = s_extcsdbuf[179];
+	cardHandle->Rpmb_Capacity = s_extcsdbuf[168]*256; //128/512 ==256 ,unit is 512 byte  
+	if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
 	{
 		return FALSE;
 	}		   
@@ -1549,8 +1549,8 @@ PUBLIC BOOLEAN CARD_SDIO_InitCard(CARD_SDIO_HANDLE cardHandle, CARD_SPEED_MODE s
 		  {
 			  return FALSE;
 		  }
-        CARD_SDIO_ReadExtCSD(cardHandle);
-	 extcsd_Part_Config = s_extcsdbuf[179];
+	CARD_SDIO_ReadExtCSD(cardHandle);
+	extcsd_Part_Config = s_extcsdbuf[179];
 	cardHandle->Boot1_Capacity = s_extcsdbuf[226]*256; //128/512 ==256 ,unit is 512 byte  
 	 if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
 	 {
@@ -1559,30 +1559,29 @@ PUBLIC BOOLEAN CARD_SDIO_InitCard(CARD_SDIO_HANDLE cardHandle, CARD_SPEED_MODE s
 	 
 	 //get Boot2 Capacity
 	CARD_SDIO_Select_CurPartition(cardHandle, PARTITION_BOOT2); 	  
-	  if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
+	if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
 	{
 		return FALSE;
 	 }
 	CARD_SDIO_ReadExtCSD(cardHandle);
 	extcsd_Part_Config = s_extcsdbuf[179];
 	cardHandle->Boot2_Capacity = s_extcsdbuf[226]*256; //128/512 ==256 ,unit is 512 byte  
-         if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
+	if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
 	{
 		return FALSE;
 	}
-     
-	/*if(FALSE == MMC_SWITCH(cardHandle, EXT_CSD_HS_TIMING_INDEX, 1))
-	{
-		return FALSE;
-	}*/
-#ifndef CONFIG_SC8825
-        MMC_SWITCH(cardHandle, EXT_CSD_HS_TIMING_INDEX, 1);
-         if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
+
+	MMC_SWITCH(cardHandle, EXT_CSD_HS_TIMING_INDEX, 1);
+	if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
 	{
 		return FALSE;
 	}
-#endif     
+#if defined CONFIG_SC8825
+	SDIO_Card_Pal_SetSpeedMode(cardHandle->sdioPalHd, EMMC_SPEED_SDR50);
+	SDIO_Card_Pal_SetClk(cardHandle->sdioPalHd, SDIO_CARD_PAL_50MHz);
+#else
 	SDIO_Card_Pal_SetClk(cardHandle->sdioPalHd,SDIO_CARD_PAL_25MHz);
+#endif
 	__udelay (100*1000);
 #if defined CONFIG_SC8825
 	busWidth = CARD_WIDTH_8_BIT;
