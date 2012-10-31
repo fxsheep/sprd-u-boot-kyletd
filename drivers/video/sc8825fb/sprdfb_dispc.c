@@ -202,17 +202,25 @@ static int32_t sprdfb_dispc_early_init(struct sprdfb_device *dev)
 	__raw_bits_and(~(1<<18), AHB_DISPC_CLK);
 
 	//set DPI divdior
-	__raw_bits_and(~(1<<19), AHB_DISPC_CLK);  //div=0
-	__raw_bits_and(~(1<<20), AHB_DISPC_CLK);
+	__raw_bits_and(~(1<<19), AHB_DISPC_CLK);  //div=11, dpi_clk = pll_src/(11+1)
+	__raw_bits_or((1<<20), AHB_DISPC_CLK);
 	__raw_bits_and(~(1<<21), AHB_DISPC_CLK);
-	__raw_bits_and(~(1<<22), AHB_DISPC_CLK);
+	__raw_bits_or((1<<22), AHB_DISPC_CLK);
 	__raw_bits_and(~(1<<23), AHB_DISPC_CLK);
 	__raw_bits_and(~(1<<24), AHB_DISPC_CLK);
 	__raw_bits_and(~(1<<25), AHB_DISPC_CLK);
 	__raw_bits_and(~(1<<26), AHB_DISPC_CLK);
 
+	//enable dispc matric clock
+	__raw_bits_or((1<<9), AHB_CTL2);  //core_clock_en
+	__raw_bits_or((1<<11), AHB_CTL2);  //matrix clock en
+
 	//enable DISPC clock
 	__raw_bits_or(1<<22, AHB_CTL0);
+
+	printf("0x20900200 = 0x%x\n", __raw_readl(0x20900200));
+	printf("0x20900208 = 0x%x\n", __raw_readl(0x20900208));
+	printf("0x20900220 = 0x%x\n", __raw_readl(0x20900220));
 
 	dispc_reset();
 	dispc_module_enable();
@@ -278,10 +286,8 @@ static int32_t sprdfb_dispc_refresh (struct sprdfb_device *dev)
 			udelay(30);
 			/*dpi register update with SW and VSync*/
 			dispc_clear_bits((1<<4), DISPC_DPI_CTRL);
-
 			/* start refresh */
 			dispc_set_bits((1 << 4), DISPC_CTRL);
-
 			is_first_frame = 0;
 		}else{
 		while(!(dispc_read(DISPC_INT_RAW) & (0x10)));
@@ -289,6 +295,7 @@ static int32_t sprdfb_dispc_refresh (struct sprdfb_device *dev)
 			dispc_set_bits((1<<5), DISPC_INT_CLR);
                    }
 	}else{
+
 		/* start refresh */
 		dispc_set_bits((1 << 4), DISPC_CTRL);
 		while(!(dispc_read(DISPC_INT_RAW) & (1<<0)));

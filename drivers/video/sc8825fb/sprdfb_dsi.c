@@ -40,6 +40,17 @@ struct sprdfb_dsi_context {
 
 static struct sprdfb_dsi_context dsi_ctx;
 
+static void __raw_bits_and(unsigned int v, unsigned int a)
+{
+	__raw_writel((__raw_readl(a) & v), a);
+}
+
+static void __raw_bits_or(unsigned int v, unsigned int a)
+{
+	__raw_writel((__raw_readl(a) | v), a);
+}
+
+
 static uint32_t dsi_core_read_function(uint32_t addr, uint32_t offset)
 {
 	return __raw_readl(addr + offset);
@@ -96,7 +107,7 @@ static int32_t dsi_edpi_setbuswidth(struct info_mipi * mipi)
 		break;
 	}
 
-	dsi_core_write_function(DSI_CTL_BEGIN,  R_DSI_HOST_DPI_CFG, (uint32_t)color_coding);
+	dsi_core_write_function(DSI_CTL_BEGIN,  R_DSI_HOST_DPI_CFG, (uint32_t)(color_coding<<2));
 	return 0;
 }
 
@@ -115,7 +126,7 @@ static int32_t dsi_dpi_init(struct panel_spec* panel)
 
 	dpi_param.no_of_lanes = mipi->lan_number;
 	dpi_param.byte_clock = mipi->phy_feq / 8;
-	dpi_param.pixel_clock = DSI_PHY_REF_CLOCK / 4;
+	dpi_param.pixel_clock = 32*1000;//DSI_PHY_REF_CLOCK / 4;
 
 	switch(mipi->video_bus_width){
 	case 16:
@@ -180,6 +191,8 @@ int32_t sprdfb_dsi_init(struct sprdfb_device *dev)
 	dsih_ctrl_t* dsi_instance = &(dsi_ctx.dsi_inst);
 	dphy_t *phy = &(dsi_instance->phy_instance);
 	struct info_mipi * mipi = dev->panel->info.mipi;
+
+	__raw_bits_or((1<<0), 0x2090021c);  //enable dphy
 
 	FB_PRINT("sprdfb:[%s]\n", __FUNCTION__);
 

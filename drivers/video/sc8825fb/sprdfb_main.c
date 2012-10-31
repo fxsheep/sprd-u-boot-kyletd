@@ -153,6 +153,11 @@ static int real_refresh(struct sprdfb_device *dev)
 
 	FB_PRINT("sprdfb: [%s]\n", __FUNCTION__);
 
+	if(NULL == dev->panel){
+		FB_PRINT("sprdfb: [%s] fail (no panel!)\n", __FUNCTION__);
+		return -1;
+	}
+
 	ret = dev->ctrl->refresh(dev);
 	if (ret) {
 		FB_PRINT("sprdfb: failed to refresh !!!!\n");
@@ -173,11 +178,11 @@ static int tiger_probe(void * lcdbase)
 	LDO_SetVoltLevel(LDO_LDO_VDD28, LDO_VOLT_LEVEL3);
 	LDO_TurnOnLDO(LDO_LDO_VDD28);
 #endif
-
+/*
 	__raw_writel((__raw_readl(0x20900208) | 0xAFE), 0x20900208);
 	__raw_writel((__raw_readl(0x20900200) | 0xFFFFFFFF), 0x20900200);
 	__raw_writel((__raw_readl(0x20900220) | 0x00500000), 0x20900220);
-
+*/
 
 	dev->ctrl = &sprdfb_dispc_ctrl;
 	dev->ctrl->early_init(dev);
