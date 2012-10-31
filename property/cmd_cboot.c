@@ -27,10 +27,8 @@ extern void CHG_Init (void);
 int boot_pwr_check(void)
 {
     static int total_cnt = 0;
-#ifndef CONFIG_TIGER
     if(!power_button_pressed())
       total_cnt ++;
-#endif
     return total_cnt;
 }
 #define mdelay(_ms) udelay(_ms*1000)
@@ -75,7 +73,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	}
 #endif    
 #endif	
-    
+
     boot_pwr_check();
     board_keypad_init();
     boot_pwr_check();

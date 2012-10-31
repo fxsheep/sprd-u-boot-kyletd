@@ -134,7 +134,7 @@
 #endif
 
 #define CONFIG_HW_WATCHDOG
-#define CONFIG_AUTOBOOT //used for FPGA test, auto boot other image
+//#define CONFIG_AUTOBOOT //used for FPGA test, auto boot other image
 //#define CONFIG_DISPLAY_CPUINFO
 
 #define CONFIG_CMDLINE_TAG		1	/* enable passing of ATAGs */

@@ -558,9 +558,6 @@ void board_init_r (gd_t *id, ulong dest_addr)
 #endif /* CONFIG_VFD */
 
 /*tempaily use for tiger to avoid died as refreshing LCD*/
-#ifdef CONFIG_TIGER
-	drv_lcd_init ();
-#else
 
 	/* IP Address */
 	gd->bd->bi_ip_addr = getenv_IPaddr ("ipaddr");
@@ -673,7 +670,6 @@ void board_init_r (gd_t *id, ulong dest_addr)
 
 #ifdef SPRD_EVM_TAG_ON
 		SPRD_EVM_TAG(11);
-#endif
 #endif
     extern int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]);
     boot_pwr_check();
