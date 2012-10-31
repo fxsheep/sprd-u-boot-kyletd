@@ -36,8 +36,16 @@ SDHOST_BIT_WIDTH_E;
 
 typedef enum SDHOST_SPEED_E_TAG
 {
+#if defined CONFIG_SC8825
+	EMMC_SDR12,
+	EMMC_SDR25,
+	EMMC_SDR50,
+	EMMC_SDR104,
+	EMMC_DDR50
+#else
 	SDIO_HIGHSPEED,	// high speed mode ,some card support this mode,clock rate can be up to 50MHz
 	SDIO_LOWSPEED		// Normal speed mode , all the card support this mode default, clock rate can be up to 25MHz
+#endif
 }
 SDHOST_SPEED_E;
 
