@@ -231,8 +231,8 @@ static struct info_mipi lcd_nt35516_mipi_info = {
 	.v_sync_pol = SPRDFB_POLARITY_POS,
 	.de_pol = SPRDFB_POLARITY_POS,
 	.te_pol = SPRDFB_POLARITY_POS,
-	.color_mode_pol = SPRDFB_POLARITY_POS,
-	.shut_down_pol = SPRDFB_POLARITY_POS,
+	.color_mode_pol = SPRDFB_POLARITY_NEG,
+	.shut_down_pol = SPRDFB_POLARITY_NEG,
 	.timing = &lcd_nt35516_mipi_timing,
 	.ops = NULL,
 };
