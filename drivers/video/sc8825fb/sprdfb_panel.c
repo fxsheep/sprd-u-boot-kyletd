@@ -29,15 +29,23 @@ static struct panel_cfg lcd_panel[] = {
 		.panel = &lcd_panel_hx8357,
 		},
 };
+#elif defined CONFIG_SC8825EA_ONTIM
+extern struct panel_spec lcd_otm8018b_mipi_spec;
+static struct panel_cfg lcd_panel[] = {
+	[0]={
+		.lcd_id = 0x18,
+		.panel = &lcd_otm8018b_mipi_spec ,
+	},
+ };
 
 #elif defined CONFIG_SC8825EA
 extern struct panel_spec lcd_nt35516_mipi_spec;
 static struct panel_cfg lcd_panel[] = {
-    [0]={
-        .lcd_id = 0x16,
-        .panel = &lcd_nt35516_mipi_spec ,
-        },
-};
+	[0]={
+		.lcd_id = 0x16,
+		.panel = &lcd_nt35516_mipi_spec ,
+	},
+ };
 
 #elif defined CONFIG_SC8825EB
 extern struct panel_spec lcd_nt35516_mcu_spec;

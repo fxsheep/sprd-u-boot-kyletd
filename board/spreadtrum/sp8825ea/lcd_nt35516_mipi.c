@@ -25,7 +25,7 @@
 #define LCD_PRINT(...)
 #endif
 
-#define MAX_DATA   32
+#define MAX_DATA   48
 
 typedef struct LCM_Init_Code_tag {
 	unsigned int tag;
