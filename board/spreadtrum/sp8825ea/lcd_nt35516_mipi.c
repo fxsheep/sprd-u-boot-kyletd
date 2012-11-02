@@ -223,7 +223,7 @@ static struct timing_rgb lcd_nt35516_mipi_timing = {
 };
 
 static struct info_mipi lcd_nt35516_mipi_info = {
-	.work_mode  = SPRDFB_MIPI_MODE_VIDEO,
+	.work_mode  = SPRDFB_MIPI_MODE_CMD,
 	.video_bus_width = 24, /*18,16*/
 	.lan_number = 3,
 	.phy_feq = 500*1000,
