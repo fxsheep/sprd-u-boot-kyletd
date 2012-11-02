@@ -1,4 +1,5 @@
 #include <config.h>
+#include <common.h>
 #include <asm/arch/bits.h>
 #include <asm/arch/chip_drv_config_extern.h>
 #include <asm/arch/regs_nfc.h>
@@ -62,6 +63,17 @@ struct sc8810_nand_page_oob {
 	int eccsize; /* per ??? bytes data for ecc calcuate once time */
 	int eccbit; /* ecc level per eccsize */
 };
+
+struct nand_spec_str{
+    u8          mid;
+    u8          did;
+    u8          id3;
+    u8          id4;
+    u8          id5;
+    struct sc8810_nand_timing_param timing_cfg;
+};
+
+static struct nand_spec_str *ptr_nand_spec = NULL;
 
 #define NF_MC_CMD_ID	(0xFD)
 #define NF_MC_ADDR_ID	(0xF1)
@@ -132,21 +144,42 @@ static struct nand_ecclayout _nand_oob_128 = {
 };
 
 static struct nand_ecclayout _nand_oob_224 = {
-	.eccbytes = 104,
+	.eccbytes = 112,
 	.eccpos = {
-		120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132,
-		133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145,
-		146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158,
-		159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171,
-		172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184,
-		185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197,
-		198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210,
-		211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223},
+		112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124,
+		125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137,
+		138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,
+		151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163,
+		164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176,
+		177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189,
+		190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202,
+		203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215,
+		216, 217, 218, 219, 220, 221, 222, 223},
 	.oobfree = {
 		{.offset = 2,
-		.length = 118}}
+		.length = 110}}
 };
 
+
+
+static struct nand_ecclayout _nand_oob_256 = {
+	.eccbytes = 112,
+	.eccpos = {
+		144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156,
+		157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169,
+		170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182,
+		183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195,
+		196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208,
+		209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221,
+		222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234,
+		235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247,
+		248, 249, 250, 251, 252, 253, 254, 255},
+	.oobfree = {
+		{.offset = 2,
+		.length = 142}}
+};
+
+#if 0
 struct sc8810_nand_timing_param nand_timing =
 {
 	50,
@@ -156,12 +189,42 @@ struct sc8810_nand_timing_param nand_timing =
 	40,
 	50
 };
+#endif
 
 /* only for special 4kpage or 8kpage nand flash, no 2kpage or normal 4kpage or normal 8kpage */
 static struct sc8810_nand_page_oob nand_config_table[] =
 {
 	{0xec, 0xbc, 0x00, 0x66, 0x56, 4096, 128, 512, 4},
-	{0x2c, 0xbc, 0x90, 0x66, 0x54, 4096, 224, 512, 8}
+	{0x2c, 0xb3, 0x90, 0x66, 0x64, 4096, 224, 512, 8},
+	{0x2c, 0xbc, 0x90, 0x66, 0x54, 4096, 224, 512, 8},
+	{0xec, 0xb3, 0x01, 0x66, 0x5a, 4096, 128, 512, 4},
+	{0xec, 0xbc, 0x00, 0x6a, 0x56, 4096, 256, 512, 8}
+};
+
+/* some nand id could not be calculated the pagesize by mtd, replace it with a known id which has the same format. */
+static unsigned char nand_id_replace_table[][10] =
+{
+    {0xad, 0xb3, 0x91, 0x11, 0x00, /*replace with*/ 0xec, 0xbc, 0x00, 0x66, 0x56},
+    {0xad, 0xbc, 0x90, 0x11, 0x00, /*replace with*/ 0xec, 0xbc, 0x00, 0x66, 0x56}
+};
+
+
+static const struct nand_spec_str nand_spec_table[] = {
+    {0x2c, 0xb3, 0xd1, 0x55, 0x5a, {10, 10, 12, 10, 20, 50}},// MT29C8G96MAAFBACKD-5, MT29C4G96MAAHBACKD-5
+    {0x2c, 0xba, 0x80, 0x55, 0x50, {10, 10, 12, 10, 20, 50}},// MT29C2G48MAKLCJA-5 IT
+    {0x2c, 0xbc, 0x90, 0x55, 0x56, {10, 10, 12, 10, 20, 50}},// KTR0405AS-HHg1, KTR0403AS-HHg1, MT29C4G96MAZAPDJA-5 IT
+
+    {0x98, 0xac, 0x90, 0x15, 0x76, {12, 10, 12, 10, 20, 50}},// TYBC0A111392KC
+    {0x98, 0xbc, 0x90, 0x55, 0x76, {12, 10, 12, 10, 20, 50}},// TYBC0A111430KC, KSLCBBL1FB4G3A, KSLCBBL1FB2G3A
+    {0xad, 0xbc, 0x90, 0x11, 0x00, {25, 15, 25, 10, 20, 50}},// H9DA4VH4JJMMCR-4EMi, H9DA4VH2GJMMCR-4EM
+    {0xad, 0xbc, 0x90, 0x55, 0x54, {25, 15, 25, 10, 20, 50}},//
+
+    {0xec, 0xb3, 0x01, 0x66, 0x5a, {21, 10, 21, 10, 20, 50}},// KBY00U00VA-B450
+    {0xec, 0xbc, 0x00, 0x55, 0x54, {21, 10, 21, 10, 20, 50}},// KA100O015M-AJTT
+    {0xec, 0xbc, 0x00, 0x6a, 0x56, {21, 10, 21, 10, 20, 50}},// K524G2GACH-B050
+    {0xec, 0xbc, 0x01, 0x55, 0x48, {21, 15, 21, 10, 20, 50}},// KBY00N00HM-A448
+
+    {0, 0, 0, 0, 0, {0, 0, 0, 0, 0, 0}}
 };
 
 void read_chip_id(void);
@@ -402,6 +465,8 @@ static u32 sc8810_ecc_decode(struct sc8810_ecc_param *param)
 	}
 	return  ret;
 }
+
+#if 0
 static void set_nfc_param(unsigned long nfc_clk)
 {
 	u32 value = 0;
@@ -427,6 +492,57 @@ static void set_nfc_param(unsigned long nfc_clk)
 
 //	local_irq_restore(flags);	
 }
+#endif
+
+static struct nand_spec_str *get_nand_spec(u8 *nand_id)
+{
+    int i = 0;
+    while(nand_spec_table[i].mid != 0){
+        if (
+                (nand_id[0] == nand_spec_table[i].mid)
+                && (nand_id[1] == nand_spec_table[i].did)
+                && (nand_id[2] == nand_spec_table[i].id3)
+                && (nand_id[3] == nand_spec_table[i].id4)
+                && (nand_id[4] == nand_spec_table[i].id5)
+           ){
+                return &nand_spec_table[i];
+        }
+        i++;
+    }
+    return (struct nand_spec_str *)0;
+}
+
+#define DELAY_NFC_TO_PAD 9
+#define DELAY_PAD_TO_NFC 6
+#define DELAY_RWL (DELAY_NFC_TO_PAD + DELAY_PAD_TO_NFC)
+
+static void set_nfc_timing(struct sc8810_nand_timing_param *nand_timing, u32 nfc_clk_MHz)
+{
+	u32 value = 0;
+	u32 cycles;
+	cycles = nand_timing->acs_time * nfc_clk_MHz / 1000 + 1;
+	value |= ((cycles & 0x1F) << NFC_ACS_OFFSET);
+
+	cycles = nand_timing->rwh_time * nfc_clk_MHz / 1000 + 2;
+	value |= ((cycles & 0x1F) << NFC_RWH_OFFSET);
+
+	cycles = (nand_timing->rwl_time+DELAY_RWL) * nfc_clk_MHz / 1000 + 1;
+	value |= ((cycles & 0x3F) << NFC_RWL_OFFSET);
+
+	cycles = nand_timing->acr_time * nfc_clk_MHz / 1000 + 1;
+	value |= ((cycles & 0x1F) << NFC_ACR_OFFSET);
+
+	cycles = nand_timing->rr_time * nfc_clk_MHz / 1000 + 1;
+	value |= ((cycles & 0x1F) << NFC_RR_OFFSET);
+
+	cycles = nand_timing->ceh_time * nfc_clk_MHz / 1000 + 1;
+	value |= ((cycles & 0x3F) << NFC_CEH_OFFSET);
+
+        nfc_reg_write(NFC_TIMING, value);
+
+    debug("set_nfc_timing NFC_TIMING: %x ", nfc_reg_read(NFC_TIMING));
+}
+
 static void sc8810_nand_hw_init(void)
 {
 	int ik_cnt = 0;
@@ -665,8 +781,11 @@ void nand_spl_hardware_config(struct nand_chip *this, u8 id[5])
 			break;
 			case 8:
 				/* 8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 13 bytes */
-				this->ecc.bytes = 13;
-				this->ecc.layout = &_nand_oob_224;
+				this->ecc.bytes = 14;
+				if (nand_config_table[index].oobsize == 224)
+					this->ecc.layout = &_nand_oob_224;
+				else
+					this->ecc.layout = &_nand_oob_256;
 				mtdoobsize = nand_config_table[index].oobsize;
 			break;
 		}
@@ -703,11 +822,15 @@ void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5]
 			break;
 			case 8:
 				/* 8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 13 bytes */
-				this->ecc.bytes = 13;
-				this->ecc.layout = &_nand_oob_224;
+				this->ecc.bytes = 14;
+				if (nand_config_table[index].oobsize == 224)
+					this->ecc.layout = &_nand_oob_224;
+				else
+					this->ecc.layout = &_nand_oob_256;
 				mtd->oobsize = nand_config_table[index].oobsize;
 			break;
 		}
+		mtdoobsize = nand_config_table[index].oobsize;
 	} else 
 		printk("The type of nand flash is not in table, so use default configuration!\n");
 }
@@ -736,6 +859,13 @@ int board_nand_init(struct nand_chip *this)
 
 	read_chip_id();
 	/* The 4th id byte is the important one */
+	ptr_nand_spec = get_nand_spec(io_wr_port);
+
+	if (ptr_nand_spec != NULL)
+		set_nfc_timing(&ptr_nand_spec->timing_cfg, 153);
+	else
+		nfc_reg_write(NFC_TIMING, ((6 << 0) | (6 << 5) | (10 << 10) | (6 << 16) | (5 << 21) | (5 << 26)));
+
 	extid = io_wr_port[3];
 	/* Calc pagesize */
 	mtdwritesize = 1024 << (extid & 0x3);
