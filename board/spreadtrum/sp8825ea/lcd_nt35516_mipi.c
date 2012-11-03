@@ -214,16 +214,16 @@ static struct panel_operations lcd_nt35516_mipi_operations = {
 };
 
 static struct timing_rgb lcd_nt35516_mipi_timing = {
-	.hfp = 80,  /* unit: pixel */
-	.hbp = 80,
-	.hsync = 6,
+	.hfp = 20,  /* unit: pixel */
+	.hbp = 20,
+	.hsync = 4,
 	.vfp = 10, /*unit: line*/
 	.vbp = 10,
 	.vsync = 6,
 };
 
 static struct info_mipi lcd_nt35516_mipi_info = {
-	.work_mode  = SPRDFB_MIPI_MODE_CMD,
+	.work_mode  = SPRDFB_MIPI_MODE_VIDEO,
 	.video_bus_width = 24, /*18,16*/
 	.lan_number = 3,
 	.phy_feq = 500*1000,
