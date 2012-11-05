@@ -44,8 +44,8 @@ extern unsigned char raw_header[8192];
 #define RAMDISK_ADR 		0x85500000
 #if BOOT_NATIVE_LINUX
 //pls make sure uboot running area
-#define VLX_TAG_ADDR            (0x80000100)
-#define KERNEL_ADR		(0x80008000)
+#define VLX_TAG_ADDR            (0x82000100)
+#define KERNEL_ADR		(0x82008000)
 
 #else
 
