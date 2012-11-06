@@ -274,13 +274,6 @@ int is_factorymode()
 }
 void addbuf(char *buf)
 {
-    /* preset loop_per_jiffy */
-    int str_len = strlen(buf);
-#ifdef CONFIG_LOOP_PER_JIFFY
-    sprintf(&buf[str_len], " lpj=%d", CONFIG_LOOP_PER_JIFFY);
-#else
-    sprintf(&buf[str_len], " lpj=%d", 3350528); /* SC8810 1GHz */
-#endif
 }
 void addcmdline(char *buf)
 {

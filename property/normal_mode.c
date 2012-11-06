@@ -676,6 +676,12 @@ void creat_cmdline(char * cmdline,boot_img_hdr *hdr)
 	sprintf(buf, "initrd=0x%x,0x%x", RAMDISK_ADR, hdr->ramdisk_size);
 	addbuf(buf);
 
+	/* preset loop_per_jiffy */
+#ifdef CONFIG_LOOP_PER_JIFFY
+	str_len = strlen(buf);
+	sprintf(&buf[str_len], " lpj=%d", CONFIG_LOOP_PER_JIFFY);
+#endif
+
 	if(cmdline && cmdline[0]){
 		str_len = strlen(buf);
 		sprintf(&buf[str_len], " %s", cmdline);
