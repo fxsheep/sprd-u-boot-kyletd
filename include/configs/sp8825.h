@@ -63,6 +63,7 @@
 #define CONFIG_EMMC_BOOT
 
 #ifdef  CONFIG_EMMC_BOOT
+#define EMMC_SECTOR_SIZE 512
 #define	CONFIG_MMC
 #define CONFIG_CMD_MMC
 #define CONFIG_TIGER_MMC

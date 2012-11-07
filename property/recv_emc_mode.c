@@ -12,8 +12,7 @@
 #include "asm/arch/sci_types.h"
 #include <ext_common.h>
 #include <ext4fs.h>
-#define PRODUCTINFO_SIZE	(3 * 1024)
-#define EMMC_SECTOR_SIZE 512
+
 extern int prodinfo_read_partition(block_dev_desc_t *p_block_dev, EFI_PARTITION_INDEX part, int offset, char *buf, int len);
 
 

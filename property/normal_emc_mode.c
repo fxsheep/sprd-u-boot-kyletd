@@ -9,8 +9,6 @@
 #include "backupnvitem.h"
 #endif
 
-
-#define EMMC_SECTOR_SIZE 512
 #define KERNL_PAGE_SIZE 2048
 int get_partition_info (block_dev_desc_t *dev_desc, int part, disk_partition_t *info);
 

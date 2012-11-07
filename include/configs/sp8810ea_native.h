@@ -69,6 +69,7 @@
 //#define CONFIG_EMMC_SPL
 
 #ifdef CONFIG_EMMC_BOOT
+#define EMMC_SECTOR_SIZE 512
 #define CONFIG_SYS_EMMC_U_BOOT_SECTOR_NUM 0x400 
 #endif
 
