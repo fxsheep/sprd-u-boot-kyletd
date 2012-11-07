@@ -29,9 +29,11 @@ COBJS-y += cmd_cboot.o
 ifdef CONFIG_EMMC_BOOT
 COBJS-y += normal_emc_mode.o
 COBJS-y += alarm_emc_mode.o
+COBJS-y += recv_emc_mode.o
 else
 COBJS-y += normal_nand_mode.o
 COBJS-y += alarm_nand_mode.o
+COBJS-y += recv_nand_mode.o
 endif
 COBJS-y += normal_mode.o
 COBJS-y += recv_mode.o
