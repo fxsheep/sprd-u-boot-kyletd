@@ -673,7 +673,7 @@ static void LDO_TurnOffCoreLDO(void)
 
 static void LDO_TurnOffAllModuleLDO(void)
 {
-	ANA_REG_OR(ANA_AUDIO_PA_CTL1, PA_LDO_EN_RST);///PA poweroff
+	//ANA_REG_OR(ANA_AUDIO_PA_CTL1, PA_LDO_EN_RST);///PA poweroff
 	ANA_REG_SET (ANA_LDO_PD_CTL1, ANA_LDO_PD_CTL_MSK);
 	ANA_REG_SET (ANA_LDO_PD_CTL0, ANA_LDO_PD_CTL_MSK);
 }
