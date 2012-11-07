@@ -766,7 +766,7 @@ void vlx_entry()
 }
 void normal_mode(void)
 {
-#ifdef CONFIG_SC8810
+#if defined (CONFIG_SC8810) || defined (CONFIG_SC8825)
     //MMU_Init(CONFIG_MMU_TABLE_ADDR);
 	vibrator_hw_init();
 #endif
