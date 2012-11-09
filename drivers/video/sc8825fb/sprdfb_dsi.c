@@ -126,7 +126,7 @@ static int32_t dsi_dpi_init(struct panel_spec* panel)
 
 	dpi_param.no_of_lanes = mipi->lan_number;
 	dpi_param.byte_clock = mipi->phy_feq / 8;
-	dpi_param.pixel_clock = 32*1000;//DSI_PHY_REF_CLOCK / 4;
+	dpi_param.pixel_clock = 384*1000/11;//DSI_PHY_REF_CLOCK / 4;
 
 	switch(mipi->video_bus_width){
 	case 16:

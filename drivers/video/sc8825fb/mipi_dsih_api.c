@@ -101,11 +101,13 @@ dsih_error_t mipi_dsih_open(dsih_ctrl_t * instance)
     /* initialize pll so escape clocks could be generated at 864MHz, 1 lane */
     /* however the high speed clock will not be requested */
     //err = mipi_dsih_dphy_configure(&(instance->phy_instance), 1, DEFAULT_BYTE_CLOCK);
+    #if 0/*Jessica*/
     err = mipi_dsih_dphy_configure(&(instance->phy_instance), instance->max_lanes, 190*1000);
     if (err)
     {
         return err; /* ERR_DSI_PHY_POWERUP; */
     }
+    #endif
     /* dividing by 6 is aimed for max PHY frequency, 1GHz */
     mipi_dsih_hal_tx_escape_division(instance, 6); //6    //Jessica
     instance->status = INITIALIZED;

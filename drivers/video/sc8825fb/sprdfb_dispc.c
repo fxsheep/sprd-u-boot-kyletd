@@ -202,7 +202,7 @@ static int32_t sprdfb_dispc_early_init(struct sprdfb_device *dev)
 	__raw_bits_and(~(1<<18), AHB_DISPC_CLK);
 
 	//set DPI divdior
-	__raw_bits_and(~(1<<19), AHB_DISPC_CLK);  //div=11, dpi_clk = pll_src/(11+1)
+	__raw_bits_and(~(1<<19), AHB_DISPC_CLK);  //div=10, dpi_clk = pll_src/(10+1)
 	__raw_bits_or((1<<20), AHB_DISPC_CLK);
 	__raw_bits_and(~(1<<21), AHB_DISPC_CLK);
 	__raw_bits_or((1<<22), AHB_DISPC_CLK);
