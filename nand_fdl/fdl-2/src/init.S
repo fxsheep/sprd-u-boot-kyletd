@@ -41,7 +41,7 @@
 #include <./configs/omap730.h>
 #endif
 
-#ifdef CONFIG_TIGER
+#ifdef CONFIG_SC8825
 #define BIGEND_PROT_REG 0x20900290
 #define AHB_CTRL5_REG  	0x20900230
 #define FDL2_STACK 	0x81000000

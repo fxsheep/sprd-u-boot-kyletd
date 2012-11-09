@@ -35,12 +35,6 @@
 #include <common.h>
 #include <version.h>
 
-#if defined(CONFIG_OMAP1610)
-#include <./configs/omap1510.h>
-#elif defined(CONFIG_OMAP730)
-#include <./configs/omap730.h>
-#endif
-
 /*
  *************************************************************************
  *
@@ -48,6 +42,12 @@
  *
  *************************************************************************
  */
+
+#if defined CONFIG_SC8825
+#define FDL1_STACK 0x00028000
+#else
+#define FDL1_STACK 0x31000000
+#endif
 
 
 .globl _start
@@ -66,6 +66,7 @@ _start:
  *************************************************************************
  */
 
+
 /*
  * These are defined in the board-specific linker script.
  */
@@ -79,7 +80,7 @@ _bss_end:
 
 .global _armboot_start
 _armboot_start:
-	.word reset
+	.word _start
 
 /*
  * the actual reset code
@@ -94,6 +95,23 @@ reset:
 	orr	r0,r0,#0xd3
 	msr	cpsr,r0
 
+	MRC p15,0,r0,c1,c0,0
+
+	BIC r0,r0,#0x80
+	BIC r0,r0,#1	/*disable MMU*/
+	LDR r1,=0x1004
+	BIC r0,r0,r1	/*disable cache*/
+
+	MCR p15,0,r0,c1,c0,0
+
+	/*set stack limit to 0*/
+	MOV R10, #0
+	ldr sp, =0x28000
+	MOV r0, #100
+	MOV r1, #0
+	MOV r2, #0
+	bl  DMC_Init 
+
 clear_bss:
 	ldr	r0, _bss_start		/* find start of bss segment        */
 	ldr	r1, _bss_end		/* stop here                        */
@@ -104,11 +122,5 @@ clbss_l:str	r2, [r0]		/* clear loop...                    */
 	cmp	r0, r1
 	ble	clbss_l
 
-	ldr sp, =0x31000000
-
 	b main
 
-
-.global JumpToTarget
-JumpToTarget:
-	mov pc, r0

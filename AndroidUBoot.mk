@@ -7,6 +7,8 @@ UBOOT_BUILT_FDL := $(UBOOT_OUT)/nand_fdl/fdl2.bin
 UBOOT_CONFIG := $(UBOOT_OUT)/include/config.h
 AUTOBOOT_BIN := u-boot_autopoweron.bin
 
+export PRODUCT_OUT UBOOT_OUT
+
 .PHONY: $(UBOOT_OUT)
 $(UBOOT_OUT):
 	@echo "Start U-Boot build"

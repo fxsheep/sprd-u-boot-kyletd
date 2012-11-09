@@ -422,11 +422,17 @@ $(NAND_SPL):	$(TIMESTAMP_FILE) $(VERSION_FILE) depend
 $(U_BOOT_NAND):	$(NAND_SPL) $(obj)u-boot.bin
 		cat $(obj)nand_spl/u-boot-spl-16k.bin $(obj)u-boot.bin > $(obj)u-boot-nand.bin
 
+ifeq ($(SOC),sc8825)
+fdl2:fdl1
+	$(MAKE) -C nand_fdl/fdl-2 $@
+else
 fdl2:
 	$(MAKE) -C nand_fdl/fdl-2 $@
+endif
 
 fdl1:
-	#$(MAKE) -C nand_fdl/fdl-1 $@
+	$(MAKE) -C nand_fdl/fdl-1 $@
+	@cp ../$(UBOOT_OUT)/nand_fdl/fdl1.bin ../$(PRODUCT_OUT)
 
 $(ONENAND_IPL):	$(TIMESTAMP_FILE) $(VERSION_FILE) $(obj)include/autoconf.mk
 		$(MAKE) -C onenand_ipl/board/$(BOARDDIR) all

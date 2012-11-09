@@ -10,8 +10,11 @@
 #define DQSR_VALUE        4
 #define GATE_TRAING_ON    1
 #define GATE_EARLY_LATE   2
-#define mem_drv           34
-#define EMC_FREQ          200
+//#define mem_drv         34
+#define EMC_FREQ          200   //ddr clock 
+//#define EMC_SINGLE_CS         //single ddr cs
+
+static uint32 mem_drv  = 34;
 
 #define ANALOG_DIE_REG_BASE  0x42000600
 #define ANALOG_DCDC_CTRL_CAL 0x50
@@ -49,6 +52,41 @@ typedef enum  {LPDDR2_S2, LPDDR2_S4} MEM_COL_TYPE_ENUM;
 typedef enum  {BL2 = 2, BL4 = 4, BL8 = 8, BL16 = 16} MEM_BL_ENUM;
 typedef enum  {SEQ, INTLV} MEM_BT_ENUM;
 
+typedef enum
+{
+	SDLL_PHS_DLY_MIN = 0,
+	SDLL_PHS_DLY_DEF = 0,
+	SDLL_PHS_DLY_36  = 0,
+	SDLL_PHS_DLY_54  = 1,
+	SDLL_PHS_DLY_72  = 2,
+	SDLL_PHS_DLY_90  = 3,
+	SDLL_PHS_DLY_108 = 4,
+	SDLL_PHS_DLY_126 = 5,
+	SDLL_PHS_DLY_144 = 6,
+	SDLL_PHS_DLY_MAX = 6,
+}SDLL_PHS_DLY_E;
+
+typedef enum
+{
+	DQS_PHS_DLY_MIN = 0,
+	DQS_PHS_DLY_90  = 0,
+	DQS_PHS_DLY_180 = 1,
+	DQS_PHS_DLY_DEF = 1,
+	DQS_PHS_DLY_270 = 2,
+	DQS_PHS_DLY_360 = 3,
+	DQS_PHS_DLY_MAX = 3,
+}DQS_PHS_DLY_E;
+
+typedef enum
+{
+	DXN_MIN = 0,
+	DXN0    = 0,
+	DXN1    = 1,
+	DXN2    = 2,
+	DXN3    = 3,
+	DXN_MAX = 3,
+}DXN_E;
+
 #define MEMORY_TYPE    LPDDR2   //typedef enum int {LPDDR2,LPDDR1,DDR3} MEM_TYPE_ENUM; 
 #define MEM_WIDTH      X32
 
@@ -59,8 +97,8 @@ typedef enum  {SEQ, INTLV} MEM_BT_ENUM;
 #define UMCTL_CFG_ADD_MCMD            0x040
 #define UMCTL_CFG_ADD_POWCTL          0x044
 #define UMCTL_CFG_ADD_POWSTAT         0x048
-#define UMCTL_CFG_ADD_MCFG            0x080
 #define UMCTL_CFG_ADD_MCFG1           0x07C
+#define UMCTL_CFG_ADD_MCFG            0x080
 #define UMCTL_CFG_ADD_PPCFG           0x084
 #define UMCTL_CFG_ADD_TOGCNT1U        0x0c0
 #define UMCTL_CFG_ADD_TINIT           0x0c4
@@ -726,10 +764,12 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_DFISTCFG2) =   0x00000003;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_DFILPCFG0) =   0x00078101; //dfi_lp_wakeup_sr=8
 
+	//the priority settings is DSP > Disp > others > GPU
+	// so DSP/Disp/Camera are set to LL and all others set to BE
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_0);
-	value_temp &= ~(0xf << 4);
+	value_temp &= ~(0xff << 0);
 	value_temp &= ~(0xff << 16);
-	value_temp |= (0x8 << 16); //quantum
+	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x0 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
@@ -738,9 +778,9 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_0) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_1);
-	value_temp &= ~(0xf << 4);
+	value_temp &= ~(0xff << 0);
 	value_temp &= ~(0xff << 16);
-	value_temp |= (0x8 << 16); //quantum
+	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x0 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
@@ -749,9 +789,9 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_1) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_2);
-	value_temp &= ~(0xf << 4);
+	value_temp &= ~(0xff << 0);
 	value_temp &= ~(0xff << 16);
-	value_temp |= (0x8 << 16); //quantum
+	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x1 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
@@ -760,53 +800,56 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_2) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_3);
-	value_temp &= ~(0xf << 4);
+	value_temp &= ~(0xff << 0);
 	value_temp &= ~(0xff << 16);
-	value_temp |= (0x8 << 16); //quantum
+	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x1 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
 	value_temp |= (0x1 << 4); //bp_wr_en
+	value_temp |= 1;	//qos:LL
 	//value_temp[1:0] = 0x3; //qos dynamic mode by port signal
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_3) =      value_temp;
 
 	value_temp = REG32( UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_4);
-	value_temp &= ~(0xf << 4);
+	value_temp &= ~(0xff << 0);
 	value_temp &= ~(0xff << 16);
-	value_temp |= (0x8 << 16); //quantum
+	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x1 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
 	value_temp |= (0x1 << 4); //bp_wr_en
+	value_temp |= 1;	//qos:LL
 	//value_temp[1:0] = 0x3; //qos dynamic mode by port signal
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_4) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_5);
-	value_temp &= ~(0xf << 4);
+	value_temp &= ~(0xff << 0);
 	value_temp &= ~(0xff << 16);
-	value_temp |= (0x8 << 16); //quantum
+	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x0 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
 	value_temp |= (0x1 << 4); //bp_wr_en
+	value_temp |= 1;	//qos:LL
 	//value_temp[1:0] = 0x3; //qos dynamic mode by port signal
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_5) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_6);
-	value_temp &= ~(0xf << 4);
+	value_temp &= ~(0xff << 0);
 	value_temp &= ~(0xff << 16);
-	value_temp |= (0x20 << 16); //quantum
+	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x0 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
 	value_temp |= (0x1 << 4); //bp_wr_en
-	value_temp |= 0x3; //qos dynamic mode by port signal
+	value_temp |= 1;        //qos:LL
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_6) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_7);
-	value_temp &= ~(0xf << 4);
+	value_temp &= ~(0xff << 0);
 	value_temp &= ~(0xff << 16);
-	value_temp |= (0x8 << 16); //quantum
+	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x1 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
@@ -819,7 +862,7 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 
         value_temp = REG32(PUBL_REG_BASE+PUBL_CFG_ADD_ZQ0CR1);
         value_temp &= ~0xf;
-#if 1
+
 	switch (mem_drv)
 	{
 		case 34:
@@ -840,7 +883,7 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 		default:
 			while(1);
 	}
-#endif
+
         REG32(PUBL_REG_BASE+PUBL_CFG_ADD_ZQ0CR1) = value_temp;
 	value_temp = (8<<18) | (2750<<6) |27;	//per 533MHz
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PTR0) = value_temp;
@@ -1069,8 +1112,11 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	value_temp |= (mem_type_enum == LPDDR2 ) ? 0x0 : 0x1; //0 = ITMS uses DQS and DQS#
 	//1 = ITMS uses DQS only
 	value_temp |= (0x1 << 1);
-	//value_temp |= (0x1<<18); //only enable CS0 for data training
+#ifdef EMC_SINGLE_CS
+	value_temp |= (0x1<<18); //only enable CS0 for data training
+#else
 	value_temp |= (0x3 << 18); //enable CS0/1 for data training
+#endif
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PGCR) = value_temp;
 
 	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DSGCR);
@@ -1211,9 +1257,9 @@ void mem_init(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt) //{{{
 	}
 }
 
-static void __emc_init(void)   //{{{
+static void __emc_init(void)
 {
-	uint32  value_temp, i;
+	uint32 value_temp, i;
 	MEM_TYPE_ENUM mem_type_enum;
 	MEM_WIDTH_ENUM mem_width_enum;
 	mem_type_enum = MEMORY_TYPE;
@@ -1635,7 +1681,7 @@ static void modify_dxndqstr_delay_trim(uint32 dxn, uint32 trim_value)
 	modify_reg_field(publ_cfg_dxndllcr_addr, 30, 1, 0);
 	wait_100ns();
 	modify_reg_field(publ_cfg_dxndllcr_addr, 30, 1, 1);
-	wiat_us(10);
+	wait_us(10);
 }
 
 static void polling_reg_bit_field(uint32 addr, uint32 start_bit, uint32 bit_num, uint32 value)
@@ -1771,16 +1817,62 @@ static void publ_enable_dxn(uint32 dxn)
 	publ_cfg_add_dxngcr = PUBL_CFG_ADD_DX0GCR+(0x10*4*dxn);
 	modify_reg_field(PUBL_REG_BASE+publ_cfg_add_dxngcr, 0, 1, 1);
 }
+#if 0
+uint32 cal_sdll_dly_param(SDLL_PHS_DLY_E sdll_phs_dly)
+{
+	switch (sdll_phs_dly)
+	{
+		case SDLL_PHS_DLY_36:  return 3;
+		case SDLL_PHS_DLY_54:  return 2;
+		case SDLL_PHS_DLY_72:  return 1;
+		case SDLL_PHS_DLY_90:  return 0;
+		case SDLL_PHS_DLY_108: return 4;
+		case SDLL_PHS_DLY_126: return 8;
+		case SDLL_PHS_DLY_144: return 12;
+		default:               return 0;
+	}
+}
 
-void DMC_Init()
+void set_dqs_pt_gsl_gps_dly(DXN_E dxn, DQS_PHS_DLY_E dqs_step_dly, SDLL_PHS_DLY_E sdll_phs_dly)
+{
+	uint32 dxndqstr_addr = PUBL_REG_BASE+PUBL_CFG_ADD_DX0DQSTR + 0x10*4*dxn;
+	uint32 dxndllcr_addr = PUBL_REG_BASE+PUBL_CFG_ADD_DX0DLLCR + 0x10*4*dxn;
+
+	modify_reg_field(dxndqstr_addr, 20, 3, dqs_step_dly);
+	modify_reg_field(dxndqstr_addr, 22, 3, dqs_step_dly);
+	modify_reg_field(dxndllcr_addr, 14, 4, cal_sdll_dly_param(sdll_phs_dly));
+	modify_reg_field(dxndllcr_addr, 30, 1, 0);
+
+	//wait some time for DLL reset
+	wait_100ns();
+	modify_reg_field(dxndllcr_addr, 30, 1, 1);
+	wait_us(10);
+}
+void DMC_Init(const uint32 drv_strength, const uint32 sdll_phase, const uint32 dqs_step)
+#else
+void DMC_Init(uint32 emc_freq)
+#endif
 {
 	uint32 i=0;
-	uint32 value_temp=0;
 
-	modify_emc_clk(EMC_FREQ);	
+	if (emc_freq>=100 && emc_freq<=400)
+		modify_emc_clk(emc_freq);
+	else
+		modify_emc_clk(EMC_FREQ);
 
 	for (i=0; i<1000; i++);
-	
+
+//	if (drv_strength == 0)
+//		mem_drv = drv_strength;
 	__emc_init();
+#if 0
+	if (drv_strength != 0)
+	{
+		set_dqs_pt_gsl_gps_dly(0, sdll_phase&0xff,       dqs_step&0xff); 
+		set_dqs_pt_gsl_gps_dly(1, (sdll_phase>>8)&0xff,  (dqs_step>>8)&0xff);
+		set_dqs_pt_gsl_gps_dly(2, (sdll_phase>>16)&0xff, (dqs_step>>16)&0xff);
+		set_dqs_pt_gsl_gps_dly(3, (sdll_phase>>24)&0xff, (dqs_step>>24)&0xff);
+	}
+#endif
 }
 

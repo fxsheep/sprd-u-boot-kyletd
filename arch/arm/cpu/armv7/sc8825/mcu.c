@@ -17,7 +17,6 @@ SC6800     -gtp -cpu ARM926EJ-S -D_REF_SC6800_ -D_BL_NF_SC6800_
 #include <asm/arch/sdram.h>
 #include <asm/arch/chip.h>
 
-//#define FPGA_DEBUG
 #define REG32(x)   (*((volatile uint32 *)(x)))
 
 typedef enum MCU_CLK_TYPE_TAG
@@ -52,38 +51,31 @@ typedef struct ARM_EMC_AHB_CLK_TAG
 static const ARM_EMC_AHB_CLK_T s_arm_emc_ahb_clk[] =
 {
 //   mcu_clk       arm_clk       emc_clk       ahb_clk
-    {ARM_CLK_100M, ARM_CLK_100M, ARM_CLK_50M,  ARM_CLK_100M, ARM100_EMC50_AHB100 },
-    {ARM_CLK_200M, ARM_CLK_200M, ARM_CLK_100M, ARM_CLK_100M, ARM200_EMC100_AHB100},
-    {ARM_CLK_400M, ARM_CLK_400M, ARM_CLK_200M, ARM_CLK_100M, ARM400_EMC200_AHB100},
-    {ARM_CLK_400M, ARM_CLK_400M, ARM_CLK_200M, ARM_CLK_200M, ARM400_EMC200_AHB200},
     {ARM_CLK_800M, ARM_CLK_800M, ARM_CLK_100M, ARM_CLK_200M, ARM800_EMC100_AHB200},
-    {ARM_CLK_870M, ARM_CLK_870M, ARM_CLK_100M, ARM_CLK_200M, ARM870_EMC100_AHB200},
     {ARM_CLK_800M, ARM_CLK_800M, ARM_CLK_200M, ARM_CLK_200M, ARM800_EMC200_AHB200},
     {ARM_CLK_800M, ARM_CLK_800M, ARM_CLK_400M, ARM_CLK_200M, ARM800_EMC400_AHB200},
-    {ARM_CLK_1000M,ARM_CLK_1000M,ARM_CLK_50M,  ARM_CLK_200M, ARM1000_EMC50_AHB200},
     {ARM_CLK_1000M,ARM_CLK_1000M,ARM_CLK_100M, ARM_CLK_200M, ARM1000_EMC100_AHB200},
     {ARM_CLK_1000M,ARM_CLK_1000M,ARM_CLK_200M, ARM_CLK_200M, ARM1000_EMC200_AHB200},
     {ARM_CLK_1000M,ARM_CLK_1000M,ARM_CLK_400M, ARM_CLK_200M, ARM1000_EMC400_AHB200},
-    {ARM_CLK_1200M,ARM_CLK_1200M,ARM_CLK_100M, ARM_CLK_200M, ARM1200_EMC100_AHB200},
     {ARM_CLK_1200M,ARM_CLK_1200M,ARM_CLK_200M, ARM_CLK_200M, ARM1200_EMC200_AHB200},
     {ARM_CLK_1200M,ARM_CLK_1200M,ARM_CLK_400M, ARM_CLK_200M, ARM1200_EMC400_AHB200},
 };
 
 static uint32 GetClockCfg(MCU_CLK_TYPE_E clk_type, uint32 *mcu_clk, uint32 *arm_clk, uint32 *emc_clk, uint32 *ahb_clk)
 {
-	uint32 i;
-	for (i=0; i<(sizeof(s_arm_emc_ahb_clk)/sizeof(s_arm_emc_ahb_clk[0])); i++)
-	{
-		if (s_arm_emc_ahb_clk[i].clk_type == clk_type)
-		{
-			*mcu_clk = s_arm_emc_ahb_clk[i].mcu_clk;
-			*arm_clk = s_arm_emc_ahb_clk[i].arm_clk;
-			*emc_clk = s_arm_emc_ahb_clk[i].emc_clk;
-			*ahb_clk = s_arm_emc_ahb_clk[i].ahb_clk;
-			return 0;	
-		}
-	}
-	return -1;
+    uint32 i;
+    for (i=0; i<(sizeof(s_arm_emc_ahb_clk)/sizeof(s_arm_emc_ahb_clk[0])); i++)
+    {
+        if (s_arm_emc_ahb_clk[i].clk_type == clk_type)
+        {
+            *mcu_clk = s_arm_emc_ahb_clk[i].mcu_clk;
+            *arm_clk = s_arm_emc_ahb_clk[i].arm_clk;
+            *emc_clk = s_arm_emc_ahb_clk[i].emc_clk;
+            *ahb_clk = s_arm_emc_ahb_clk[i].ahb_clk;
+            return 0;
+        }
+    }
+    return -1;
 }
 
 static void delay()
@@ -98,22 +90,22 @@ uint32 GET_MPLL_N()
 }
 uint32 GET_MPLL_M()
 {
-	uint32 M;
-	switch ((REG32(GR_MPLL_MN)>>16)&0x3)
-	{
-		case 0x0: M=2; break;
-		case 0x3: M=13;break;
-		default:  M=4; break;	
-	}
-	return M;
+    uint32 M;
+    switch ((REG32(GR_MPLL_MN)>>16)&0x3)
+    {
+        case 0x0: M=2; break;
+        case 0x3: M=13;break;
+        default:  M=4; break;	
+    }
+    return M;
 }
 void SET_MPLL_N(uint32 N)
 {
-	uint32 mpll;
-	mpll =REG32(GR_MPLL_MN);
-	mpll &= ~0x07FF;
-	mpll |= N & 0x07FF;
-	REG32(GR_MPLL_MN) = mpll;
+    uint32 mpll;
+    mpll =REG32(GR_MPLL_MN);
+    mpll &= ~0x07FF;
+    mpll |= N & 0x07FF;
+    REG32(GR_MPLL_MN) = mpll;
         delay();
 }
 int SET_MPLL_M(uint32 M)
@@ -126,7 +118,7 @@ int SET_MPLL_M(uint32 M)
         case 13:M=3; break;
         default:     return -1;
     }
-	
+
     mpll = REG32(GR_MPLL_MN);
     mpll &= ~(0x3<<16);
     mpll |= (M<<16);
@@ -212,7 +204,7 @@ uint32 AhbClkConfig(uint32 ahb_clk)
     uint32 ahb_arm_clk, div, mcu_clk;
     
     mcu_clk = GetMPllClk();
-	
+
     ahb_arm_clk = REG32(AHB_ARM_CLK);
     div = mcu_clk/ahb_clk;
     if (div*ahb_clk != mcu_clk)
@@ -258,8 +250,6 @@ uint32 McuClkConfig(uint32 mcu_clk)
     return 0;
 }
 
-static uint32 mpll_clk, dpll_clk, emc_clk, arm_emc_ahb_clk;
-
 uint32 ClkConfig(MCU_CLK_TYPE_E clk_type)
 {
     uint32 mcu_clk, arm_clk, emc_clk, ahb_clk, ahb_arm_clk, div;
@@ -270,10 +260,6 @@ uint32 ClkConfig(MCU_CLK_TYPE_E clk_type)
     McuClkConfig(mcu_clk);
     AhbClkConfig(ahb_clk);
     EmcClkConfig(emc_clk);
-
-    mpll_clk = GetMPllClk();
-    dpll_clk = GetDPllClk();
-    arm_emc_ahb_clk = REG32(AHB_ARM_CLK);
 
     return 0;
 }
@@ -294,10 +280,65 @@ uint32 MCU_Init()
         while(1);
     return 0;
 }
+#if 0
+#define SPL_DATA_ADR (CONFIG_SYS_TEXT_BASE + (23*1024))
 
+typedef struct
+{
+    uint32  tag;
+    uint32  len;
+    uint32  data[];
+}spl_priv_data;
+
+typedef struct
+{
+    uint32  flag;
+    uint32  mem_drv;
+    uint32  sdll_phase;
+    uint32  dqs_step;
+    uint32  check_sum; 
+}emc_priv_data;
+
+#define EMC_PRIV_DATA  0x10
+#define EMC_MAGIC_DATA 0xabcd1234
+
+static spl_priv_data* spl_data = NULL;
+static emc_priv_data* emc_data = NULL; 
+
+uint32 GET_SPL_Data()
+{
+    uint32 ret = 1;
+
+    spl_data = (spl_priv_data *)SPL_DATA_ADR;
+    if (spl_data->tag == EMC_PRIV_DATA)
+    {
+        emc_data = (emc_priv_data *)(spl_data->data);
+        if (emc_data->flag == EMC_MAGIC_DATA)
+        {
+            uint32 check_sum = 0;
+            check_sum ^= emc_data->flag;
+            check_sum ^= emc_data->mem_drv;
+            check_sum ^= emc_data->sdll_phase;
+            check_sum ^= emc_data->dqs_step;
+            if (check_sum == emc_data->check_sum)
+                ret = 0;
+        }
+    }
+    return ret;
+}
+#endif
 void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
+    uint32 ret;
     MCU_Init();
-    DMC_Init();
+#if 0
+    ret = GET_SPL_Data();
+    if (ret == 0)
+        DMC_Init(emc_data->mem_drv, emc_data->sdll_phase, emc_data->dqs_step);
+    else
+        DMC_Init(0, 0, 0);
+#else
+    DMC_Init(0);
+#endif
 }
 

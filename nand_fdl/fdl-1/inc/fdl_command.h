@@ -10,32 +10,32 @@ extern "C" {
 /******************************************************************************
  * sys_connect
  ******************************************************************************/
-int sys_connect(PKT_HEADER *packet, void *arg);
+int sys_connect(PACKET_T *packet, void *arg);
 
 /******************************************************************************
  * data_start
  ******************************************************************************/
-int data_start(PKT_HEADER *packet, void *arg);
+int data_start(PACKET_T *packet, void *arg);
 
 /******************************************************************************
  * data_midst
  ******************************************************************************/
-int data_midst(PKT_HEADER *packet, void *arg);
+int data_midst(PACKET_T *packet, void *arg);
 
 /******************************************************************************
  * data_end
  ******************************************************************************/
-int data_end(PKT_HEADER *packet, void *arg);
+int data_end(PACKET_T *packet, void *arg);
 
 /******************************************************************************
  * data_exec
  ******************************************************************************/
-int data_exec(PKT_HEADER *packet, void *arg);
+int data_exec(PACKET_T *packet, void *arg);
 
 /******************************************************************************
  * set_baudrate
  ******************************************************************************/
-int set_baudrate(PKT_HEADER *packet, void *arg);
+int set_baudrate(PACKET_T *packet, void *arg);
  
 #ifdef __cplusplus
 }
