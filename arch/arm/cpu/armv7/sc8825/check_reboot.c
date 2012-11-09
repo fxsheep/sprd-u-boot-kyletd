@@ -78,7 +78,7 @@ int power_button_pressed(void)
 	udelay(3000);
 	int status = ANA_REG_GET(ADI_EIC_DATA);
 	//printf("eica status %x\n", status);
-	#if !(defined (CONFIG_SC8825EA) || defined (CONFIG_SC8825EB))
+	#if !(defined (CONFIG_SC8825))
 	return !!(status & (1 << 3)/*PBINT*/);//low level if pb hold
 	#else
 	return !(status & (1 << 3)/*PBINT*/);

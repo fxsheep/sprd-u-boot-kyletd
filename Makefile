@@ -1299,6 +1299,16 @@ sp8825eb_native_config	: unconfig
 	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sp8825eb spreadtrum sc8825
+
+garda_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 garda spreadtrum sc8825
+
+garda_native_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 garda spreadtrum sc8825
 #########################################################################
 #########################################################################
 

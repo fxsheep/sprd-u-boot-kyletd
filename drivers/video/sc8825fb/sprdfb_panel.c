@@ -64,6 +64,16 @@ static struct panel_cfg lcd_panel[] = {
         .panel = &lcd_panel_hx8357,
         },
 };
+
+#elif defined CONFIG_GARDA
+extern struct panel_spec lcd_nt35516_mipi_spec;
+static struct panel_cfg lcd_panel[] = {
+	[0]={
+		.lcd_id = 0x16,
+		.panel = &lcd_nt35516_mipi_spec ,
+	},
+ };
+
 #else
 #ifdef CONFIG_LCD_QVGA
 /*
