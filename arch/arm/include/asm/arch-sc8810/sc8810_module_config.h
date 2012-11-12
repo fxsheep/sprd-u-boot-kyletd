@@ -116,6 +116,9 @@ extern   "C"
 /**---------------------------------------------------------------------------*
 **                               Micro Define for SDIO                    **
 **---------------------------------------------------------------------------*/
+#define     SDIO_BASE_CLK_384M      384000000        // 384 MHz
+#define     SDIO_BASE_CLK_256M      256000000        // 256 MHz
+#define     SDIO_BASE_CLK_153M      153000000        // 153 MHz
 #define     SDIO_BASE_CLK_96M       96000000        // 96 MHz
 #define     SDIO_BASE_CLK_80M       80000000        // 80 MHz
 #define     SDIO_BASE_CLK_64M       64000000        // 64 MHz

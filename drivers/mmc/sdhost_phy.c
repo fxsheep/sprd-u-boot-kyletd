@@ -21,7 +21,7 @@
 #include "asm/arch/os_api.h"
 #include "asm/arch/chip_plf_export.h"
 #include "sdhost_drv.h"
-#ifdef CONFIG_TIGER
+#if defined(CONFIG_TIGER) || defined (CONFIG_SC7710G2)
 #include <asm/arch/sdio_reg_v3.h>
 #include <asm/arch/int_reg_v3.h>
 #include <asm/arch/sys_timer_reg_v0.h>
@@ -348,7 +348,7 @@ PUBLIC void SDHOST_Cfg_Voltage (SDHOST_HANDLE sdhost_handler,SDHOST_VOL_RANGE_E 
             break;
     }
 
-#if defined (CONFIG_TIGER)
+#if defined(CONFIG_TIGER) || defined (CONFIG_SC7710G2)
     LDO_SetVoltLevel (LDO_LDO_SDIO3, LDO_VOLT_LEVEL3);
     LDO_SetVoltLevel (LDO_LDO_VDD30, LDO_VOLT_LEVEL1); 
 #else
@@ -458,7 +458,7 @@ PUBLIC void SDHOST_SD_POWER (SDHOST_HANDLE sdhost_handler,SDHOST_PWR_ONOFF_E on_
     if (POWR_ON == on_off)
     {
         //LDO_TurnOnLDO (LDO_LDO_SDIO);
-#if defined (CONFIG_TIGER)
+#if defined(CONFIG_TIGER) || defined (CONFIG_SC7710G2)
 		LDO_TurnOnLDO(LDO_LDO_SDIO3);
 		LDO_TurnOnLDO(LDO_LDO_VDD30);
 #else
@@ -469,7 +469,7 @@ PUBLIC void SDHOST_SD_POWER (SDHOST_HANDLE sdhost_handler,SDHOST_PWR_ONOFF_E on_
     else
     {
         //LDO_TurnOffLDO (LDO_LDO_SDIO);
-#if defined (CONFIG_TIGER)
+#if defined(CONFIG_TIGER) || defined (CONFIG_SC7710G2)
 		LDO_TurnOffLDO(LDO_LDO_SDIO3);
 		LDO_TurnOffLDO(LDO_LDO_VDD30);
 #else
@@ -2104,7 +2104,7 @@ LOCAL SDHOST_SLOT_NO _GetIntSDHOSTSlotNum (void)
 {
     uint32 tmpReg;
     SDHOST_SLOT_NO ret;
-#if defined (CONFIG_TIGER)
+#if defined(CONFIG_TIGER) || defined (CONFIG_SC7710G2)
     tmpReg = REG32 (EMMC_SLOT_INT_STS);
 #else
     tmpReg = REG32 (SDIO1_SLOT_INT_STS);
@@ -2112,7 +2112,7 @@ LOCAL SDHOST_SLOT_NO _GetIntSDHOSTSlotNum (void)
 
     if ( (tmpReg& (0x01<<0)))
     {
-#if defined (CONFIG_TIGER)
+#if defined(CONFIG_TIGER) || defined (CONFIG_SC7710G2)
         ret = SDHOST_SLOT_7;
 #else
         ret = SDHOST_SLOT_1;
@@ -2252,6 +2252,12 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
      REG32 (AHB_SOFT_RST) &= ~BIT_21;
      sdio_port_ctl[slot_NO].open_flag = TRUE;
      sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_384M);
+#elif defined(CONFIG_SC7710G2)
+         REG32 (AHB_CTL6)     |= BIT_1;
+         REG32 (AHB_SOFT2_RST) |= BIT_1;
+         REG32 (AHB_SOFT2_RST) &= ~BIT_1;
+         sdio_port_ctl[slot_NO].open_flag = TRUE;
+         sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_384M);
 #else
 	    REG32 (AHB_CTL0)     |= BIT_19;
 	    REG32 (AHB_SOFT_RST) |= BIT_16;
@@ -2271,7 +2277,7 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
 
         case SDHOST_SLOT_1:
             {
-#if defined(CONFIG_TIGER)		
+#if defined(CONFIG_TIGER)	|| defined(CONFIG_SC7710G2)		
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO0_BASE_ADDR+0x100) );
 #else
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO1_BASE_ADDR);
@@ -2280,42 +2286,42 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
             break;
 
         case SDHOST_SLOT_2:
-#if defined(CONFIG_TIGER)		
+#if defined(CONFIG_TIGER)	|| defined(CONFIG_SC7710G2)		
             {
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO0_BASE_ADDR+0x200) );
             }
             break;
 #endif			
         case SDHOST_SLOT_3:
-#if defined(CONFIG_TIGER)	
+#if defined(CONFIG_TIGER)	|| defined(CONFIG_SC7710G2)		
             {
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO1_BASE_ADDR );
             }
             break;
 #endif			
         case SDHOST_SLOT_4:
-#if defined(CONFIG_TIGER)	
+#if defined(CONFIG_TIGER)	|| defined(CONFIG_SC7710G2)	
             {
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO1_BASE_ADDR+0x100) );
             }
             break;
 #endif			
         case SDHOST_SLOT_5:
-#if defined(CONFIG_TIGER)	
+#if defined(CONFIG_TIGER)	|| defined(CONFIG_SC7710G2)	
             {
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) (SDIO1_BASE_ADDR+0x200) );
             }
             break;
 #endif			
         case SDHOST_SLOT_6:
-#if defined(CONFIG_TIGER)			
+#if defined(CONFIG_TIGER)	|| defined(CONFIG_SC7710G2)			
             {
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) SDIO2_BASE_ADDR );
             }
             break;
 #endif			
         case SDHOST_SLOT_7:
-#if defined(CONFIG_TIGER)			
+#if defined(CONFIG_TIGER)	|| defined(CONFIG_SC7710G2)		
             {
                 sdio_port_ctl[slot_NO].host_cfg = (SDIO_REG_CFG *) ( (volatile uint32 *) EMMC_BASE_ADDR);
             }
@@ -2476,6 +2482,30 @@ PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
     {
         clk = SDIO_BASE_CLK_26M;
         REG32 (GR_CLK_GEN5) |= (3<<23);
+    }
+    return clk;
+#elif defined(CONFIG_SC7710G2)
+    uint32 clk = 0;
+    REG32 (GR_CLK_GEN7) &= ~ (BIT_23|BIT_24);
+    //Select the clk source of SDIO
+    if (sdio_base_clk >= SDIO_BASE_CLK_384M)
+    {
+        clk = SDIO_BASE_CLK_384M;
+         REG32 (GR_CLK_GEN7) |= (1<<23);
+    }
+    else if (sdio_base_clk >= SDIO_BASE_CLK_256M)
+    {
+        clk = SDIO_BASE_CLK_256M;
+        REG32 (GR_CLK_GEN7) |= (1<<24);
+    }
+    else if (sdio_base_clk >= SDIO_BASE_CLK_153M)
+    {
+        clk = SDIO_BASE_CLK_153M;
+        REG32 (GR_CLK_GEN5) |= (3<<23);
+    }
+    else
+    {
+        clk = SDIO_BASE_CLK_26M;
     }
     return clk;
 #elif defined(PLATFORM_SC8800G)

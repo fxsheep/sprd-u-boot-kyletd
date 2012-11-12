@@ -75,6 +75,36 @@
 #define SDIO1_SLOT_INT_STS      (SDIO1_BASE_ADDR+0xFC)
 #define SDIO1_HC_VER_REG        (SDIO1_BASE_ADDR+0xFE)
 
+
+#define EMMC_SYS_ADDR          (EMMC_BASE_ADDR+0x0)
+#define EMMC_BLK_SIZE          (EMMC_BASE_ADDR+0x4)
+#define EMMC_BLK_CNT           (EMMC_BASE_ADDR+0x6)
+#define EMMC_ARGU_REG          (EMMC_BASE_ADDR+0x8)
+#define EMMC_TRANS_MODE        (EMMC_BASE_ADDR+0xc)
+#define EMMC_CMD_REG           (EMMC_BASE_ADDR+0xE)
+#define EMMC_RESPONSE_REG      (EMMC_BASE_ADDR+0x10)
+#define EMMC_BUF_DATA_PORT (EMMC_BASE_ADDR+0x20)
+#define EMMC_PRESENT_STATE (EMMC_BASE_ADDR+0x24)
+#define EMMC_HC_CTL            (EMMC_BASE_ADDR+0x28)
+#define EMMC_PWR_CTL           (EMMC_BASE_ADDR+0x29)
+#define EMMC_BLK_GAP           (EMMC_BASE_ADDR+0x2A)
+#define EMMC_WAKEUP_CTL        (EMMC_BASE_ADDR+0x2B)
+#define EMMC_CLK_CTL           (EMMC_BASE_ADDR+0x2C)
+#define EMMC_TIMEOUT_CTL       (EMMC_BASE_ADDR+0x2E)
+#define EMMC_SW_RESET          (EMMC_BASE_ADDR+0x2F)
+#define EMMC_NML_INT_STS       (EMMC_BASE_ADDR+0x30)
+#define EMMC_ERR_INT_STS       (EMMC_BASE_ADDR+0x32)
+#define EMMC_NML_INT_STS_EN    (EMMC_BASE_ADDR+0x34)
+#define EMMC_ERR_INT_STS_EN    (EMMC_BASE_ADDR+0x36)
+#define EMMC_NML_INT_SIG_EN    (EMMC_BASE_ADDR+0x38)
+#define EMMC_ERR_INT_SIG_EN    (EMMC_BASE_ADDR+0x3A)
+#define EMMC_ACMD12_ERRSTS (EMMC_BASE_ADDR+0x3C)
+#define EMMC_CAPBILITY_REG (EMMC_BASE_ADDR+0x40)
+#define EMMC_MAX_CUR_CAP_REG   (EMMC_BASE_ADDR+0x48)
+#define EMMC_SLOT_INT_STS      (EMMC_BASE_ADDR+0xFC)
+#define EMMC_HC_VER_REG        (EMMC_BASE_ADDR+0xFE)
+
+
 typedef struct SDIO_REG_CFG_TAG
 {
     volatile uint32 DMA_SYS_ADD;
@@ -92,7 +122,12 @@ typedef struct SDIO_REG_CFG_TAG
     volatile uint32 INT_STA;
     volatile uint32 INT_STA_EN;
     volatile uint32 INT_SIG_EN;
-    volatile uint32 CMD12_ERR_STA;
+#ifdef CONFIG_SC7710G2
+        volatile uint32 HOST_CTL2;
+#else
+        volatile uint32 CMD12_ERR_STA;
+#endif
+
     volatile uint32 CAPBILITY;
     volatile uint32 CAPBILITY_RES;
     volatile uint32 CURR_CAPBILITY;

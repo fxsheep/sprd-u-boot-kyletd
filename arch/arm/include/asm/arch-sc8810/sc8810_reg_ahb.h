@@ -49,6 +49,12 @@ extern   "C"
 #define AHB_ENDIAN_EN           (AHB_REG_BASE + 0x90)
 #define USB_PHY_CTRL            (AHB_REG_BASE + 0xA0)
 
+#ifdef CONFIG_SC7710G2
+#define AHB_SOFT2_RST		(AHB_REG_BASE + 0x1C)
+#define AHB_CTL6                       (AHB_REG_BASE + 0x3C)
+#endif
+
+
 #define CHIP_ID                 (AHB_REG_BASE + 0x1FC)
 
 #define AHB_DSP_BOOT_EN             (AHB_REG_BASE + 0x84)
