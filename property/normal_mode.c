@@ -628,10 +628,6 @@ static int start_linux()
 	u32 parm_at = (u32)-1;
 	u32 machine_type;
 
-#ifdef CONFIG_SC8825
-	/* FIXME: arch-dependent code should not be here */
-	memset(0x81800000, 0, 0x800000);	/* clear smem 24M-32M */
-#endif
 	machine_type = machine_arch_type;         /* get machine type */
 
 	theKernel = (void (*)(int, int, u32))KERNEL_ADR; /* set the kernel address */
