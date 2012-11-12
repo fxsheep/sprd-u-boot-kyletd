@@ -58,6 +58,21 @@
 #define EXT_MEM_TYPE_DDR 1
 #endif
 
+#define CONFIG_EMMC_BOOT
+#ifdef CONFIG_EMMC_BOOT
+#define CONFIG_MMC
+#define CONFIG_CMD_MMC
+#define CONFIG_TIGER_MMC
+#define CONFIG_UEFI_PARTITION
+#define CONFIG_EFI_PARTITION
+//#define SPL_USB_DOWNLOAD
+#define CONFIG_EXT4_SPARSE_DOWNLOAD
+//#define CONFIG_EMMC_SPL
+
+#define EMMC_SECTOR_SIZE 512
+#define CONFIG_SYS_EMMC_U_BOOT_SECTOR_NUM 0x400 
+#endif
+
 #define CONFIG_RAM512M
 #define BB_DRAM_TYPE_256MB_32BIT
 #define  CONFIG_MTD_NAND_SC8810 1
@@ -232,10 +247,11 @@
 /*#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),384k(2ndbl),128k(params),512k(vmjaluna),6016k(modem),7680k(kernel),5120k(dsp),1280k(fixnv),2560k(runtimenv),6400k(recovery),100m(system),198m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"*/
 //#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot),5120k(dsp),1280k(fixnv),3840k(backupfixnv),3840k(runtimenv),10m(recovery),150m(system),300m(userdata),1m(boot_logo),1m(fastboot_logo),2m(cache),256k(misc)"
 //#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),128k(params),512k(vmjaluna),10m(modem),10m(boot)"
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),256k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),250m(system),180m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),3840k(productinfo),512k(kpanic)"
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),256k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),200m(system),230m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),3840k(productinfo),512k(kpanic)"
 #define CONFIG_BOOTARGS "mem=240M console=ttyS1,115200n8 init=/init " MTDPARTS_DEFAULT
 #endif
 
+#define CONFIG_LOOP_PER_JIFFY  3350528
 #define COPY_LINUX_KERNEL_SIZE	(0x600000)
 #define LINUX_INITRD_NAME	"modem"
 
@@ -263,7 +279,7 @@
 #define CONFIG_USB_GADGET_DUALSPEED
 //#define CONFIG_USB_ETHER
 #define CONFIG_CMD_FASTBOOT
-#define SCRATCH_ADDR    0x1000000
+#define SCRATCH_ADDR    0x2000000
 #define FB_DOWNLOAD_BUF_SIZE (250*1024*1024)
 
 #define CONFIG_MODEM_CALIBERATE
@@ -284,7 +300,7 @@
 //#define LCD_TEST_PATTERN
 //#define CONFIG_LCD_LOGO
 #define CONFIG_SYS_WHITE_ON_BLACK
-#define CONFIG_FB_LCDC_CS1
+#define CONFIG_LCD_HX8369
 #ifdef LCD_TEST_PATTERN
 #define CONSOLE_COLOR_RED 0xf800 
 #define CONSOLE_COLOR_GREEN 0x07e0
@@ -293,6 +309,9 @@
 #define CONSOLE_COLOR_MAGENTA 0x001f
 #define CONSOLE_COLOR_CYAN 0x001f
 #endif
+
+#define CONFIG_FB_LCDC_CS1
+
 #endif // CONFIG_LCD
 
 #define CALIBRATE_ENUM_MS 15000

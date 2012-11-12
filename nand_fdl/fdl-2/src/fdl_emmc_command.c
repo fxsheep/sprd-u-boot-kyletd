@@ -674,7 +674,7 @@ void splFillCheckData(unsigned int * splBuf,  int len)
 	*(splBuf + MAGIC_DATA_SAVE_OFFSET) = MAGIC_DATA;
 	*(splBuf + CHECKSUM_SAVE_OFFSET) = (unsigned int)eMMCCheckSum((unsigned int *)&splBuf[CHECKSUM_START_OFFSET/4], SPL_CHECKSUM_LEN - CHECKSUM_START_OFFSET);
 //	*(splBuf + CHECKSUM_SAVE_OFFSET) = splCheckSum(splBuf);
-#elif defined(CONFIG_TIGER)
+#elif defined(CONFIG_TIGER) || defined(CONFIG_SC7710G2)
 	EMMC_BootHeader *header;
 	header = (EMMC_BootHeader *)((unsigned char*)splBuf+BOOTLOADER_HEADER_OFFSET);
 	header->version  = 0;

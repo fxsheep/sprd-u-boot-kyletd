@@ -126,6 +126,8 @@ typedef enum
     LDO_LDO_WIF1,
     LDO_LDO_WIF0,
     LDO_LDO_SDIO1,
+    LDO_LDO_SDIO3,
+    LDO_LDO_VDD30,
     //end sc8810
 
     LDO_LDO_MAX     //id for calculate LDO number only!

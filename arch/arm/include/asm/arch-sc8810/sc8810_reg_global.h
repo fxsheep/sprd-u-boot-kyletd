@@ -64,6 +64,11 @@ extern   "C"
 #define GR_SWRST                        GR_SOFT_RST             ////mingweiflag GR_SOFT_RST or GR_SWRST?
 #define GR_BUSCLK_ALM                   GR_BUSCLK
 #define LDO_USB_PD BIT_9
+
+#ifdef CONFIG_SC7710G2
+#define GR_CLK_GEN7                     (GREG_BASE + 0x00B4)
+#endif
+
 /*
   the GEN0 register bit
 */

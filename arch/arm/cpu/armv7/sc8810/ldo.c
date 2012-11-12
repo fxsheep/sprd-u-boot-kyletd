@@ -434,6 +434,36 @@ static struct ldo_ctl_info ldo_ctl_data[] =
 		.b1_rst = 0,
 		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
 	},
+	#ifdef CONFIG_SC7710G2
+	{
+		.id = LDO_LDO_SDIO3,//LDO_EMMIO
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = 0,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = 0,
+		.level_reg_b0 = ANA_LDO_VCTL4,
+		.b0 = BIT_12,
+		.b0_rst = BIT_13,
+		.level_reg_b1 = ANA_LDO_VCTL0,
+		.b1 = BIT_14,
+		.b1_rst = BIT_15,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	{
+		.id = LDO_LDO_VDD30,//LDO_EMMCORE
+		.bp_reg = ANA_LDO_PD_SET,
+		.bp_bits = 0,
+		.bp_rst_reg = ANA_LDO_PD_RST,
+		.bp_rst = 0,
+		.level_reg_b0 = ANA_LDO_VCTL4,
+		.b0 = BIT_8,
+		.b0_rst = BIT_9,
+		.level_reg_b1 = LDO_INVALID_REG_ADDR,
+		.b1 = BIT_10,
+		.b1_rst = BIT_11,
+		.init_level = LDO_VOLT_LEVEL_FAULT_MAX,
+	},
+	#endif
 };
 
 static struct ldo_sleep_ctl_info slp_ldo_ctl_data[] = {
