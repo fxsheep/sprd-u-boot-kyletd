@@ -318,6 +318,28 @@ int read_spldata()
 	return 0;
 }
 
+/*The function is temporary, will move to the chip directory*/
+#if BOOT_NATIVE_LINUX_MODEM
+void modem_entry()
+{
+#ifdef CONFIG_SC8825
+	//  *(volatile u32 *)0x4b00100c=0x100;
+	u32 cpdata[3] = {0xe59f0000, 0xe12fff10, MODEM_ADR};
+	*(volatile u32*)0x20900250 = 0;//disbale cp clock, cp iram select to ap
+	//*(volatile u32*)0x20900254 = 0;// hold cp
+	memcpy((volatile u32*)0x30000, cpdata, sizeof(cpdata));
+	*(volatile u32*)0x20900250 =0xf;// 0x3;//enale cp clock, cp iram select to cp
+	*(volatile u32*)0x20900254 = 1;// reset cp
+#endif
+}
+
+void sipc_addr_reset()
+{
+	memset((void *)SIPC_APCP_START_ADDR, 0x0, SIPC_APCP_RESET_ADDR_SIZE);
+}
+
+#endif
+
 void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 {
     boot_img_hdr *hdr = (void *)raw_header;
@@ -343,7 +365,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	if(NULL == p_block_dev){
 		return;
 	}
-
 
 #ifdef CONFIG_SPLASH_SCREEN
 #define SPLASH_PART "boot_logo"
@@ -572,8 +593,8 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 
 #endif /* BOOTING_BACKUP_NVCALIBRATION */
 
-#if !(BOOT_NATIVE_LINUX)
-#if 1
+#if((!BOOT_NATIVE_LINUX)||(BOOT_NATIVE_LINUX_MODEM))
+
 	/* recovery damaged fixnv or backupfixnv */
 	orginal_right = 0;
 	memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
@@ -743,7 +764,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		}
 	}
 	//array_value((unsigned char *)RUNTIMENV_ADR, RUNTIMENV_SIZE);
-#endif
+
 	/* DSP_PART */
 	printf("Reading dsp to 0x%08x\n", DSP_ADR);
 
@@ -809,7 +830,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		}
 	}
 
-#if !(BOOT_NATIVE_LINUX)
+#if((!BOOT_NATIVE_LINUX)||(BOOT_NATIVE_LINUX_MODEM))
 	////////////////////////////////////////////////////////////////
 	/* MODEM_PART */
 	printf("Reading modem to 0x%08x\n", MODEM_ADR);
@@ -853,7 +874,16 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	}
 	secure_check(VMJALUNA_ADR, 0, VMJALUNA_ADR + VMJALUNA_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
 #endif
+
 	creat_cmdline(cmdline,hdr);
+
+#if BOOT_NATIVE_LINUX_MODEM
+	//sipc addr clear
+	sipc_addr_reset();
+	// start modem CP
+	modem_entry();
+#endif
+
 	vlx_entry();
 }
 
