@@ -10,11 +10,13 @@
 #define DQSR_VALUE        4
 #define GATE_TRAING_ON    1
 #define GATE_EARLY_LATE   2
-//#define mem_drv         34
-#define EMC_FREQ          200   //ddr clock 
+#define mem_drv           34
+#ifndef SC8825_EMC_FREQ
+#define SC8825_EMC_FREQ   200   //ddr clock
+#endif
 //#define EMC_SINGLE_CS         //single ddr cs
 
-static uint32 mem_drv  = 34;
+//static uint32 mem_drv  = 34;
 
 #define ANALOG_DIE_REG_BASE  0x42000600
 #define ANALOG_DCDC_CTRL_CAL 0x50
@@ -1130,7 +1132,7 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 } //emc_init_common_reg
 
 //all cs are initialized simultaneously
-void mem_init(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt) //{{{
+static void mem_init(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt) //{{{
 {
 	uint32  value_temp, i;
 	uint32  mode_ba;
@@ -1456,13 +1458,13 @@ void emc_init_repowered(void)   //{{{
 	move_upctl_state_to_access();
 }
 
-void precharge_all_bank(void)
+static void precharge_all_bank(void)
 {
 	//all cs be precharged
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_MCMD) = 0x85f00001;
 }
 
-void load_mode(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt)
+static void load_mode(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt)
 {
 	uint32  mode_ba, mode_a;
 	uint32  value_temp;
@@ -1850,7 +1852,7 @@ void set_dqs_pt_gsl_gps_dly(DXN_E dxn, DQS_PHS_DLY_E dqs_step_dly, SDLL_PHS_DLY_
 }
 void DMC_Init(const uint32 drv_strength, const uint32 sdll_phase, const uint32 dqs_step)
 #else
-void DMC_Init(uint32 emc_freq)
+void DMC_Init(uint32 emc_freq, uint32 drv_strength, uint32 sdll_phase, uint32 dqs_step)
 #endif
 {
 	uint32 i=0;
@@ -1858,7 +1860,7 @@ void DMC_Init(uint32 emc_freq)
 	if (emc_freq>=100 && emc_freq<=400)
 		modify_emc_clk(emc_freq);
 	else
-		modify_emc_clk(EMC_FREQ);
+		modify_emc_clk(SC8825_EMC_FREQ);
 
 	for (i=0; i<1000; i++);
 

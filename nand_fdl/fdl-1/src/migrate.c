@@ -6,11 +6,15 @@
 #include <asm/arch/bits.h>
 #include <asm/arch/chip_drv_config_extern.h>
 
+//#define USE_FDL_DBG
+#ifdef USE_FDL_DBG
 char * version_string="fdl1";
+
+#endif
 
 int printf(const char *fmt, ...)
 {
-#if 0
+#if defined USE_FDL_DBG
 	va_list args;
 	unsigned int i;
 	char printbuffer[CONFIG_SYS_PBSIZE];
@@ -50,10 +54,9 @@ int board_init(void)
 
 int vprintf(const char *fmt, va_list args)
 {
+#if defined USE_FDL_DBG
 	uint i;
-#if 0
 	char printbuffer[CONFIG_SYS_PBSIZE];
-
 	/* For this to work, printbuffer must be larger than
 	 *	 * anything we ever want to print.
 	 *		 */
@@ -61,18 +64,20 @@ int vprintf(const char *fmt, va_list args)
 
 	/* Print the string */
 	serial_puts(printbuffer);
-#endif
 	return i;
+#else
+	return 0;
+#endif
 }
 
 void putc(const char c)
 {
-	//serial_putc(c);
+	serial_putc(c);
 }
 
 void puts(const char *str)
 {
-	//serial_puts(str);
+	serial_puts(str);
 }
 
 int ctrlc(void)
@@ -88,7 +93,7 @@ int do_reset(void *cmdtp, int flag, int argc, char * const argv[])
 void hw_watchdog_reset(void)
 {
 }
-#if 1
+
 uint32 SCI_GetTickCount(void)
 {
 	volatile uint32 tmp_tick1;
@@ -105,4 +110,4 @@ uint32 SCI_GetTickCount(void)
 
 	return tmp_tick1;
 }
-#endif
+

@@ -327,18 +327,23 @@ uint32 GET_SPL_Data()
     return ret;
 }
 #endif
+
 void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
     uint32 ret;
     MCU_Init();
 #if 0
     ret = GET_SPL_Data();
-    if (ret == 0)
-        DMC_Init(emc_data->mem_drv, emc_data->sdll_phase, emc_data->dqs_step);
+    if (ret != 0)
+    {
+        DMC_Init(0, 0, 0, 0);
+    }
     else
-        DMC_Init(0, 0, 0);
+    {
+        DMC_Init(0, emc_data->mem_drv, emc_data->sdll_phase, emc_data->dqs_step);
+    }
 #else
-    DMC_Init(0);
+    DMC_Init(0, 0, 0, 0);
 #endif
 }
 

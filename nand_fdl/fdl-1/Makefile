@@ -1,3 +1,4 @@
+
 include  $(TOPDIR)/config.mk
 include  $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/config.mk
 include  $(TOPDIR)/board/$(BOARDDIR)/config.mk
@@ -5,7 +6,7 @@ sinclude $(TOPDIR)/include/idh_config.mk
 
 gcclibdir    := $(shell dirname `$(CC) -print-libgcc-file-name`)
 
-LDSCRIPT      = $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/u-boot.lds
+LDSCRIPT      = $(TOPDIR)/nand_fdl/board/$(BOARDDIR)/fdl1.lds
 FDL1_LDFLAGS  = -Bstatic -T $(LDSCRIPT) $(PLATFORM_LDFLAGS)
 
 AFLAGS       += -I $(OBJTREE)/include/asm/arch
@@ -27,10 +28,14 @@ GENERIC_LIB   =
 COM_OBJ_FILE  = dl_engine.o fdl_crc.o packet.o fdl_channel.o fdl_stdio.o usb_boot.o drv_usb.o virtual_com.o string.o 
 COM_OBJS      = $(addprefix $(obj),$(COM_OBJ_FILE))
 
-CPU_OBJ_FILE  = chip_cfg.o sdram.o mmu_asm.o mmu.o
+CPU_OBJ_FILE  = chip_cfg.o mmu_asm.o mmu.o
+ifdef CONFIG_SC8825
+CPU_OBJ_FILE += sdram.o
+endif
+
 CPU_LIB       = $(addprefix $(obj),$(CPU_OBJ_FILE))
 
-UBOOT_LIBS    = $(ARM_LIB)  $(COMMON_LIB) $(CPU_LIB) $(GENERIC_LIB) $(DRIVERS_LIB)
+UBOOT_LIBS    = $(ARM_LIB) $(COMMON_LIB) $(GENERIC_LIB) $(DRIVERS_LIB)
 
 FDL1_LNDIR   := $(OBJTREE)/nand_fdl/fdl-1
 
@@ -46,10 +51,10 @@ fdl1:$(ALL)
 $(ALL) : $(fdlobj)fdl1.axf
 	$(OBJCOPY) ${OBJCFLAGS} -O binary $< $@
 
-$(fdlobj)fdl1.axf: $(FDL1_OBJS) $(COM_OBJS) $(UBOOT_LIBS)
+$(fdlobj)fdl1.axf: $(FDL1_OBJS) $(COM_OBJS)  $(CPU_LIB) $(UBOOT_LIBS)
 	@mkdir -p $(FDL1_LNDIR)
-	cd $(FDL1_LNDIR) && $(LD) $(FDL1_LDFLAGS) -Ttext $(FDL1_TEXT_BASE) -Tbss $(FDL1_BSS_BASE)\
-		--start-group $(FDL1_COBJ_FILE) $(FDL1_SOBJ_FILE) $(COM_OBJS) $(UBOOT_LIBS) --end-group \
+	cd $(FDL1_LNDIR) && $(LD) $(FDL1_LDFLAGS) \
+		$(FDL1_COBJ_FILE) $(FDL1_SOBJ_FILE) $(COM_OBJ_FILE) $(CPU_OBJ_FILE) $(UBOOT_LIBS) \
 		-Map $(fdlobj)fdl1.map \
 		-o $@ $(PLATFORM_LIBS)
 
@@ -60,7 +65,7 @@ $(obj)%.o:$(SRCTREE)/nand_fdl/common/src/%.c
 	$(CC) $(CFLAGS) -I $(FDL1_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 $(obj)%.o:$(SRCTREE)/nand_fdl/fdl-1/src/%.c
 	$(CC) $(CFLAGS) -I $(FDL1_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
-$(obj)%.o:$(SRCTREE)/nand_fdl/fdl-1/src/%.s
+$(obj)%.o:$(SRCTREE)/nand_fdl/fdl-1/src/%.S
 	$(CC) $(AFLAGS) -I $(FDL1_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<
 $(obj)%.o:$(SRCTREE)/arch/$(ARCH)/cpu/$(CPU)/$(SOC)/%.S
 	$(CC) $(AFLAGS) -I $(FDL1_PATH)/inc -I $(COM_PATH)/inc -c -o $@ $<

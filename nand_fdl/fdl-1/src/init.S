@@ -35,6 +35,13 @@
 #include <common.h>
 #include <version.h>
 
+
+#if defined CONFIG_SC8825
+#define FDL1_STACK 0x00028000
+#else
+#define FDL1_STACK 0x31000000
+#endif
+
 /*
  *************************************************************************
  *
@@ -42,12 +49,6 @@
  *
  *************************************************************************
  */
-
-#if defined CONFIG_SC8825
-#define FDL1_STACK 0x00028000
-#else
-#define FDL1_STACK 0x31000000
-#endif
 
 
 .globl _start
@@ -65,20 +66,32 @@ _start:
  *
  *************************************************************************
  */
-
-
 /*
  * These are defined in the board-specific linker script.
  */
-.globl _bss_start
+
+#if defined CONFIG_SC8825
+.local _bss0_start
+_bss0_start:
+	.word __bss0_start
+.local _bss0_end
+_bss0_end:
+	.word __bss0_end
+.local _bss1_start
+_bss1_start:
+	.word __bss1_start
+.local _bss1_end
+_bss1_end:
+	.word __bss1_end
+#else
+.local _bss_start
 _bss_start:
 	.word __bss_start
-
-.globl _bss_end
+.local _bss_end
 _bss_end:
 	.word _end
-
-.global _armboot_start
+#endif
+.local _armboot_start
 _armboot_start:
 	.word _start
 
@@ -106,21 +119,34 @@ reset:
 
 	/*set stack limit to 0*/
 	MOV R10, #0
-	ldr sp, =0x28000
-	MOV r0, #100
-	MOV r1, #0
-	MOV r2, #0
-	bl  DMC_Init 
+	ldr sp, =FDL1_STACK
+
+	MOV R0, #0
+	MOV R1, #0
+	MOV R2, #0
+	MOV R3, #0
+	bl  DMC_Init
+
+#if defined CONFIG_SC8825	
+	ldr r0, _bss0_start
+	ldr r1, _bss0_end
+	bl  clear_bss
+
+	ldr r0, _bss1_start
+	ldr r1, _bss1_end
+	bl  clear_bss
+#else
+	ldr r0, _bss_start
+	ldr r1, _bss_end
+	bl  clear_bss
+#endif
+	b   main
 
 clear_bss:
-	ldr	r0, _bss_start		/* find start of bss segment        */
-	ldr	r1, _bss_end		/* stop here                        */
 	mov	r2, #0x00000000		/* clear                            */
-
 clbss_l:str	r2, [r0]		/* clear loop...                    */
 	add	r0, r0, #4
 	cmp	r0, r1
 	ble	clbss_l
-
-	b main
+	bx	r14
 
