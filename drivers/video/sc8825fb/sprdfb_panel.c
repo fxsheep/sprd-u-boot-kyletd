@@ -145,11 +145,11 @@ void sprdfb_panel_remove(struct sprdfb_device *dev);
 static int32_t panel_reset_dispc(struct panel_spec *self)
 {
 	dispc_write(0, DISPC_RSTN);
-	udelay(200);
+	mdelay(20);
 	dispc_write(1, DISPC_RSTN);
 
 	/* wait 10ms util the lcd is stable */
-	mdelay(10);
+	mdelay(20);
 	return 0;
 }
 
@@ -247,8 +247,8 @@ static struct panel_spec *adapt_panel_from_readid(struct sprdfb_device *dev)
 
 	for(i = 0;i<(sizeof(lcd_panel))/(sizeof(lcd_panel[0]));i++) {
 		FB_PRINT("sprdfb: [%s]: try panel 0x%x\n", __FUNCTION__, lcd_panel[i].lcd_id);
-		panel_reset(lcd_panel[i].panel);
 		panel_mount(dev, lcd_panel[i].panel);
+		panel_reset(lcd_panel[i].panel);
 		panel_init(dev);
 		dev->panel->ops->panel_init(dev->panel);
 		id = dev->panel->ops->panel_readid(dev->panel);
