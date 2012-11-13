@@ -33,8 +33,7 @@ int board_init()
 
 int dram_init(void)
 {
-	//gd->ram_size = get_ram_size((volatile void *)PHYS_SDRAM_1,
-	//		PHYS_SDRAM_1_SIZE);
-	gd->ram_size = 0x8000000;//PHYS_SDRAM_1_SIZE;
+	gd->ram_size = get_ram_size((volatile void *)PHYS_SDRAM_1,
+			PHYS_SDRAM_1_SIZE);
 	return 0;
 }
