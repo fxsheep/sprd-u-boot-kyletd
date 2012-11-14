@@ -66,6 +66,16 @@ unsigned char *g_eMMCBuf = (unsigned char*)0x82000000;
 unsigned char *g_eMMCBuf = (unsigned char*)0x2000000;
 #endif
 
+#if defined CONFIG_SC8825
+#define BOOTLOADER_HEADER_OFFSET 0x20
+typedef struct{
+	uint32 version;
+	uint32 magicData;
+	uint32 checkSum;
+	uint32 hashLen;
+}EMMC_BootHeader;
+#endif
+
 typedef struct
 {
 	unsigned int partition_index;
@@ -462,9 +472,20 @@ int fastboot_flashNVParttion(EFI_PARTITION_INDEX part, void *data, size_t sz)
 
 void fastboot_splFillCheckData(unsigned int * splBuf,  int len)
 {
+#if   defined(CONFIG_SC8810)
 	*(splBuf + MAGIC_DATA_SAVE_OFFSET) = MAGIC_DATA;
 	*(splBuf + CHECKSUM_SAVE_OFFSET) = (unsigned int)fastboot_eMMCCheckSum((unsigned int *)&splBuf[CHECKSUM_START_OFFSET/4], SPL_CHECKSUM_LEN - CHECKSUM_START_OFFSET);
+
+#elif defined(CONFIG_SC8825) || defined(CONFIG_SC7710G2)
+	EMMC_BootHeader *header;
+	header = (EMMC_BootHeader *)((unsigned char*)splBuf+BOOTLOADER_HEADER_OFFSET);
+	header->version  = 0;
+	header->magicData= MAGIC_DATA;
+	header->checkSum = (unsigned int)fastboot_eMMCCheckSum((unsigned char*)splBuf+BOOTLOADER_HEADER_OFFSET+sizeof(*header), SPL_CHECKSUM_LEN-(BOOTLOADER_HEADER_OFFSET+sizeof(*header)));
+	header->hashLen  = 0;
+#endif
 }
+
 
 void cmd_flash(const char *arg, void *data, unsigned sz)
 {
