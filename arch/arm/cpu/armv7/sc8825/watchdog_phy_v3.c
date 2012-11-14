@@ -94,7 +94,7 @@ PUBLIC int32 WDG_PHY_CONFIG (WDG_CONFIG_T *cfg)
             break;
 
         case WDG_TIMER_STATE_START:
-            ANA_REG_OR (WDG_CTRL, WDG_CNT_EN_BIT);
+            ANA_REG_OR (WDG_CTRL, WDG_CNT_EN_BIT | WDG_RST_EN_BIT);
             break;
 
         default:
