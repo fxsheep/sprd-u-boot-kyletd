@@ -84,11 +84,12 @@ static void delay()
     for (i=0; i<0x100; i++);
 }
 
-uint32 GET_MPLL_N()
+static uint32 GET_MPLL_N()
 {	
     return REG32(GR_MPLL_MN)&0x07FF;
 }
-uint32 GET_MPLL_M()
+
+static uint32 GET_MPLL_M()
 {
     uint32 M;
     switch ((REG32(GR_MPLL_MN)>>16)&0x3)
@@ -99,7 +100,8 @@ uint32 GET_MPLL_M()
     }
     return M;
 }
-void SET_MPLL_N(uint32 N)
+
+static void SET_MPLL_N(uint32 N)
 {
     uint32 mpll;
     mpll =REG32(GR_MPLL_MN);
@@ -108,7 +110,7 @@ void SET_MPLL_N(uint32 N)
     REG32(GR_MPLL_MN) = mpll;
         delay();
 }
-int SET_MPLL_M(uint32 M)
+static int SET_MPLL_M(uint32 M)
 {
     uint32 mpll;
     switch(M)
@@ -127,12 +129,12 @@ int SET_MPLL_M(uint32 M)
     return 0;
 }
 
-uint32 GetMPllClk (void)
+static uint32 GetMPllClk (void)
 {
     return GET_MPLL_M()*GET_MPLL_N()*1000000;
 }
 
-uint32 SetMPllClk (uint32 clk)
+static uint32 SetMPllClk (uint32 clk)
 {
     uint32 M, N, ret=1;
     clk /= 1000000;
@@ -150,11 +152,12 @@ uint32 SetMPllClk (uint32 clk)
     return ret;
 }
 
-uint32 GET_DPLL_N()
+static uint32 GET_DPLL_N()
 {	
     return REG32(GR_DPLL_MN)&0x07FF;
 }
-uint32 GET_DPLL_M()
+
+static uint32 GET_DPLL_M()
 {
     uint32 M;
     switch ((REG32(GR_DPLL_MN)>>16)&0x3)
@@ -166,12 +169,12 @@ uint32 GET_DPLL_M()
     return M;
 }
 
-uint32 GetDPllClk(void)
+static uint32 GetDPllClk(void)
 {
     return GET_DPLL_M()*GET_DPLL_N()*1000000;
 }
 
-uint32 EmcClkConfig(uint32 emc_clk)
+static uint32 EmcClkConfig(uint32 emc_clk)
 {
     uint32 src_clk, div, ahb_arm_clk;
 
@@ -199,7 +202,7 @@ uint32 EmcClkConfig(uint32 emc_clk)
     return 0;
 }
 
-uint32 AhbClkConfig(uint32 ahb_clk)
+static uint32 AhbClkConfig(uint32 ahb_clk)
 {
     uint32 ahb_arm_clk, div, mcu_clk;
     
@@ -220,7 +223,7 @@ uint32 AhbClkConfig(uint32 ahb_clk)
     return 0;
 }
 
-uint32 AxiClkConfig()
+static uint32 AxiClkConfig()
 {
     uint32 ca5_cfg;
     ca5_cfg = REG32(AHB_CA5_CFG);
@@ -231,7 +234,7 @@ uint32 AxiClkConfig()
     return 0;
 }
 
-uint32 ArmClkPeriSet()
+static uint32 ArmClkPeriSet()
 {
     uint32 ahb_arm_clk;
     ahb_arm_clk  = REG32(AHB_ARM_CLK);
@@ -241,7 +244,7 @@ uint32 ArmClkPeriSet()
     return 0;
 }
 
-uint32 McuClkConfig(uint32 mcu_clk)
+static uint32 McuClkConfig(uint32 mcu_clk)
 {
     if (SetMPllClk(mcu_clk))
         return -1;
@@ -250,7 +253,7 @@ uint32 McuClkConfig(uint32 mcu_clk)
     return 0;
 }
 
-uint32 ClkConfig(MCU_CLK_TYPE_E clk_type)
+static uint32 ClkConfig(MCU_CLK_TYPE_E clk_type)
 {
     uint32 mcu_clk, arm_clk, emc_clk, ahb_clk, ahb_arm_clk, div;
     if (GetClockCfg(clk_type, &mcu_clk, &arm_clk, &emc_clk, &ahb_clk))
@@ -280,8 +283,13 @@ uint32 MCU_Init()
         while(1);
     return 0;
 }
-#if 0
+
+#define USE_SPL_DATA
+#if defined USE_SPL_DATA
+
 #define SPL_DATA_ADR (CONFIG_SYS_TEXT_BASE + (23*1024))
+
+#define SPL_DATA_DBG
 
 typedef struct
 {
@@ -302,10 +310,14 @@ typedef struct
 #define EMC_PRIV_DATA  0x10
 #define EMC_MAGIC_DATA 0xabcd1234
 
+#if defined SPL_DATA_DBG
+#define SPL_DATA_DBG_ADR (SPL_DATA_ADR + 0x100)
+#endif
+
 static spl_priv_data* spl_data = NULL;
 static emc_priv_data* emc_data = NULL; 
 
-uint32 GET_SPL_Data()
+static uint32 GET_SPL_Data()
 {
     uint32 ret = 1;
 
@@ -332,7 +344,7 @@ void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
     uint32 ret;
     MCU_Init();
-#if 0
+#if defined USE_SPL_DATA
     ret = GET_SPL_Data();
     if (ret != 0)
     {
@@ -340,6 +352,12 @@ void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
     }
     else
     {
+#if defined SPL_DATA_DBG
+        *((volatile unsigned int *)(SPL_DATA_DBG_ADR + 0x00)) = emc_data->mem_drv;
+        *((volatile unsigned int *)(SPL_DATA_DBG_ADR + 0x04)) = emc_data->sdll_phase;
+        *((volatile unsigned int *)(SPL_DATA_DBG_ADR + 0x08)) = emc_data->dqs_step;
+        *((volatile unsigned int *)(SPL_DATA_DBG_ADR + 0x0C)) = emc_data->check_sum;
+#endif
         DMC_Init(0, emc_data->mem_drv, emc_data->sdll_phase, emc_data->dqs_step);
     }
 #else
