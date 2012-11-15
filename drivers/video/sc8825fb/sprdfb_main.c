@@ -17,6 +17,7 @@
 #include <asm/errno.h>
 
 #include <asm/arch/tiger_lcd.h>
+#include <asm/arch-sc8825/ldo.h>
 
 #include <asm/arch/sc8810_reg_global.h>
 
@@ -93,8 +94,8 @@ void LCD_SetBackLightBrightness( unsigned long  value)
 
 void set_backlight(uint32_t value)
 {
-#if defined (CONFIG_SP8825) || defined (CONFIG_SP8825EA) || defined (CONFIG_SP8825EB)
- 	__raw_writel(0x101, 0x4C000138);
+#if defined (CONFIG_SP8825) || defined (CONFIG_SP8825EA) || defined (CONFIG_SP8825EB) ||defined(CONFIG_GARDA)
+	__raw_writel(0x101, 0x4C000138);
 	__raw_bits_or((1<<5), 0x4B000008);
 	__raw_bits_or((1<<8), 0x4A000384);
 	__raw_bits_or((1<<8), 0x4A000388);
@@ -178,6 +179,8 @@ static int tiger_probe(void * lcdbase)
 	LDO_SetVoltLevel(LDO_LDO_VDD28, LDO_VOLT_LEVEL3);
 	LDO_TurnOnLDO(LDO_LDO_VDD28);
 #endif
+	LDO_SetVoltLevel(LDO_LDO_SIM1, LDO_VOLT_LEVEL2);
+	LDO_TurnOnLDO(LDO_LDO_SIM1);
 /*
 	__raw_writel((__raw_readl(0x20900208) | 0xAFE), 0x20900208);
 	__raw_writel((__raw_readl(0x20900200) | 0xFFFFFFFF), 0x20900200);

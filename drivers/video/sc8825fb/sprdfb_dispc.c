@@ -280,6 +280,8 @@ static int32_t sprdfb_dispc_refresh (struct sprdfb_device *dev)
 	sprdfb_panel_before_refresh(dev);
 
 	if(SPRDFB_PANEL_IF_DPI == dev->panel_if_type){
+		//dispc_write(0x0, DISPC_OSD_CTRL);
+		//dispc_write(0x0, DISPC_BG_COLOR);
 		/*dpi register update*/
 		dispc_set_bits((1<<5), DISPC_DPI_CTRL);
 		if(is_first_frame){

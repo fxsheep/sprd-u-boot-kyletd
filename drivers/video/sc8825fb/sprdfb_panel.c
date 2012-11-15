@@ -145,11 +145,11 @@ void sprdfb_panel_remove(struct sprdfb_device *dev);
 static int32_t panel_reset_dispc(struct panel_spec *self)
 {
 	dispc_write(0, DISPC_RSTN);
-	mdelay(20);
+	mdelay(200);
 	dispc_write(1, DISPC_RSTN);
-
+printf("reset!!!!\n");
 	/* wait 10ms util the lcd is stable */
-	mdelay(20);
+	mdelay(200);
 	return 0;
 }
 
