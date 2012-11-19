@@ -234,6 +234,9 @@ PUBLIC void SDHOST_Cfg_SpeedMode (SDHOST_HANDLE sdhost_handler,SDHOST_SPEED_E sp
 		tmpReg |= 1<<16;
 		break;
 	case EMMC_SDR50:
+		REG32(EMMC_CLK_WR_DL)     = 0x33;
+		REG32(EMMC_CLK_RD_POS_DL) = 0x08;
+		REG32(EMMC_CLK_RD_NEG_DL) = 0x08;
 		tmpReg |= 2<<16;
 		break;
 	case EMMC_SDR104:

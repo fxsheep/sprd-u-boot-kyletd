@@ -12,6 +12,7 @@ void ADC_Init(void)
 {
 	ANA_REG_OR(ANA_APB_CLK_EN, ADC_EB | CLK_AUXAD_EN | CLK_AUXADC_EN);
 	ANA_REG_OR(ADC_CTRL, ADC_EN_BIT);
+	ANA_REG_OR(ADC_CTRL, ADC_MODE_12B);
 }
 
 void ADC_SetCs(adc_channel id)
@@ -36,12 +37,14 @@ void ADC_SetScale(bool scale)
 
 void ADC_ConfigTPC(uint8_t x, uint8_t y)
 {
+#if 0
     if(x > ADC_MAX || y > ADC_MAX){
         pr_err("tpc x and y channel should be in 0~%d\n", ADC_MAX);
         return;
     }
 
     ANA_REG_MSK_OR(ADC_TPC_CH_CTRL, x|y<<ADC_TPC_Y_CH_OFFSET, ADC_TPC_X_CH_MSK|ADC_TPC_Y_CH_MSK);
+#endif
 }
 
 int32_t ADC_GetValue(adc_channel id, bool scale)

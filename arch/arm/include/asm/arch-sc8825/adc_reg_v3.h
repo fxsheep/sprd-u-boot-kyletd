@@ -35,27 +35,31 @@ extern   "C"
 
 #define ADC_CTRL                            (ADC_REG_BASE + 0x0000)
 #define ADC_CS                              (ADC_REG_BASE + 0x0004)
-#define ADC_TPC_CH_CTRL                     (ADC_REG_BASE + 0x0008)
-#define ADC_DAT                             (ADC_REG_BASE + 0x00C)
-#define ADC_INT_EN                          (ADC_REG_BASE + 0x0010)
-#define ADC_INT_CLR                         (ADC_REG_BASE + 0x0014)
-#define ADC_INT_STAT                        (ADC_REG_BASE + 0x0018)
-#define ADC_INT_SRC                         (ADC_REG_BASE + 0x001C)
+//#define ADC_TPC_CH_CTRL                   (ADC_REG_BASE + 0x0008)
+#define ADC_HW_CH_CFG_SLOW(x)               (ADC_REG_BASE + 0x0008 + ((x)-1)*0x04)
+#define ADC_HW_CH_CFG_FAST(x)               (ADC_REG_BASE + 0x0028 + ((x)-1)*0x04)
+#define ADC_HW_CH_DELAY                     (ADC_REG_BASE + 0x0048)
+#define ADC_DAT                             (ADC_REG_BASE + 0x004C)
+#define ADC_INT_EN                          (ADC_REG_BASE + 0x0050)
+#define ADC_INT_CLR                         (ADC_REG_BASE + 0x0054)
+#define ADC_INT_STAT                        (ADC_REG_BASE + 0x0058)
+#define ADC_INT_SRC                         (ADC_REG_BASE + 0x005C)
 
 ///ADC_CTRL
-#define ADC_STATUS_BIT                      BIT_4
-#define ADC_TPC_CH_ON_BIT                    BIT_2
+//#define ADC_STATUS_BIT                      BIT_4
+//#define ADC_TPC_CH_ON_BIT                   BIT_2
+#define ADC_MODE_12B                        BIT_2
 #define SW_CH_ON_BIT                        BIT_1
 #define ADC_EN_BIT                          BIT_0
 
 ///ADC_CS bit map
-#define ADC_SCALE_BIT                       BIT_4
-#define ADC_CS_BIT_MSK                      0x0F
+#define ADC_SCALE_BIT                       BIT_5
+#define ADC_CS_BIT_MSK                      0x1F
 
 ////ADC_TPC_CH_CTRL bit map
-#define ADC_TPC_X_CH_MSK                    0x0F
-#define ADC_TPC_Y_CH_OFFSET             4
-#define ADC_TPC_Y_CH_MSK                    (0x0F << ADC_TPC_Y_CH_OFFSET)
+//#define ADC_TPC_X_CH_MSK                    0x0F
+//#define ADC_TPC_Y_CH_OFFSET                 4
+//#define ADC_TPC_Y_CH_MSK                    (0x0F << ADC_TPC_Y_CH_OFFSET)
 
 ////ADC_INT_EN
 #define ADC_IRQ_EN_BIT                      BIT_0
@@ -63,9 +67,8 @@ extern   "C"
 #define ADC_IRQ_CLR_BIT                     BIT_0
 
 #define ADC_IRQ_RAW_BIT                     BIT_0
-
 //ADC_DAT bit map
-#define ADC_DATA_MSK                        0x3FF
+#define ADC_DATA_MSK                        0xFFF
 
 #define TPC_CHANNEL_X    2
 #define TPC_CHANNEL_Y    3
