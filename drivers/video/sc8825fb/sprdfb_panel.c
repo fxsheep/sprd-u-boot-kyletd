@@ -20,6 +20,9 @@
 #include "sprdfb.h"
 
 
+static ushort colormap[256];
+
+
 #ifdef CONFIG_SC8810_OPENPHONE
 
 extern struct panel_spec lcd_panel_hx8357;
@@ -108,6 +111,7 @@ vidinfo_t panel_info = {
 	.vl_col = 480,
 	.vl_bpix = 4,
 	.vl_row = 800,
+	.cmap = colormap,
 };
 #endif
 
@@ -116,6 +120,7 @@ vidinfo_t panel_info = {
 	.vl_col = 320,
 	.vl_bpix = 4,
 	.vl_row = 480,
+	.cmap = colormap,
 };
 #endif
 
@@ -124,6 +129,7 @@ vidinfo_t panel_info = {
 	.vl_col = 240,
 	.vl_bpix = 4,
 	.vl_row = 320,
+	.cmap = colormap,
 };
 #endif
 
@@ -132,6 +138,7 @@ vidinfo_t panel_info = {
 	.vl_col = 540,
 	.vl_bpix = 4,
 	.vl_row = 960,
+	.cmap = colormap,
 };
 #endif
 
@@ -144,12 +151,13 @@ void sprdfb_panel_remove(struct sprdfb_device *dev);
 
 static int32_t panel_reset_dispc(struct panel_spec *self)
 {
-	dispc_write(0, DISPC_RSTN);
-	mdelay(200);
 	dispc_write(1, DISPC_RSTN);
-printf("reset!!!!\n");
+	mdelay(20);
+	dispc_write(0, DISPC_RSTN);
+	mdelay(20);
+	dispc_write(1, DISPC_RSTN);
 	/* wait 10ms util the lcd is stable */
-	mdelay(200);
+	mdelay(120);
 	return 0;
 }
 
