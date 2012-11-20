@@ -772,7 +772,7 @@ void nand_spl_hardware_config(struct nand_chip *this, u8 id[5])
 		g_info.ecc_mode = nand_config_table[index].eccbit;
 		this->eccbitmode = g_info.ecc_mode;
 		/* 4 bit ecc, per 512 bytes can creat 13 * 4 = 52 bit , 52 / 8 = 7 bytes
-		   8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 13 bytes */
+		   8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 14 bytes */
 		switch (g_info.ecc_mode) {
 			case 4:
 				/* 4 bit ecc, per 512 bytes can creat 13 * 4 = 52 bit , 52 / 8 = 7 bytes */
@@ -780,7 +780,7 @@ void nand_spl_hardware_config(struct nand_chip *this, u8 id[5])
 				this->ecc.layout = &_nand_oob_128;
 			break;
 			case 8:
-				/* 8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 13 bytes */
+				/* 8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 14 bytes */
 				this->ecc.bytes = 14;
 				if (nand_config_table[index].oobsize == 224)
 					this->ecc.layout = &_nand_oob_224;
@@ -813,7 +813,7 @@ void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5]
 		g_info.ecc_mode = nand_config_table[index].eccbit;
 		this->eccbitmode = g_info.ecc_mode;
 		/* 4 bit ecc, per 512 bytes can creat 13 * 4 = 52 bit , 52 / 8 = 7 bytes
-		   8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 13 bytes */
+		   8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 14 bytes */
 		switch (g_info.ecc_mode) {
 			case 4:
 				/* 4 bit ecc, per 512 bytes can creat 13 * 4 = 52 bit , 52 / 8 = 7 bytes */
@@ -821,7 +821,7 @@ void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5]
 				this->ecc.layout = &_nand_oob_128;
 			break;
 			case 8:
-				/* 8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 13 bytes */
+				/* 8 bit ecc, per 512 bytes can creat 13 * 8 = 104 bit , 104 / 8 = 14 bytes */
 				this->ecc.bytes = 14;
 				if (nand_config_table[index].oobsize == 224)
 					this->ecc.layout = &_nand_oob_224;
@@ -830,7 +830,6 @@ void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5]
 				mtd->oobsize = nand_config_table[index].oobsize;
 			break;
 		}
-		mtdoobsize = nand_config_table[index].oobsize;
 	} else 
 		printk("The type of nand flash is not in table, so use default configuration!\n");
 }
