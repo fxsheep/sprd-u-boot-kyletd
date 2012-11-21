@@ -659,7 +659,7 @@ unsigned short eMMCCheckSum(const unsigned int *src, int len)
     return (unsigned short) (~sum);
 }
 
-#if 	defined CONFIG_TIGER
+#if defined(CONFIG_TIGER) || defined(CONFIG_SC7710G2)
 #define BOOTLOADER_HEADER_OFFSET 0x20
 typedef struct{
 	uint32 version;
@@ -670,17 +670,17 @@ typedef struct{
 #endif
 void splFillCheckData(unsigned int * splBuf,  int len)
 {
-#if   defined(CONFIG_SC8810)
-	*(splBuf + MAGIC_DATA_SAVE_OFFSET) = MAGIC_DATA;
-	*(splBuf + CHECKSUM_SAVE_OFFSET) = (unsigned int)eMMCCheckSum((unsigned int *)&splBuf[CHECKSUM_START_OFFSET/4], SPL_CHECKSUM_LEN - CHECKSUM_START_OFFSET);
-//	*(splBuf + CHECKSUM_SAVE_OFFSET) = splCheckSum(splBuf);
-#elif defined(CONFIG_TIGER) || defined(CONFIG_SC7710G2)
+#if defined(CONFIG_TIGER) || defined(CONFIG_SC7710G2)
 	EMMC_BootHeader *header;
 	header = (EMMC_BootHeader *)((unsigned char*)splBuf+BOOTLOADER_HEADER_OFFSET);
 	header->version  = 0;
 	header->magicData= MAGIC_DATA;
 	header->checkSum = (unsigned int)eMMCCheckSum((unsigned char*)splBuf+BOOTLOADER_HEADER_OFFSET+sizeof(*header), SPL_CHECKSUM_LEN-(BOOTLOADER_HEADER_OFFSET+sizeof(*header)));
 	header->hashLen  = 0;
+#else
+        *(splBuf + MAGIC_DATA_SAVE_OFFSET) = MAGIC_DATA;
+	*(splBuf + CHECKSUM_SAVE_OFFSET) = (unsigned int)eMMCCheckSum((unsigned int *)&splBuf[CHECKSUM_START_OFFSET/4], SPL_CHECKSUM_LEN - CHECKSUM_START_OFFSET);
+//	*(splBuf + CHECKSUM_SAVE_OFFSET) = splCheckSum(splBuf);
 #endif
 }
 

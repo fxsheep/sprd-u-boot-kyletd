@@ -33,6 +33,10 @@ ifdef CONFIG_SC8825
 CPU_OBJ_FILE += sdram.o
 endif
 
+ifdef CONFIG_SC7710G2
+CPU_OBJ_FILE += sdram_sc7710g2.o sdram_prod_sc7710g2.o
+endif
+
 CPU_LIB       = $(addprefix $(obj),$(CPU_OBJ_FILE))
 
 UBOOT_LIBS    = $(ARM_LIB) $(COMMON_LIB) $(GENERIC_LIB) $(DRIVERS_LIB)

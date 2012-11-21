@@ -220,7 +220,7 @@ PUBLIC void SDHOST_Cfg_BusWidth (SDHOST_HANDLE sdhost_handler,SDHOST_BIT_WIDTH_E
 //      NONE
 //  Note:
 /*****************************************************************************/
-#if defined CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
 PUBLIC void SDHOST_Cfg_SpeedMode (SDHOST_HANDLE sdhost_handler,SDHOST_SPEED_E speed)
 {
 	uint32 tmpReg = sdhost_handler->host_cfg->HOST_CTL2;
@@ -308,7 +308,7 @@ typedef enum
 /*****************************************************************************/
 PUBLIC void SDHOST_Cfg_Voltage (SDHOST_HANDLE sdhost_handler,SDHOST_VOL_RANGE_E voltage)
 {
-#ifdef CONFIG_TIGER
+#if defined (CONFIG_TIGER) || defined (CONFIG_SC7710G2)
     /*<CR:MS00234475 modify for SPI smartphone 30/03/2011 by shengyanxin bagin*/
 #if defined (MODEM_CONTROL_SUPPORT_SPI)
     return;
@@ -695,7 +695,7 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
 
     //SDCLK Frequency Select ,Configure SDCLK select
     clkDiv = sdhost_handler->baseClock/sdio_clk;
-#if defined CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
     clkDiv /= 2;
 #endif
     if (0 != sdhost_handler->baseClock%sdio_clk)
@@ -706,7 +706,7 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
     SDHOST_PRINT ( ("   clkDiv: %d, sdio_clk:%d, baseClock:%d\n",clkDiv, sdio_clk, sdhost_handler->baseClock));
 
     tmpReg = sdhost_handler->host_cfg->HOST_CTL1;
-#if defined (CONFIG_SC8825)
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
     clkDiv--;
     tmpReg &= (~ (0x3ff<<6));
     tmpReg |= clkDiv&(0x3<<6);

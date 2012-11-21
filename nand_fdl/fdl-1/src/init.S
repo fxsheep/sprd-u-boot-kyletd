@@ -38,6 +38,8 @@
 
 #if defined CONFIG_SC8825
 #define FDL1_STACK 0x00028000
+#elif defined CONFIG_SC7710G2
+#define FDL1_STACK 0x40008000
 #else
 #define FDL1_STACK 0x31000000
 #endif
@@ -70,7 +72,7 @@ _start:
  * These are defined in the board-specific linker script.
  */
 
-#if defined CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined (CONFIG_SC7710G2)
 .local _bss0_start
 _bss0_start:
 	.word __bss0_start
@@ -127,7 +129,7 @@ reset:
 	MOV R3, #0
 	bl  DMC_Init
 
-#if defined CONFIG_SC8825	
+#if defined (CONFIG_SC8825) || defined (CONFIG_SC7710G2)
 	ldr r0, _bss0_start
 	ldr r1, _bss0_end
 	bl  clear_bss

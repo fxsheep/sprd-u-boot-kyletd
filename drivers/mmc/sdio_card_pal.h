@@ -36,7 +36,7 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr(SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_E
 typedef enum
 {
 	SDIO_CARD_PAL_400KHz,			// 初始化频率
-#ifdef CONFIG_SC8825	
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
 	SDIO_CARD_PAL_1MHz,
 	SDIO_CARD_PAL_2MHz,
 	SDIO_CARD_PAL_4MHz,
@@ -46,7 +46,7 @@ typedef enum
 	SDIO_CARD_PAL_20MHz,			// MMC卡的工作频率
 	SDIO_CARD_PAL_25MHz,			// SD卡的工作频率
 	SDIO_CARD_PAL_50MHz,			// SD卡高速模式下的工作频率
-#ifdef CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
 	SDIO_CARD_PAL_100MHz,
 #endif
 }
@@ -63,7 +63,7 @@ PUBLIC BOOLEAN SDIO_Card_Pal_SetBusWidth(SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_P
 
 typedef enum
 {
-#if defined CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
 	EMMC_SPEED_SDR12,
 	EMMC_SPEED_SDR25,
 	EMMC_SPEED_SDR50,

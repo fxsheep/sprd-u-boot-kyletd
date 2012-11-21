@@ -36,7 +36,7 @@ SDHOST_BIT_WIDTH_E;
 
 typedef enum SDHOST_SPEED_E_TAG
 {
-#if defined CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
 	EMMC_SDR12,
 	EMMC_SDR25,
 	EMMC_SDR50,

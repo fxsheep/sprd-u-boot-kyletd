@@ -106,7 +106,7 @@ int main(void)
 	mem_malloc_init (_bss_end, CONFIG_SYS_MALLOC_LEN);	   
 #endif	   
 	   timer_init();
-#ifdef CONFIG_TIGER
+#if defined (CONFIG_TIGER) || defined(CONFIG_SC7710G2)
 #else
        sprd_clean_rtc();
 
@@ -120,7 +120,7 @@ int main(void)
 			extern int mmc_legacy_init(int dev);
 			mmc_legacy_init(1);
 			if (!FDL_Check_Partition_Table()) {
-				#ifdef CONFIG_SC8825 // JUST FOR TEST , DELETE IT LATER
+  				#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2) // JUST FOR TEST , DELETE IT LATER
 				write_uefi_parition_table(g_sprd_emmc_partition_cfg);
 				#else				
 				FDL_SendAckPacket (convert_err (NAND_INCOMPATIBLE_PART));

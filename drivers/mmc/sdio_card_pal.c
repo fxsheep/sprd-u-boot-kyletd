@@ -446,7 +446,7 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_
             {
                 SDHOST_RST(handle->sdio_port, RST_MODULE);
                 SDHOST_Cfg_BusWidth (handle->sdio_port,SDIO_1BIT_WIDTH);
-#if defined CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
                 SDHOST_Cfg_SpeedMode (handle->sdio_port, EMMC_SDR12);
 #else
                 SDHOST_Cfg_SpeedMode (handle->sdio_port,SDIO_LOWSPEED);
@@ -520,7 +520,7 @@ PUBLIC BOOLEAN SDIO_Card_Pal_SetClk (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_C
                 SDHOST_SD_Clk_Freq_Set (handle->sdio_port,400000);
             }
             break;
-#ifdef CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
 		case SDIO_CARD_PAL_1MHz:
                 SDHOST_SD_Clk_Freq_Set (handle->sdio_port,1000000);
 				break;
@@ -637,7 +637,7 @@ PUBLIC BOOLEAN SDIO_Card_Pal_SetSpeedMode (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD
         (SDIO_CARD_PAL_MAGICNUM == handle->MagicNum)
         && (TRUE == handle->flag)
     );
-#if defined CONFIG_SC8825
+#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
 	switch (speedMode)
 	{
 		case EMMC_SPEED_SDR12:
