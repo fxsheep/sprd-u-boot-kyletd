@@ -2266,7 +2266,7 @@ PUBLIC BOOLEAN CARD_SDIO_WriteMultiBlock(CARD_EMMC_PARTITION_TPYE  cardPartiton,
 
 
 //-----------------------------------------------------------------------------------
-//	Set erase start address
+//	Set  SD20 erase start address
 //-----------------------------------------------------------------------------------
 LOCAL BOOLEAN _SD20_SetEraseStart(CARD_SDIO_HANDLE cardHandle,uint32 startBlock)
 {
@@ -2281,7 +2281,7 @@ LOCAL BOOLEAN _SD20_SetEraseStart(CARD_SDIO_HANDLE cardHandle,uint32 startBlock)
 }
 
 //-----------------------------------------------------------------------------------
-//	Set erase end address
+//	Set SD20 erase end address
 //-----------------------------------------------------------------------------------
 LOCAL BOOLEAN _SD20_SetEraseEnd(CARD_SDIO_HANDLE cardHandle,uint32 endBlock)
 {
@@ -2295,6 +2295,35 @@ LOCAL BOOLEAN _SD20_SetEraseEnd(CARD_SDIO_HANDLE cardHandle,uint32 endBlock)
 	return TRUE;
 }
 
+//-----------------------------------------------------------------------------------
+//	Set MMC441 erase start address
+//-----------------------------------------------------------------------------------
+LOCAL BOOLEAN _MMC441_SetEraseStart(CARD_SDIO_HANDLE cardHandle,uint32 startBlock)
+{
+	uint8 rspBuf[16];
+
+	if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD35_ERASE_GROUP_START,startBlock,NULL,rspBuf))
+	{
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+//-----------------------------------------------------------------------------------
+//	Set MMC441erase end address
+//-----------------------------------------------------------------------------------
+LOCAL BOOLEAN _MMC441_SetEraseEnd(CARD_SDIO_HANDLE cardHandle,uint32 endBlock)
+{
+	uint8 rspBuf[16];
+
+	if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD36_ERASE_GROUP_END,endBlock,NULL,rspBuf))
+	{
+		return FALSE;
+	}
+
+	return TRUE;
+}
 /*****************************************************************************/
 //  Description:  erase card
 //  Author: Jason.wu
@@ -2314,12 +2343,14 @@ PUBLIC BOOLEAN CARD_SDIO_Erase(CARD_SDIO_HANDLE cardHandle,uint32 startBlock,uin
 
 	CARD_SDIO_ASSERT(TRUE == _IsCardHandleValid(cardHandle));	/*assert verified*/
 
-	if((CARD_SD_V2_0_STANDARD == cardHandle->vertion)||(CARD_SD_V1_X == cardHandle->vertion))
+	if((CARD_SD_V2_0_STANDARD == cardHandle->vertion)
+			||(CARD_SD_V1_X == cardHandle->vertion)
+			|| (CARD_MMC_441_STANDARD == cardHandle->vertion))
 	{
 		startAddress = startBlock*cardHandle->BlockLen;
 		endAddress = endBlock*cardHandle->BlockLen;
 	}
-	else if(CARD_SD_V2_0_HIGHCAP== cardHandle->vertion)
+	else if((CARD_MMC_441_HIGHCAP== cardHandle->vertion) || (CARD_SD_V2_0_HIGHCAP== cardHandle->vertion))
 	{
 		startAddress = startBlock;
 		endAddress = endBlock;
@@ -2333,15 +2364,31 @@ PUBLIC BOOLEAN CARD_SDIO_Erase(CARD_SDIO_HANDLE cardHandle,uint32 startBlock,uin
 		CARD_SDIO_ASSERT(0);	/*assert verified*/
 	}
 
-//set start group Id
-	if(FALSE == _SD20_SetEraseStart( cardHandle,startAddress))
+	if((CARD_MMC_441_HIGHCAP== cardHandle->vertion) || (CARD_MMC_441_STANDARD == cardHandle->vertion))
 	{
-		return FALSE;
+//set  MMC441start group Id
+		if(FALSE == _MMC441_SetEraseStart( cardHandle,startAddress))
+		{
+			return FALSE;
+		}
+//set MMC441 end group Id
+		if(FALSE == _MMC441_SetEraseEnd( cardHandle,endAddress))
+		{
+			return FALSE;
+		}
 	}
-//set end group Id
-	if(FALSE == _SD20_SetEraseEnd( cardHandle,endAddress))
+	else
 	{
-		return FALSE;
+//set SD20 start group Id
+		if(FALSE == _SD20_SetEraseStart( cardHandle,startAddress))
+		{
+			return FALSE;
+		}
+//set SD20 end group Id
+		if(FALSE == _SD20_SetEraseEnd( cardHandle,endAddress))
+		{
+			return FALSE;
+		}
 	}
 //send erase command
 	if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(cardHandle->sdioPalHd,CARD_CMD38_ERASE,0,NULL,rspBuf))
@@ -2446,7 +2493,9 @@ PUBLIC BOOLEAN Emmc_Read(CARD_EMMC_PARTITION_TPYE  cardPartiton, uint32 startBlo
 
 PUBLIC BOOLEAN Emmc_Erase(CARD_EMMC_PARTITION_TPYE cardPartiton, uint32 startBlock,uint32 num)
 {
+	uint32 ret = 0;
 	uint8 rspBuf[16];
+	uint32 endBlock = startBlock +num -1;
 
 	 if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(emmc_handle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
 	 {
@@ -2461,7 +2510,15 @@ PUBLIC BOOLEAN Emmc_Erase(CARD_EMMC_PARTITION_TPYE cardPartiton, uint32 startBlo
 		}  
 
 	 }
-	return TRUE;
+
+	 ret = CARD_SDIO_Erase(emmc_handle,startBlock, endBlock);
+
+	if(SDIO_CARD_PAL_ERR_NONE != SDIO_Card_Pal_SendCmd(emmc_handle->sdioPalHd,CARD_CMD13_SEND_STATUS, 1<<16,NULL,rspBuf))
+	{
+		return FALSE;
+	}
+
+	return ret;
 
 }
 
