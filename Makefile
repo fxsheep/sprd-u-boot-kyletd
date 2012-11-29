@@ -432,7 +432,7 @@ endif
 
 fdl1:
 	$(MAKE) -C nand_fdl/fdl-1 $@
-	@cp ../$(UBOOT_OUT)/nand_fdl/fdl1.bin ../$(PRODUCT_OUT)
+	-@cp ../$(UBOOT_OUT)/nand_fdl/fdl1.bin ../$(PRODUCT_OUT)
 
 $(ONENAND_IPL):	$(TIMESTAMP_FILE) $(VERSION_FILE) $(obj)include/autoconf.mk
 		$(MAKE) -C onenand_ipl/board/$(BOARDDIR) all

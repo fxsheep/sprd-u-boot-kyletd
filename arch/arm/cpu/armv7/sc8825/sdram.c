@@ -2,17 +2,31 @@
 
 #define REG32(x)              (*((volatile uint32 *)(x)))
 
-#define MEM_CS0_2048Mb
-//#define MEM_CS0_4096Mb
-#define MEM_CS1_2048Mb        //caution: if CS1 is not available, modify it to MEM_CS1_0Mb
+#define MEM_CS0_4096Mb
+#if defined CONFIG_GARDA && defined CONFIG_SC8825
+#define MEM_CS1_2048Mb
+#else
+#define MEM_CS1_0Mb        //caution: if CS1 is not available, modify it to MEM_CS1_0Mb
+#endif
+//#define MEMORY_TYPE           LPDDR1
+#define MEMORY_TYPE           LPDDR2   //typedef enum int {LPDDR2,LPDDR1,DDR3} MEM_TYPE_ENUM;
+
 #define DQSR_VALUE            4
 #define GATE_TRAING_ON        1
 #define GATE_EARLY_LATE       2
 #ifndef SC8825_EMC_FREQ
 #define SC8825_EMC_FREQ       200   //ddr clock
 #endif
-#define ZQ_CALIBRE_DPSLEEP    0
+
+#if (MEMORY_TYPE == LPDDR1)
+#define SC8825_EMC_DRV        40
+#else
+#define SC8825_EMC_DRV        48
+#endif
+
+#define ZQ_CALIBRE_DPSLEEP    0x0
 #define SOFTWARE_ENABLE_VREF  0
+
 #define ANALOG_DIE_REG_BASE   0x42000600
 #define ANALOG_DCDC_CTRL_CAL  0x50
 #define ANALOG_DCDC_CTRL_DS   0x4C
@@ -26,6 +40,8 @@
 //- Memory burst type interleaved is not supported for mDDR with BL16.
 //Also, Must read M2.2.10.5 Considerations for Memory Initialization
 //=====================================================================================
+#define MEM_WIDTH             X32
+
 #define BASE_ADDR_AHBREG      (0x20900200)
 #define ADDR_AHBREG_ARMCLK    (BASE_ADDR_AHBREG+0x0024)
 #define ADDR_AHBREG_AHB_CTRL0 (BASE_ADDR_AHBREG+0x0000)
@@ -54,15 +70,6 @@ typedef enum  {LPDDR2_S2, LPDDR2_S4} MEM_COL_TYPE_ENUM;
 typedef enum  {BL2 = 2, BL4 = 4, BL8 = 8, BL16 = 16} MEM_BL_ENUM;
 typedef enum  {SEQ, INTLV} MEM_BT_ENUM;
 
-//#define MEMORY_TYPE    LPDDR1
-#define MEMORY_TYPE    LPDDR2   //typedef enum int {LPDDR2,LPDDR1,DDR3} MEM_TYPE_ENUM; 
-#define MEM_WIDTH      X32
-
-#if (MEMORY_TYPE == LPDDR1)
-#define SC8825_EMC_DRV 40
-#else
-#define SC8825_EMC_DRV 34
-#endif
 
 typedef enum
 {
@@ -224,14 +231,15 @@ typedef enum
 #define PUBL_CFG_ADD_BISTFWR0      (0x4f * 4) // R/W - BIST Fail Word Register 0
 #define PUBL_CFG_ADD_BISTFWR1      (0x50 * 4) // R/W - BIST Fail Word Register 1
 #define PUBL_CFG_ADD_ZQ0CR0        (0x60 * 4) // R/W - ZQ 0 Impedance Control Register 0
-#define PUBL_CFG_ADD_ZQ0CR1        (0x61 * 4) // R/W - ZQ 1
-#define PUBL_CFG_ADD_ZQ0SR0        (0x62 * 4) // R/W - ZQ 1
-#define PUBL_CFG_ADD_ZQ0SR1        (0x63 * 4) // R/W - ZQ 1
+#define PUBL_CFG_ADD_ZQ0CR1        (0x61 * 4) // R/W - ZQ 0 Impedance Control Register 1
+#define PUBL_CFG_ADD_ZQ0SR0        (0x62 * 4) // R/W - ZQ 0 Impedance Status Register 0
+#define PUBL_CFG_ADD_ZQ0SR1        (0x63 * 4) // R/W - ZQ 0 Impedance Status Register 1
+
 #define PUBL_CFG_ADD_DX0GCR        (0x70 * 4) // R/W - DATX8 0 General Configuration Register
 #define PUBL_CFG_ADD_DX0GSR0       (0x71 * 4) // R   - DATX8 0 General Status Register 0
 #define PUBL_CFG_ADD_DX0GSR1       (0x72 * 4) // R   - DATX8 0 General Status Register 1
 #define PUBL_CFG_ADD_DX0DLLCR      (0x73 * 4) // R   - DATX8 0 DLL Control Register
-#define PUBL_CFG_ADD_DX0DQTR       (0x74 * 4) // R   - DATX8 0 DLL Control Register
+#define PUBL_CFG_ADD_DX0DQTR       (0x74 * 4) // R/W - DATX8 0 DQ Timing Register
 #define PUBL_CFG_ADD_DX0DQSTR      (0x75 * 4) // R/W
 
 #define PUBL_CFG_ADD_DX1GCR        (0x80 * 4) // R/W - DATX8 1 General Configuration Register
@@ -252,7 +260,7 @@ typedef enum
 #define PUBL_CFG_ADD_DX3GSR0       (0xa1 * 4) // R   - DATX8 3 General Status Register 0
 #define PUBL_CFG_ADD_DX3GSR1       (0xa2 * 4) // R   - DATX8 3 General Status Register 1
 #define PUBL_CFG_ADD_DX3DLLCR      (0xa3 * 4) // R   - DATX8 3 DLL Control Register
-#define PUBL_CFG_ADD_DX3DQTR       (0xa4 * 4) // R   - DATX8 3 DLL Control Register
+#define PUBL_CFG_ADD_DX3DQTR       (0xa4 * 4) // R/W - DATX8 3 DQ Timing Register
 #define PUBL_CFG_ADD_DX3DQSTR      (0xa5 * 4) // R/W
 
 static void modify_reg_field(uint32 addr, uint32 start_bit, uint32 bit_num, uint32 value)
@@ -279,22 +287,51 @@ static void modify_adie_reg_field(uint32 addr, uint32 start_bit, uint32 bit_num,
 	REG32(addr) = temp;
 }
 
-static void polling_reg_bit_field(uint32 addr, uint32 start_bit, uint32 bit_num, uint32 value)
+static uint32 polling_reg_bit_field(uint32 addr, uint32 start_bit, uint32 bit_num, uint32 value)
 {
 	uint32 temp, i;
 	uint32 exp_value;
 	uint32 mask;
-	
+
 	mask = 0;
 	for (i=0; i<bit_num; i++)
 	{
 		mask |= 1<<(start_bit+i);
 	}
 	exp_value = value << start_bit;
-	do 
+	do {temp = REG32(addr);} while((temp & mask) != exp_value);
+	return temp;
+}
+
+static void wait_n_pclk_cycle(uint32 num)
+{
+	volatile uint32 i;
+	uint32          value_temp;
+	for (i=0; i<num; i++)
 	{
-		temp = REG32(addr);
-	}while((temp & mask) != exp_value);
+		value_temp = REG32(PUBL_REG_BASE+PUBL_CFG_ADD_PGSR);
+	}
+}
+
+static void wait_100ns()
+{
+	uint32 i;
+	for (i=0; i<100; i++);
+}
+
+static void wait_1us()
+{
+	uint32 i;
+	for (i=0; i<1000; i++);
+}
+
+static void wait_us(uint32 us)
+{
+	uint32 i;
+	for (i=0; i<us; i++)
+	{
+		wait_1us();
+	}
 }
 
 static void write_upctl_state_cmd(uPCTL_STATE_CMD_ENUM cmd)
@@ -584,18 +621,14 @@ static uint32 dq_training(uint32 offset)
 static void emc_publ_do_gate_training(void)
 {
 	uint32  value_temp, i;
-	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PIR);
-	value_temp &= ~0x1;
-	value_temp &= ~(0x1 << 7);
-	value_temp |= 0x1 << 7; //Read DQS Training
-	value_temp |= 0x1;
-	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PIR) = value_temp;
+	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PIR) = 0x81;
 
 	//check data training done
 	//according to PUBL databook on PIR operation.
 	//10 configuration clock cycle must be waited before polling PGSR
 	//repeat(10)@(posedge `HIER_ARM_SYS.u_sys_wrap.u_DWC_ddr3phy_pub.pclk);
-	for(i = 0; i < 100; i++);
+	//for(i = 0; i < 100; i++);
+	wait_n_pclk_cycle(5);
 	do
 		value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PGSR);
 	while((value_temp & 0x10) != 0x10);
@@ -614,6 +647,35 @@ static void emc_publ_do_gate_training(void)
 	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DX1GSR0);
 	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DX2GSR0);
 	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DX3GSR0);
+}
+
+static void set_value_ddrphy_ret_en(uint32 value)
+{
+	if (value == 0x1)
+	{
+		REG32(0x4B001080) = 0x1;  //set ret_en to 1
+	}
+	else if (value == 0x0)
+	{
+		REG32(0x4B002080) = 0x1;  //clear set_en to 1
+	}
+}
+
+static void publ_do_zq_calibration()
+{
+	uint32 value_temp, i;
+	REG32(PUBL_REG_BASE+PUBL_CFG_ADD_ZQ0CR0) = 1<<30;
+
+	value_temp = polling_reg_bit_field(PUBL_REG_BASE+PUBL_CFG_ADD_ZQ0SR0, 31, 1, 1);
+	if ((value_temp & (0x1<<30)) == (0<<30))
+	{
+
+	}
+	else
+	{
+//zq cal has error
+		while (1);
+	}
 }
 
 static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
@@ -716,17 +778,17 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TOGCNT100N) =  TOGCNT100N;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TRFC) =        0x00000034;
 
-	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TINIT) =       0x00000001;
+	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TINIT) =       0x000000C8;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TRSTH) =       0x00000000;
 
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TREFI) =       0x00000027;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TMRD) =        0x00000005;
 
 
-	value_temp = (mem_type_enum == LPDDR2 ) ? 0x0001000a : 00000004 ; //compenstate for clk jitter
+	value_temp = (mem_type_enum == LPDDR2 ) ? 0x00010008 : 00000004 ; //compenstate for clk jitter
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TRP) =         value_temp;
 
-	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TRTW) =        0x00000003;
+	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TRTW) =        0x00000001; //caution, 1 enough?, xiohui@2012-11-26
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TAL) =         0x00000000; //no al for lpddr1/lpddr2
 
 	value_temp = (mem_type_enum == LPDDR2 ) ? 6 : 3;
@@ -738,7 +800,7 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 
 	value_temp = (mem_type_enum == LPDDR2 ) ? 0x00000011 : 0x00000008;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TRAS) =        value_temp;
-	value_temp = (mem_type_enum == LPDDR2 ) ? 0x0000001b : 0x0000000c;
+	value_temp = (mem_type_enum == LPDDR2 ) ? 0x00000019 : 0x0000000c;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TRC) =         value_temp;
 
 	value_temp = (mem_type_enum == LPDDR2 ) ? 0x00000006 : 0x00000003; //compenstate for clk jitter
@@ -751,15 +813,16 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TWR) =         value_temp;
 
 	//xiaohui change from 3 to 4 due to tWTR=7.5ns whereas clk_emc=2.348ns
-	value_temp = (mem_type_enum == LPDDR2 ) ? 0x00000004 : 0x00000002;
+	value_temp = (mem_type_enum == LPDDR2 ) ? 0x00000003 : 0x00000002;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TWTR) =        value_temp;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TEXSR) =       0x00000038;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TXP) =         0x00000004;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TXPDLL) =      0x00000000;
 	//xiaohui change from 0x24 to 0x27 due to tZQCS=90ns whereas clk_emc=2.348ns
-	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TZQCS) =       0x00000027;
+	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TZQCS) =       0x00000024;
 
-	value_temp = mem_type_enum == LPDDR2 ? 0x5 : 0x0;
+	//value_temp = mem_type_enum == LPDDR2 ? 0x190A4 : 0x0; //assume 0.4s need one calibration, see samsung lpddr2 on page 140
+	value_temp = 0x0; //assume 0.4s need one calibration, see samsung lpddr2 on page 140
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TZQCSI) =      value_temp;
 
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_TDQS) =        0x00000001;
@@ -854,7 +917,8 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	//the priority settings is DSP > Disp > others > GPU
 	// so DSP/Disp/Camera are set to LL and all others set to BE
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_0);
-	value_temp &= ~0xffff;
+	value_temp &= ~0xff;
+	value_temp &= ~(0xff<<16);
 	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x0 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
@@ -864,7 +928,8 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_0) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_1);
-	value_temp &= ~0xffff;
+	value_temp &= ~0xff;
+	value_temp &= ~(0xff<<16);
 	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x0 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
@@ -874,7 +939,8 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_1) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_2);
-	value_temp &= ~0xffff;
+	value_temp &= ~0xff;
+	value_temp &= ~(0xff<<16);
 	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x1 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
@@ -884,7 +950,8 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_2) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_3);
-	value_temp &= ~0xffff;
+	value_temp &= ~0xff;
+	value_temp &= ~(0xff<<16);
 	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x1 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
@@ -895,18 +962,20 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_3) =      value_temp;
 
 	value_temp = REG32( UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_4);
-	value_temp &= ~0xffff;
+	value_temp &= ~0xff;
+	value_temp &= ~(0xff<<16);
 	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x1 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
 	value_temp |= (0x1 << 5); //bp_rd_en, as per the coreconsultant
 	value_temp |= (0x1 << 4); //bp_wr_en
-	value_temp |= 1;	//qos:LL
+	value_temp |= 0x1;	//qos:LL
 	//value_temp[1:0] = 0x3; //qos dynamic mode by port signal
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_4) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_5);
-	value_temp &= ~0xffff;
+	value_temp &= ~0xff;
+	value_temp &= ~(0xff<<16);
 	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x0 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
@@ -917,7 +986,8 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_5) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_6);
-	value_temp &= ~0xffff;
+	value_temp &= ~0xff;
+	value_temp &= ~(0xff<<16);
 	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x0 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
@@ -927,7 +997,8 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_6) =      value_temp;
 
 	value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_PCFG_7);
-	value_temp &= ~0xffff;
+	value_temp &= ~0xff;
+	value_temp &= ~(0xff<<16);
 	value_temp |= (0x10 << 16); //quantum
 	value_temp |= (0x1 << 7); //rdwr_ordered
 	value_temp |= (0x1 << 6); //st_fw_en
@@ -939,6 +1010,7 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	//REG32(PUBL_REG_BASE+PUBL_CFG_ADD_DTAR) = (0x7<<28)|(0x3fff<<12)|(0x3f0<<0);
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DTAR) = (0x0 << 28) | (0x0 << 12) | (0x0 << 0);
 
+	//ZQCR1
 	value_temp = REG32(PUBL_REG_BASE+PUBL_CFG_ADD_ZQ0CR1);
 
 	switch (MEMORY_TYPE)
@@ -952,23 +1024,23 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 		default:
 			while(1);
 	}
-	value_temp &= 0xf;
+	value_temp &= ~0xf;
 	switch (mem_drv)
 	{
 		case 34:
-			value_temp |= 0xD;
+			value_temp |= 0xD;  //output impdence divide select, 7:60ohm 9:48ohm 11:40ohm 13:34ohm
 			break;
 		case 40:
-			value_temp |= 0xB;
+			value_temp |= 0xB;  //output impdence divide select, 7:60ohm 9:48ohm 11:40ohm 13:34ohm
 			break;
 		case 48:
-			value_temp |= 0x9;
+			value_temp |= 0x9;  //output impdence divide select, 7:60ohm 9:48ohm 11:40ohm 13:34ohm
 			break;
 		case 60:
-			value_temp |= 0x7;
+			value_temp |= 0x7;  //output impdence divide select, 7:60ohm 9:48ohm 11:40ohm 13:34ohm
 			break;
 		case 80:
-			value_temp |= 0x5;
+			value_temp |= 0x5;  //output impdence divide select, 7:60ohm 9:48ohm 11:40ohm 13:34ohm
 			break;
 		default:
 			while(1);
@@ -1059,6 +1131,7 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_MR1);
 	switch(mem_type_enum)
 	{
+		case LPDDR1: {break;}
 		case LPDDR2:
 			{
 				value_temp &= ~0x7;
@@ -1072,7 +1145,6 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 				value_temp |= (0x4 << 5); //nWR=6 //!check
 				break;
 			}
-		case LPDDR1: {break;}
 		default:
 			break;
 	}
@@ -1107,10 +1179,12 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	switch(MEMORY_TYPE)
 	{
 		case LPDDR1:
-			value_temp &= ~0xffff;
+			value_temp &= ~0xff;
+			value_temp &= ~(0xff<<16);
 			break;
 		case LPDDR2:
-			value_temp &= ~0xffff;
+			value_temp &= ~0xff;
+			value_temp &= ~(0xff<<16);
 			break;
 		default:
 			while(1);
@@ -1133,7 +1207,7 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 				//value_temp[30:25] = 12;    //tRC
 				//value_temp[31] = 0x0;    //tCCD: BL/2
 				value_temp = (0x0 << 31) | (12 << 25) | (2 << 21) | (8 << 16) | (4 << 12) | (4 << 8) | (2 << 2) | (2);
-				value_temp |= ((mem_type_enum == LPDDR2 ) ? 0x00000004 : 0x00000002) << 5;
+				value_temp |= 0x00000002 << 5; //tWTR
 				break;
 			}
 		case LPDDR2:
@@ -1141,8 +1215,7 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 				value_temp = 0x36916a6d;//??? xiaohui
 				break;
 			}
-		default:
-			break;
+		default:{while(1);}
 	}
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DTPR0) = value_temp;
 
@@ -1172,12 +1245,13 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DTPR2);
 	switch(mem_type_enum)
 	{
+		case LPDDR1:
+				break;
 		case LPDDR2:
 			{
 				value_temp = 0x1001a0c8; //actually is default value
 				break;
 			}
-		case LPDDR1:
 		default:
 			break;
 	}
@@ -1233,10 +1307,10 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PGCR) = value_temp;
 
 	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DSGCR);
-	value_temp &= ~0xfff;
+	value_temp &= ~0xfff;  //only applicable for LPDDR
 	
 	//CAUTION:[7:5] DQSGX, [10:8] DQSGE
-	value_temp |= (0x1f | ((GATE_EARLY_LATE)<<8) | ((GATE_EARLY_LATE)<<5));
+	value_temp |= (0x1f | ((GATE_EARLY_LATE)<<8) | ((GATE_EARLY_LATE)<<5));  //only applicable for LPDDR
 	value_temp &= ~(0x1<<2); // zq Update Enable,CHECK!!!!
 	value_temp &= ~(0x1<<4); // Low Power DLL Power Down
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DSGCR) = value_temp;
@@ -1299,19 +1373,23 @@ void mem_init(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt, uint32 zq)
 			do  value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_MCMD);
 			while((value_temp & 0x80000000) != 0x0);
 
-			for (i=0; i<11000; i++);
+			#if 1//must be followed in board test
+			//for (i=0; i<11000; i++); //tINIT5+tINIT4, at least 11us
+			wait_n_pclk_cycle(11*1000/25);
+			#endif
 
 			//MR10: I/O calibration
 			REG32(UMCTL_REG_BASE  + UMCTL_CFG_ADD_MCMD) = 0x891ff0a3;
 			do  value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_MCMD);
 			while((value_temp & 0x80000000) != 0x0);
-			for (i=0; i<1000; i++);
+			wait_n_pclk_cycle(40);
 
 			//MR10: I/O calibration
 			REG32(UMCTL_REG_BASE  + UMCTL_CFG_ADD_MCMD) = 0x892ff0a3;
 			do  value_temp = REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_MCMD);
 			while((value_temp & 0x80000000) != 0x0);
-			for (i=0; i<1000;i++);
+			//for (i=0; i<1000;i++);
+			wait_n_pclk_cycle(40);
 
 			if(bl == 8 && bt == SEQ)
 			{
@@ -1367,8 +1445,7 @@ void mem_init(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt, uint32 zq)
 			
 			break;
 		}
-		default:
-			break;
+		default:{while(1);}
 	}
 }
 
@@ -1442,11 +1519,9 @@ static void __emc_init(uint32 mem_drv)
 
 	//according to PUBL databook on PIR operation.
 	//10 configuration clock cycle must be waited before polling PGSRi
-	for (i=0; i<=150; i++);
-	do 
-	{
-		value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PGSR);
-	} while((value_temp & 0x1) == 0);
+	wait_n_pclk_cycle(5);
+	do value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PGSR); 
+	while((value_temp & 0x1) == 0);
 
 	//check dfi init complete
 	do
@@ -1478,10 +1553,6 @@ static void __emc_init(uint32 mem_drv)
 	emc_publ_do_gate_training();
 #endif
 	//disable emc auto self-refresh
-	value_temp = REG32(0x20900308);
-	value_temp &= ~(1 << 8);
-	REG32(0x20900308) = value_temp;
-	// REG32_WR(0x2090_0308,value_temp);
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_SCFG) = 0x00000421;
 	move_upctl_state_to_access();
 }
@@ -1503,6 +1574,8 @@ void emc_init_repowered(uint32 power_off)
 	value_temp |= 0x1 << 1;
 	REG32(0x4B000080) = value_temp;
 
+	move_upctl_state_to_config();
+
 	//value_temp = REG32(0x2090_0308);
 	//value_temp[9] = 0x1;
 	//REG32(0x2090_0308) = value_temp;
@@ -1515,14 +1588,14 @@ void emc_init_repowered(uint32 power_off)
 	while((value_temp & 0x1) == 0);
 
 	value_temp = 0x0;
-	value_temp |= 1 << 30; //zq calibration bypass
+	value_temp |= 1 << 30; //ZCALBYP
 	value_temp |= 1 << 18; //Controller DRAM Initialization
-	value_temp |= 7;
+	value_temp |= 1;
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PIR) = value_temp;
 
 	//according to PUBL databook on PIR operation.
 	//10 configuration clock cycle must be waited before polling PGSR
-	for (i=0; i<100; i++);
+	wait_n_pclk_cycle(5);
 
 	do value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PGSR);
 	while((value_temp & 0x1) == 0);
@@ -1588,12 +1661,10 @@ void emc_init_repowered(uint32 power_off)
 	}
 	move_upctl_state_to_access();
 	move_upctl_state_to_config();
-	emc_publ_do_gate_training();
+	if (power_off)
+		emc_publ_do_gate_training();
 
 	//disable emc auto self-refresh
-	value_temp = REG32(0x20900308);
-	value_temp &= ~(0x1 << 8);
-	REG32(0x20900308) = value_temp;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_SCFG) = 0x00000421;
 	move_upctl_state_to_access();
 }
@@ -1659,7 +1730,6 @@ static void load_mode(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt)
 	}
 }
 
-
 static void disable_clk_emc()
 {
 	modify_reg_field(ADDR_AHBREG_AHB_CTRL0, 28, 1, 0);
@@ -1696,6 +1766,18 @@ static void deassert_reset_dxdll()
 	modify_reg_field(PUBL_REG_BASE+PUBL_CFG_ADD_DX3DLLCR, 30, 1, 1);
 }
 
+static void assert_reset_ddrphy_dll()
+{
+	assert_reset_acdll();
+	assert_reset_dxdll();
+}
+
+static void deassert_reset_ddrphy_dll()
+{
+	deassert_reset_acdll();
+	deassert_reset_dxdll();
+}
+
 static void modify_dpll_freq(uint32 freq)
 {
 	uint32 temp;
@@ -1705,24 +1787,6 @@ static void modify_dpll_freq(uint32 freq)
 	modify_reg_field(GLB_REG_WR_REG_GEN1, 9, 1, 0);
 }
 
-static void wait_100ns()
-{
-	uint32 i;
-	for (i=0; i<100; i++);
-}
-
-static void wait_1us()
-{
-	uint32 i;
-	for (i=0; i<1000; i++);
-}
-
-static void wait_us(uint32 us)
-{
-	uint32 i;
-	for (i=0; i<us; i++)
-		wait_1us();
-}
 
 static void modify_emc_clk(uint32 freq)
 {
@@ -1791,7 +1855,17 @@ static void modify_dxndll_phase_trim(uint32 dxn, uint32 phase)
 	
 	wait_100ns();
 	modify_reg_field(publ_cfg_dxndllcr_addr, 30, 1, 1);
-	wait_us(10);
+	if (0)
+	{
+		wait_n_pclk_cycle(10*1000/25);
+	}
+	else
+	{
+		polling_reg_bit_field(PUBL_REG_BASE+PUBL_CFG_ADD_PGSR, 0, 1, 1);
+		REG32(PUBL_REG_BASE+PUBL_CFG_ADD_PIR) = 0x5;
+		wait_n_pclk_cycle(5);
+		polling_reg_bit_field(PUBL_REG_BASE+PUBL_CFG_ADD_PGSR, 2, 1, 1);
+	}
 }
 
 static void modify_dxndqstr_delay_trim(uint32 dxn, uint32 trim_value)
@@ -1824,7 +1898,17 @@ static void modify_dxndqstr_delay_trim(uint32 dxn, uint32 trim_value)
 	modify_reg_field(publ_cfg_dxndllcr_addr, 30, 1, 0);
 	wait_100ns();
 	modify_reg_field(publ_cfg_dxndllcr_addr, 30, 1, 1);
-	wait_us(10);
+	if (0)
+	{
+		wait_n_pclk_cycle(10*1000/25);
+	}
+	else
+	{
+		polling_reg_bit_field(PUBL_REG_BASE+PUBL_CFG_ADD_PGSR, 0, 1, 1);
+		REG32(PUBL_REG_BASE+PUBL_CFG_ADD_PIR) = 0x5;
+		wait_n_pclk_cycle(5);
+		polling_reg_bit_field(PUBL_REG_BASE+PUBL_CFG_ADD_PGSR, 2, 1, 1);
+	}
 }
 
 static void publ_do_itmsrst()
@@ -1876,10 +1960,20 @@ static void publ_set_dqs_phase_trim_to_norminal(uint32 dxn)
 	
 	modify_reg_field(publ_dxn_cfg_dxndllcr_addr, 30, 1, 0);
 	
-	for (i=0; i<100; i++);
+	wait_n_pclk_cycle(100/25);
 	
 	modify_reg_field(publ_dxn_cfg_dxndllcr_addr, 30, 1, 1);
-	wait_us(10);
+	if (0)
+	{
+		wait_n_pclk_cycle(10*1000/25);
+	}
+	else
+	{
+		polling_reg_bit_field(PUBL_REG_BASE+PUBL_CFG_ADD_PGSR, 0, 1, 1);
+		REG32(PUBL_REG_BASE+PUBL_CFG_ADD_PIR) = 0x5;
+		wait_n_pclk_cycle(5);
+		polling_reg_bit_field(PUBL_REG_BASE+PUBL_CFG_ADD_PGSR, 2, 1, 1);
+	}
 	
 	modify_reg_field(PUBL_REG_BASE+publ_dxn_cfg_dxndqstr_addr, 20, 3, 3);
 	modify_reg_field(PUBL_REG_BASE+publ_dxn_cfg_dxndqstr_addr, 23, 3, 3);
