@@ -2,11 +2,11 @@
 
 #define REG32(x)              (*((volatile uint32 *)(x)))
 
-#define MEM_CS0_4096Mb
+#define MEM_CS0_TYPE          MEM_CS_4096MB
 #if defined CONFIG_GARDA && defined CONFIG_SC8825
-#define MEM_CS1_2048Mb
+#define MEM_CS1_TYPE          MEM_CS_2048MB
 #else
-#define MEM_CS1_0Mb        //caution: if CS1 is not available, modify it to MEM_CS1_0Mb
+#define MEM_CS1_TYPE          MEM_CS_0MB          //caution: if CS1 is not available, modify it to MEM_CS_0Mb
 #endif
 //#define MEMORY_TYPE           LPDDR1
 #define MEMORY_TYPE           LPDDR2   //typedef enum int {LPDDR2,LPDDR1,DDR3} MEM_TYPE_ENUM;
@@ -70,6 +70,18 @@ typedef enum  {LPDDR2_S2, LPDDR2_S4} MEM_COL_TYPE_ENUM;
 typedef enum  {BL2 = 2, BL4 = 4, BL8 = 8, BL16 = 16} MEM_BL_ENUM;
 typedef enum  {SEQ, INTLV} MEM_BT_ENUM;
 
+typedef enum
+{
+	MEM_CS_8192MB,
+	MEM_CS_4096MB,
+	MEM_CS_2048MB,
+	MEM_CS_1024MB,
+	MEM_CS_512MB,
+	MEM_CS_256MB,
+	MEM_CS_128MB,
+	MEM_CS_64MB,
+	MEM_CS_0MB,
+}MEM_CS_TYPE;
 
 typedef enum
 {
@@ -683,13 +695,13 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 {
 	uint32  value_temp;
 	uint32  TOGCNT1U, TOGCNT100N;
-	
+
 	if (mem_type_enum == LPDDR1)
 	{
 		value_temp = (1<<31)|(1<<28)|(0xc<<5)|(0xc);
 		REG32(PUBL_REG_BASE+PUBL_CFG_ADD_ZQ0CR0) = value_temp;
 	}
-	
+
 	//program common registers for ASIC/FPGA
 	//Memory Timing Configuration Registers
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_SCFG) = 0x00000420;
@@ -840,50 +852,72 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	value_temp |= 1 << 8; //addr_map: bank based
 	value_temp &= ~(0xf << 2); //density
 	value_temp |= 0x1 << 6;   //check:!!dram_type:1: LPDDR2 S4 or MDDR row width 13 and col width 10, 0:    LPDDR2 S2 or MDDR row width 14 and col width 9
-#ifdef MEM_CS0_8192Mb
-	value_temp |= (0x7 << 2);
-#elsif MEM_CS0_4096Mb
-	value_temp |= (0x6 << 2);
-#elsif MEM_CS0_2048Mb
-	value_temp |= (0x5 << 2);
-#elsif MEM_CS0_1024Mb
-	value_temp |= (0x4 << 2);
-#elsif MEM_CS0_512Mb
-	value_temp |= (0x3 << 2);
-#elsif MEM_CS0_256Mb
-	value_temp |= (0x2 << 2);
-#elsif MEM_CS0_128Mb
-	value_temp |= (0x1 << 2);
-#elsif MEM_CS0_64Mb
-	value_temp |= (0x0 << 2);
-#else
-	value_temp |= (0x6 << 2);
-#endif
+	switch (MEM_CS0_TYPE)
+	{
+		case MEM_CS_8192MB:
+			value_temp |= (0x7 << 2);
+			break;
+		case MEM_CS_4096MB:
+			value_temp |= (0x6 << 2);
+			break;
+		case MEM_CS_2048MB:
+			value_temp |= (0x5 << 2);
+			break;
+		case MEM_CS_1024MB:
+			value_temp |= (0x4 << 2);
+			break;
+		case MEM_CS_512MB:
+			value_temp |= (0x3 << 2);
+			break;
+		case MEM_CS_256MB:
+			value_temp |= (0x2 << 2);
+			break;
+		case MEM_CS_128MB:
+			value_temp |= (0x1 << 2);
+			break;
+		case MEM_CS_64MB:
+			value_temp |= (0x0 << 2);
+			break;
+		default:
+			value_temp |= (0x6 << 2);
+	}
 	value_temp |= (mem_width_enum == X32) ? 0x3 :
 		(mem_width_enum == X16) ? 0x2 :
 		0x0;  //dram_io_width
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_DCFG_CS0) = value_temp;
 
 	value_temp &= ~(0xf << 2); //density
-#ifdef MEM_CS1_8192Mb
-	value_temp |= (0x7 << 2);
-#elsif MEM_CS1_4096Mb
-	value_temp |= (0x6 << 2);
-#elsif MEM_CS1_2048Mb
-	value_temp |= (0x5 << 2);
-#elsif MEM_CS1_1024Mb
-	value_temp |= (0x4 << 2);
-#elsif MEM_CS1_512Mb
-	value_temp |= (0x3 << 2);
-#elsif MEM_CS1_256Mb
-	value_temp |= (0x2 << 2);
-#elsif MEM_CS1_128Mb
-	value_temp |= (0x1 << 2);
-#elsif MEM_CS1_64Mb
-	value_temp |= (0x0 << 2);
-#else
-	value_temp |= (0x6 << 2);
-#endif
+
+	switch (MEM_CS1_TYPE)
+	{
+		case MEM_CS_8192MB:
+			value_temp |= (0x7 << 2);
+			break;
+		case MEM_CS_4096MB:
+			value_temp |= (0x6 << 2);
+			break;
+		case MEM_CS_2048MB:
+			value_temp |= (0x5 << 2);
+			break;
+		case MEM_CS_1024MB:
+			value_temp |= (0x4 << 2);
+			break;
+		case MEM_CS_512MB:
+			value_temp |= (0x3 << 2);
+			break;
+		case MEM_CS_256MB:
+			value_temp |= (0x2 << 2);
+			break;
+		case MEM_CS_128MB:
+			value_temp |= (0x1 << 2);
+			break;
+		case MEM_CS_64MB:
+			value_temp |= (0x0 << 2);
+			break;
+		default:
+			value_temp |= (0x6 << 2);
+	}
+
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_DCFG_CS1) = value_temp;
 	REG32(UMCTL_REG_BASE + UMCTL_CFG_ADD_DFITPHYWRDATA) = 0x00000001;
 
@@ -1299,16 +1333,19 @@ static void emc_init_common_reg(MEM_TYPE_ENUM mem_type_enum,
 	value_temp |= (mem_type_enum == LPDDR2 ) ? 0x0 : 0x1; //0 = ITMS uses DQS and DQS#
 	//1 = ITMS uses DQS only
 	value_temp |= (0x1 << 1);
-#ifdef MEM_CS1_0Mb
-	value_temp |= (0x1<<18); //only enable CS0 for data training
-#else
-	value_temp |= (0x3 << 18); //enable CS0/1 for data training
-#endif
+	if (MEM_CS1_TYPE == MEM_CS_0MB)
+	{
+		value_temp |= (0x1<<18); //only enable CS0 for data training
+	}
+	else
+	{
+		value_temp |= (0x3 << 18); //enable CS0/1 for data training
+	}
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PGCR) = value_temp;
 
 	value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_DSGCR);
 	value_temp &= ~0xfff;  //only applicable for LPDDR
-	
+
 	//CAUTION:[7:5] DQSGX, [10:8] DQSGE
 	value_temp |= (0x1f | ((GATE_EARLY_LATE)<<8) | ((GATE_EARLY_LATE)<<5));  //only applicable for LPDDR
 	value_temp &= ~(0x1<<2); // zq Update Enable,CHECK!!!!
