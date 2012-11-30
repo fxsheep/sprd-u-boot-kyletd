@@ -15,7 +15,7 @@
 #define GATE_TRAING_ON        1
 #define GATE_EARLY_LATE       2
 #ifndef SC8825_EMC_FREQ
-#define SC8825_EMC_FREQ       200   //ddr clock
+#define SC8825_EMC_FREQ       400   //ddr clock
 #endif
 
 #if (MEMORY_TYPE == LPDDR1)
@@ -1454,19 +1454,19 @@ void mem_init(MEM_TYPE_ENUM mem_type_enum, uint32 bl, MEM_BT_ENUM bt, uint32 zq)
 			switch (zq)
 			{
 				case 34:
-					value_temp |= 0x1;
+					value_temp |= 0x1<<12;
 					break;
 				case 40:
-					value_temp |= 0x2;
+					value_temp |= 0x2<<12;
 					break;
 				case 48:
-					value_temp |= 0x3;
+					value_temp |= 0x3<<12;
 					break;
 				case 60:
-					value_temp |= 0x4;
+					value_temp |= 0x4<<12;
 					break;
 				case 80:
-					value_temp |= 0x6;
+					value_temp |= 0x6<<12;
 					break;
 				default:
 					while(1);
@@ -1550,6 +1550,13 @@ static void __emc_init(uint32 mem_drv)
 		}
 #endif
 	}
+
+	value_temp = 0x9;
+	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PIR) = value_temp;
+	wait_n_pclk_cycle(5);
+	for (i=0; i<100; i++);
+	do value_temp = REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PGSR);
+	while((value_temp & 0x1) == 0);
 
 	value_temp = (0x1<<18)|0x1; //Controller DRAM Initialization
 	REG32(PUBL_REG_BASE + PUBL_CFG_ADD_PIR) = value_temp;
