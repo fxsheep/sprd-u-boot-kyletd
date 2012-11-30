@@ -518,12 +518,13 @@ void board_init_r (gd_t *id, ulong dest_addr)
 #endif
     boot_pwr_check();
 
+#if !defined(CONFIG_EMMC_BOOT)
 #if defined(CONFIG_CMD_NAND)
 	puts ("NAND:  ");
-#if !(defined CONFIG_TIGER && defined CONFIG_EMMC_BOOT)
 	nand_init();		/* go init the NAND */
 #endif
 #endif
+
     boot_pwr_check();
 #ifdef SPRD_EVM_TAG_ON
 		SPRD_EVM_TAG(6);
