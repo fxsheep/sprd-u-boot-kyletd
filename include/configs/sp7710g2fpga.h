@@ -292,7 +292,7 @@
 */
 #define CONFIG_LCD
 #ifdef CONFIG_LCD
-#define CONFIG_SPLASH_SCREEN
+//#define CONFIG_SPLASH_SCREEN
 #define LCD_BPP LCD_COLOR16
 //#define CONFIG_LCD_HVGA   1
 #define CONFIG_LCD_WVGA   1
