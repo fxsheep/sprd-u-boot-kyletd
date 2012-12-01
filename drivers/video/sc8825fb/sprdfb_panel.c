@@ -43,8 +43,14 @@ static struct panel_cfg lcd_panel[] = {
 
 #elif defined CONFIG_SC8825EA
 extern struct panel_spec lcd_nt35516_mipi_spec;
+extern struct panel_spec lcd_otm8018b_mipi_spec;
+
 static struct panel_cfg lcd_panel[] = {
 	[0]={
+		.lcd_id = 0x18,
+		.panel = &lcd_otm8018b_mipi_spec ,
+	},
+	[1]={
 		.lcd_id = 0x16,
 		.panel = &lcd_nt35516_mipi_spec ,
 	},
@@ -267,17 +273,22 @@ static struct panel_spec *adapt_panel_from_readid(struct sprdfb_device *dev)
 		panel_mount(dev, lcd_panel[i].panel);
 		panel_reset(lcd_panel[i].panel);
 		panel_init(dev);
-		dev->panel->ops->panel_init(dev->panel);
 		id = dev->panel->ops->panel_readid(dev->panel);
 		if(id == lcd_panel[i].lcd_id) {
 			FB_PRINT("sprdfb: [%s]: LCD Panel 0x%x is attached!\n", __FUNCTION__, lcd_panel[i].lcd_id);
+
+			dev->panel->ops->panel_init(dev->panel);		//zxdebug modify for LCD adaptor 
+			
 			save_lcd_id_to_kernel(id);
 			panel_ready(dev);
 			return lcd_panel[i].panel;
+		} else {							//zxdbg for LCD adaptor
+			FB_PRINT("sprdfb: [%s]: LCD Panel 0x%x attached fail!go next ", __FUNCTION__, lcd_panel[i].lcd_id);
+			sprdfb_panel_remove(dev);				//zxdebug modify for LCD adaptor 
 		}
-		sprdfb_panel_remove(dev);
 	}
-	FB_PRINT("sprdfb:  [%s]: failed to attach LCD Panel!\n", __FUNCTION__);
+	
+	FB_PRINT("sprdfb:  [%s]: final failed to attach LCD Panel!\n", __FUNCTION__);
 	return NULL;
 }
 
