@@ -244,12 +244,26 @@ static uint32 ArmClkPeriSet()
     return 0;
 }
 
+static uint32 DbgClkConfig()
+{
+    uint32 ahb_arm_clk, dbg_div;
+    ahb_arm_clk  = REG32(AHB_ARM_CLK);
+    dbg_div = (ahb_arm_clk>>14)&0x3f;
+    dbg_div++;
+    ahb_arm_clk |= dbg_div<<14;
+    REG32(AHB_ARM_CLK) = ahb_arm_clk;
+    return 0;
+}
+
 static uint32 McuClkConfig(uint32 mcu_clk)
 {
     if (SetMPllClk(mcu_clk))
         return -1;
     if (mcu_clk > ARM_CLK_800M)
+    {
         ArmClkPeriSet();
+        DbgClkConfig();
+    }
     return 0;
 }
 
