@@ -102,6 +102,8 @@ typedef int32_t (*mipi_gen_write_t)(uint8_t *param, uint16_t param_length);
 typedef int32_t (*mipi_gen_read_t)(uint8_t *param, uint16_t param_length, uint8_t bytes_to_read, uint8_t *read_buffer);
 typedef int32_t (*mipi_dcs_write_t)(uint8_t *param, uint16_t param_length);
 typedef int32_t (*mipi_dcs_read_t)(uint8_t command, uint8_t bytes_to_read, uint8_t *read_buffer);
+typedef	int32_t (*mipi_force_write_t)(uint8_t data_type, uint8_t *param, uint16_t param_length);	//add for LCD adapter
+typedef	int32_t (*mipi_force_read_t)(uint8_t command, uint8_t bytes_to_read, uint8_t *read_buffer);
 
 typedef int32_t (*i2c_write_8bits_t)(uint8_t addr, uint8_t reg, uint8_t val);
 typedef int32_t (*i2c_read_8bits_t)(uint8_t addr, uint8_t reg, uint8_t *val);
@@ -185,6 +187,8 @@ struct ops_mipi{
 	int32_t (*mipi_gen_read)(uint8_t *param, uint16_t param_length, uint8_t bytes_to_read, uint8_t *read_buffer);
 	int32_t (*mipi_dcs_write)(uint8_t *param, uint16_t param_length);
 	int32_t (*mipi_dcs_read)(uint8_t command, uint8_t bytes_to_read, uint8_t *read_buffer);
+	int32_t (*mipi_force_write)(uint8_t data_type, uint8_t *param, uint16_t param_length);				//add for LCD adapter
+	int32_t (*mipi_force_read)(uint8_t command, uint8_t bytes_to_read, uint8_t *read_buffer);
 };
 
 struct i2c_info{
