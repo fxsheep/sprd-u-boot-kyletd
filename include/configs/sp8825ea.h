@@ -96,7 +96,7 @@
 #define DSP_SIZE        (0x3E0400) /* 3968K */
 #define VMJALUNA_SIZE       (0x64000) /* 400K */
 #define RUNTIMENV_SIZE      (256 * 1024)
-#define CONFIG_SPL_LOAD_LEN (0x8000)
+#define CONFIG_SPL_LOAD_LEN (0x6000)
 
 #define PRODUCTINFO_ADR		0x80490000
 
