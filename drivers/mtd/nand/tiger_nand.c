@@ -747,6 +747,19 @@ static int sprd_tiger_nand_read_lp(struct mtd_info *mtd,uint8_t *mbuf, uint8_t *
 	cfg1 = (tiger->info_size - 1) << SPAR_INFO_SIZE_OFFSET;
 	cfg2 = (tiger->ecc_mode << ECC_MODE_OFFSET) | (tiger->info_pos << SPAR_INFO_POS_OFFSET) | ((tiger->sct_pg - 1) << SPAR_SECTOR_NUM_OFFSET) | tiger->ecc_pos;
 
+#ifndef CONFIG_NAND_SPL
+	if (mbuf)
+	{
+		Dcache_CleanRegion((unsigned int)mbuf, tiger->m_size*tiger->sct_pg);
+		Dcache_InvalRegion((unsigned int)mbuf, tiger->m_size*tiger->sct_pg);
+	}
+
+	if (sbuf)
+	{
+		Dcache_CleanRegion((unsigned int)sbuf, tiger->s_size*tiger->sct_pg);
+		Dcache_InvalRegion((unsigned int)sbuf, tiger->s_size*tiger->sct_pg);
+	}
+#endif
 	if(mbuf && sbuf)
 	{
 		cfg1 |= (tiger->m_size - 1) | ((tiger->s_size  - 1)<< SPAR_SIZE_OFFSET);
@@ -848,6 +861,20 @@ static int sprd_tiger_nand_write_lp(struct mtd_info *mtd,const uint8_t *mbuf, ui
 	}
 	cfg1 = ((tiger->info_size - 1) << SPAR_INFO_SIZE_OFFSET);
 	cfg2 = (tiger->ecc_mode << ECC_MODE_OFFSET) | (tiger->info_pos << SPAR_INFO_POS_OFFSET) | ((tiger->sct_pg - 1) << SPAR_SECTOR_NUM_OFFSET) | tiger->ecc_pos;
+
+#ifndef CONFIG_NAND_SPL
+	if (mbuf)
+	{
+		Dcache_CleanRegion((unsigned int)mbuf, tiger->m_size*tiger->sct_pg);
+		Dcache_InvalRegion((unsigned int)mbuf, tiger->m_size*tiger->sct_pg);
+	}
+
+	if (sbuf)
+	{
+		Dcache_CleanRegion((unsigned int)sbuf, tiger->s_size*tiger->sct_pg);
+		Dcache_InvalRegion((unsigned int)sbuf, tiger->s_size*tiger->sct_pg);
+	}
+#endif
 	if(mbuf && sbuf)
 	{
 		cfg0 |= MAIN_USE | SPAR_USE;
