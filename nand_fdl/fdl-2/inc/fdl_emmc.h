@@ -13,7 +13,7 @@
 
 #define EMMC_SUCCESS                0
 #define EMMC_SYSTEM_ERROR           1
-#define EMMC_DEVICE_INIT_ERROR       2
+#define EMMC_DEVICE_INIT_ERROR      2
 #define EMMC_INVALID_DEVICE_SIZE    3
 #define EMMC_INCOMPATIBLE_PART      4
 #define EMMC_INVALID_ADDR           5
@@ -22,6 +22,27 @@
 
 int FDL_BootIsEMMC(void);
 int FDL_Check_Partition_Table(void);
+
+static __inline DLSTATUS convert_err (int err)
+{
+    switch (err)
+    {
+        case EMMC_SUCCESS:
+            return BSL_REP_ACK;
+        case EMMC_INVALID_ADDR:
+            return BSL_REP_DOWN_DEST_ERROR;
+        case EMMC_INVALID_SIZE:
+            return BSL_REP_DOWN_SIZE_ERROR;
+        case EMMC_DEVICE_INIT_ERROR:
+            return BSL_UNKNOWN_DEVICE;
+        case EMMC_INVALID_DEVICE_SIZE:
+            return BSL_INVALID_DEVICE_SIZE;
+        case EMMC_INCOMPATIBLE_PART:
+            return BSL_INCOMPATIBLE_PARTITION;
+        default:
+            return BSL_REP_OPERATION_FAILED;
+    }
+}
 
 #ifndef FPGA_TRACE_DOWNLOAD
 /******************************************************************************
