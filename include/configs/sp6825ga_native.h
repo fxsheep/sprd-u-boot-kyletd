@@ -60,7 +60,7 @@
 #endif
 
 #define CONFIG_EMMC_BOOT
-#define CONFIG_RAM512M
+//#define CONFIG_RAM512M
 
 #ifdef  CONFIG_EMMC_BOOT
 #define EMMC_SECTOR_SIZE 512

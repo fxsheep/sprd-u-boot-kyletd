@@ -59,7 +59,7 @@
 #endif
 
 #define CONFIG_EMMC_BOOT
-#define CONFIG_RAM512M
+#define CONFIG_RAM768M
 
 
 #ifdef  CONFIG_EMMC_BOOT
