@@ -3,20 +3,12 @@
 #ifdef CONFIG_EMMC_BOOT
 #include "card_sdio.h"
 #include "dload_op.h"
-#include "flash_command.h"
 #include "fdl_emmc.h"
 #include "packet.h"
 #include "fdl_crc.h"
 #include "fdl_stdio.h"
-#include "parsemtdparts.h"
-
 #include "asm/arch/sci_types.h"
-#include "asm/arch/nand_controller.h"
-#include <linux/mtd/mtd.h>
 #include <linux/crc32b.h>
-#include <nand.h>
-#include <linux/mtd/nand.h>
-#include <jffs2/jffs2.h>
 #include <malloc.h>
 #include <asm/arch/secure_boot.h>
 
@@ -904,7 +896,7 @@ int FDL2_eMMC_DataMidst(PACKET_T *packet, void *arg)
 
 	size = packet->packet_body.size;
 	if ((g_status.total_recv_size + size) > g_status.total_size) {
-		g_prevstatus = NAND_INVALID_SIZE;
+		g_prevstatus = EMMC_INVALID_SIZE;
 		//set_dl_op_val(0, 0, MIDSTDATA, FAIL, 2);
 		FDL2_eMMC_SendRep (g_prevstatus);
 		return 0;
@@ -1573,7 +1565,7 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 			SEND_ERROR_RSP (BSL_WRITE_ERROR);			
 			return 0;
 		}
-		ret = NAND_SUCCESS;
+		ret = EMMC_SUCCESS;
 	} else {
 		g_dl_eMMCStatus.curUserPartition = addr2part(addr);
 		if (!emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition)) {
@@ -1605,7 +1597,7 @@ int FDL2_eMMC_Erase(PACKET_T *packet, void *arg)
 				printf("format sd partition failed\n");
 			done_format_sd = 1;
 		}
-		ret = NAND_SUCCESS;
+		ret = EMMC_SUCCESS;
 	}
 
 	FDL2_eMMC_SendRep (EMMC_SUCCESS);

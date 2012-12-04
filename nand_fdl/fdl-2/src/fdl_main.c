@@ -3,14 +3,18 @@
 #include <asm/arch/cmd_def.h>
 #include <asm/arch/packet.h>
 #include <asm/arch/dl_engine.h>
-#include "fdl_nand.h"
 #include <asm/arch/sio_drv.h>
-#include "flash_command.h"
 #include "mcu_command.h"
 #include <asm/arch/usb_boot.h>
 #include <asm/arch/dma_drv_fdl.h>
 #include <asm/arch/sc_reg.h>
+
+#ifdef CONFIG_EMMC_BOOT
 #include "fdl_emmc.h"
+#else
+#include "fdl_nand.h"
+#include "flash_command.h"
+#endif
 
 extern  const unsigned char FDL2_signature[][24];
 extern int sprd_clean_rtc(void);
@@ -114,7 +118,7 @@ int main(void)
 //        FDL_SendAckPacket (BSL_REP_ACK);
 	do {
 #ifdef CONFIG_EMMC_BOOT		
-		if(FDL_BootIsEMMC()){
+		if(FDL_BootIsEMMC()) {
 			/* Initialize NAND flash. */
 			extern PARTITION_CFG g_sprd_emmc_partition_cfg[];
 			extern int mmc_legacy_init(int dev);
@@ -123,20 +127,19 @@ int main(void)
   				#if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2) // JUST FOR TEST , DELETE IT LATER
 				write_uefi_parition_table(g_sprd_emmc_partition_cfg);
 				#else				
-				FDL_SendAckPacket (convert_err (NAND_INCOMPATIBLE_PART));
+				FDL_SendAckPacket (convert_err (EMMC_INCOMPATIBLE_PART));
 				#endif
 			}
 			err = EMMC_SUCCESS;
-		}		
-		else
-#endif               
-		{
+		}
+#else
 			err = nand_flash_init();
 			if ((NAND_SUCCESS != err) && (NAND_INCOMPATIBLE_PART != err)) {
 				FDL_SendAckPacket (convert_err (err));
 				break;
 			}
-		}
+#endif
+
 #ifdef FPGA_TRACE_DOWNLOAD
 		if(!err)
 		{
@@ -154,23 +157,25 @@ int main(void)
 	   		FDL_DlReg(BSL_CMD_READ_FLASH,     FDL2_eMMC_Read,         0);
 	   		FDL_DlReg(BSL_ERASE_FLASH,        FDL2_eMMC_Erase,        0);
 		    	FDL_DlReg(BSL_REPARTITION,    	   FDL2_eMMC_Repartition,       0);	
-		}else
-#endif		
-		{
+		}
+#else
 	  		FDL_DlReg(BSL_CMD_START_DATA,     FDL2_DataStart,         0);
 	   		FDL_DlReg(BSL_CMD_MIDST_DATA,     FDL2_DataMidst,         0);
 	   		FDL_DlReg(BSL_CMD_END_DATA,       FDL2_DataEnd,           0);
 	   		FDL_DlReg(BSL_CMD_READ_FLASH,     FDL2_ReadFlash,         0);
 	   		FDL_DlReg(BSL_ERASE_FLASH,        FDL2_EraseFlash,        0);
-		    	FDL_DlReg(BSL_REPARTITION,    	   FDL2_FormatFlash,       0);	
-		}
+			FDL_DlReg(BSL_REPARTITION,    	   FDL2_FormatFlash,       0);
+#endif
    		FDL_DlReg(BSL_CMD_NORMAL_RESET,   FDL_McuResetNormal/*mcu_reset_boot*/,   0);
 	    	FDL_DlReg(BSL_CMD_READ_CHIP_TYPE, FDL_McuReadChipType, 0);  
-			
+#ifdef CONFIG_EMMC_BOOT
+		FDL_SendAckPacket (EMMC_SUCCESS == err ? BSL_REP_ACK :
+					BSL_INCOMPATIBLE_PARTITION);
+#else
 		/* Reply the EXEC cmd received in the 1st FDL. */
 		FDL_SendAckPacket (NAND_SUCCESS == err ? BSL_REP_ACK :
-                           		BSL_INCOMPATIBLE_PARTITION);
-
+					BSL_INCOMPATIBLE_PARTITION);
+#endif
         /* Start the download process. */
         FDL_DlEntry (DL_STAGE_CONNECTED);
 #endif
