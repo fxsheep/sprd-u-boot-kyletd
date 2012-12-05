@@ -110,11 +110,14 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         DBG("func: %s line: %d\n", __func__, __LINE__);
         recovery_mode();
     }
-
+   if(charger_connected()){
+        DBG("%s: charger connected\n", __FUNCTION__);
+        charge_mode();
+    }
     //find the power up trigger
-    if(boot_pwr_check() >= get_pwr_key_cnt()){
+    else if(boot_pwr_check() >= get_pwr_key_cnt()){
         DBG("%s: power button press\n", __FUNCTION__);
-
+	DBG("boot_pwr_check=%d,get_pwr_key_cnt=%d\n",boot_pwr_check(),get_pwr_key_cnt());
         //go on to check other keys
         mdelay(50);
         for(i=0; i<10;i++){
@@ -143,10 +146,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
                 break;
         }
     }
-	else if(charger_connected()){
-        DBG("%s: charger connected\n", __FUNCTION__);
-        charge_mode();
-    }else if(alarm_triggered() && alarm_flag_check()){
+    else if(alarm_triggered() && alarm_flag_check()){
         DBG("%s: alarm triggered\n", __FUNCTION__);
         int flag =alarm_flag_check();
         if(flag == 1)
