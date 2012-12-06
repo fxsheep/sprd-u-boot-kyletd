@@ -216,4 +216,7 @@ long file_fat_read(const char *filename, void *buffer, unsigned long maxsize);
 const char *file_getfsname(int idx);
 int fat_register_device(block_dev_desc_t *dev_desc, int part_no);
 
+int file_fat_write(const char *filename, void *buffer, unsigned long maxsize);
+int file_fat_rm(const char *filename);
+
 #endif /* _FAT_H_ */

@@ -25,6 +25,7 @@ LIB	= $(obj)libfat.o
 
 AOBJS	=
 COBJS-$(CONFIG_CMD_FAT)	:= fat.o file.o
+COBJS-$(CONFIG_FAT_WRITE):= fat_write.o
 
 SRCS	:= $(AOBJS:.o=.S) $(COBJS-y:.o=.c)
 OBJS	:= $(addprefix $(obj),$(AOBJS) $(COBJS-y))

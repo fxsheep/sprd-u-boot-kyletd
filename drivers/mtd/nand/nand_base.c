@@ -380,7 +380,7 @@ static int nand_block_bad(struct mtd_info *mtd, loff_t ofs, int getchip)
 static int nand_default_block_markbad(struct mtd_info *mtd, loff_t ofs)
 {
 	struct nand_chip *chip = mtd->priv;
-	uint8_t buf[2] = { 0, 0 };
+	uint8_t buf[2] = { 0x55, 0xaa };
 	int block, ret;
 #ifndef	CONFIG_MTD_NAND_SC8810
 	mtd_oob_mode_t sprd_mode;
@@ -2520,7 +2520,7 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 	int i, dev_id, maf_idx;
 	int tmp_id, tmp_manf;
 #if defined(CONFIG_NAND_SC8810) || defined(CONFIG_TIGER)
-	u8 id_data[5];
+	u8 id_data[8];
 #endif
 
 #ifdef CONFIG_MTD_NAND_SPRD

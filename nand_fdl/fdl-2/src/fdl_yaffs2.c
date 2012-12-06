@@ -10,7 +10,7 @@
 
 #define ALL_EXTRA_FLAGS		0xF0000000
 
-#define YAFFS_IGNORE_TAGS_ECC	1
+//#define YAFFS_IGNORE_TAGS_ECC	1
 
 /* Also, the top 4 bits of the object Id are set to the object type. */
 #define EXTRA_OBJECT_TYPE_SHIFT (28)
@@ -58,9 +58,9 @@ void yaffs2_PackTags2(yaffs_PackedTags2 * pt, const yaffs_ExtendedTags * t)
 	//yaffs_DumpPackedTags2(pt);
 	//yaffs_DumpTags2(t);
 
-//#ifndef YAFFS_IGNORE_TAGS_ECC
+#ifndef YAFFS_IGNORE_TAGS_ECC
 	yaffs_ECCCalculateOther((unsigned char *)&pt->t, sizeof(yaffs_PackedTags2TagsPart), &pt->ecc);
-//#endif
+#endif
 }
 
 

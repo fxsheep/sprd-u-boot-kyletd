@@ -38,7 +38,8 @@ int nand_write_fdl (unsigned int size, unsigned char *buf);
 int nand_end_write (void);
 int nand_read_fdl (struct real_mtd_partition *phypart, unsigned int off, unsigned int size, unsigned char *buf);
 int nand_read_NBL (void *buf);
-
+void nand_set_write_pos(unsigned int pos);
+unsigned int nand_check_write_pos(unsigned int  pos);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

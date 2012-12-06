@@ -91,6 +91,84 @@ int read_spldata()
 	}
 	return 0;
 }
+
+static int load_kernel_and_layout(struct mtd_info *nand, unsigned int phystart, char *header, char *kernel, char *ramdisk, unsigned int virtual_page_size, unsigned int real_page_size)
+{
+	int ret = -1;
+	boot_img_hdr *hdr = (boot_img_hdr*)header;
+	unsigned int off = phystart;
+	int size = real_page_size;
+
+	printf("virtual_page_size : %x\n",virtual_page_size);
+	printf("real_page_size : %x\n",real_page_size);
+	//read boot image header
+	ret = nand_read_offset_ret(nand, off, &size, (void *)hdr, &off);
+	if(ret != 0){
+		printf("function: %s nand read error %d\n", __FUNCTION__, ret);
+        return -1;
+	}
+	if(memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)){
+		printf("bad boot image header, give up read!!!!\n");
+        return -1;
+	}
+	else
+	{
+
+		char* prev_page_addr = header;
+		//we asume that the header takes only one page.
+		//read kernel image prepare
+		unsigned int used_size = 1*virtual_page_size;
+		unsigned int spare_size = 0;
+		unsigned int next_file_size = hdr->kernel_size;
+
+		if(used_size > 0){
+			spare_size = real_page_size - used_size;
+		}else{
+			spare_size = 0;
+		}
+		//read kernel image
+		printf("file size: %x\n",hdr->kernel_size);
+		printf("use size: %x\n",used_size);
+		printf("spare size: %x\n",spare_size);
+
+		if(spare_size) {
+			memcpy(kernel,&prev_page_addr[used_size],spare_size);
+			next_file_size -= spare_size;
+		}
+		size = (next_file_size+(real_page_size - 1)) & (~(real_page_size - 1));
+		ret = nand_read_offset_ret(nand, off, &size, (void *)(kernel+spare_size), &off);
+		if(ret != 0){
+			printf("reading kernel error!\n");
+			printf("try reading to %x\n",kernel+spare_size);
+		}
+		//read ramdisk image prepare
+		prev_page_addr =  (char*)(kernel+spare_size+size-real_page_size);
+		used_size = (next_file_size%real_page_size+virtual_page_size-1)&(~(virtual_page_size-1));
+		if(used_size > 0){
+			spare_size = real_page_size - used_size;
+		}else{
+			spare_size = 0;
+		}
+		next_file_size = hdr->ramdisk_size;
+		printf("file size: %x\n",hdr->ramdisk_size);
+		printf("use size: %x\n",used_size);
+		printf("spare size: %x\n",spare_size);
+		//read ramdisk image
+		if(spare_size){
+			memcpy(ramdisk,&prev_page_addr[used_size],spare_size);
+			next_file_size -= spare_size;
+		}
+		size = (next_file_size+(real_page_size - 1)) & (~(real_page_size - 1));
+		ret = nand_read_offset_ret(nand, off, &size, (void *)(ramdisk+spare_size), &off);
+		if(ret != 0){
+			printf("reading ramdisk error!\n");
+			printf("try reading to %x\n",ramdisk+spare_size);
+		}
+	}
+
+	return ret;
+}
+
 void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 {
     boot_img_hdr *hdr = (void *)raw_header;
@@ -465,6 +543,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	off=part->offset;
 	nand = &nand_info[dev->id->num];
 	//read boot image header
+#if 0
 	size = nand->writesize;
 	flash_page_size = nand->writesize;
 	ret = nand_read_offset_ret(nand, off, &size, (void *)hdr, &off);
@@ -501,6 +580,16 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			return;
 		}
 	}
+#else
+
+	ret = load_kernel_and_layout(nand, (unsigned int)off, (char *)raw_header, (char *) KERNEL_ADR, (char *) RAMDISK_ADR, 2048, nand->writesize);
+
+	if (ret != 0) {
+		printf("ramdisk nand read error %d\n", ret);
+		return;
+	}
+
+#endif
 
 #if !(BOOT_NATIVE_LINUX)
 	////////////////////////////////////////////////////////////////

@@ -16,7 +16,7 @@
 #include <linux/mtd/nand.h>
 #include <jffs2/jffs2.h>
 #include <malloc.h>
-#include "fdl_yaffs2.h"
+#include "yaffs_format_data_translate.h"
 
 extern void cmd_yaffs_mount(char *mp);
 extern void cmd_yaffs_umount(char *mp);
@@ -24,7 +24,7 @@ extern int cmd_yaffs_ls_chk(const char *dirfilename);
 extern void cmd_yaffs_mread_file(char *fn, unsigned char *addr);
 extern void cmd_yaffs_mwrite_file(char *fn, char *addr, int size);
 extern int cmd_yaffs_rm_chk(const char *path);
-
+extern int  yaffs_get_reserved_block_num(void);
 
 #define TRANS_CODE_SIZE		(12 * 1024) /* dloadtools optimization value */
 #define NAND_NOTUSED_ADDRESS	(0x9000000f)
@@ -110,6 +110,7 @@ static unsigned long is_factorydownload_tools = 0;
 static unsigned long is_check_dlstatus = 0; /* 1 : check  0 : don't check */
 static DL_Address_CNT_S Dl_Data_Address = {NULL, 0};
 static DL_Address_CNT_S Dl_Erase_Address = {NULL, 0};
+static unsigned int check_flag = 0;
 
 #ifdef  TRANS_CODE_SIZE
 #define min(A,B)		(((A) < (B)) ? (A) : (B))
@@ -535,7 +536,6 @@ static int nv_is_correct(unsigned char *array, unsigned long size)
 }
 
 /* phasecheck : 0 --- 3071; crc : 3072 3073; index : 3074 3075
-/*
 * retval : -1 is wrong  ;  1 is correct
 */
 int sn_is_correct(unsigned char *array, unsigned long size)
@@ -1027,157 +1027,52 @@ fail:
 
 int yaffs2_is4kImg(void)
 {
-	return (((!strcmp(phy_partition.name, "system")) || (!strcmp(phy_partition.name, "userdata"))) && (nand_page_oob_info.writesize == 4096));
+	/* return (((!strcmp(phy_partition.name, "system")) || (!strcmp(phy_partition.name, "userdata"))) && (nand_page_oob_info.writesize == 4096)); */
+	return ((!strcmp(phy_partition.name, "system")) || (!strcmp(phy_partition.name, "userdata")));
 }
 
-int mkboot_is4kImg(void)
+int yaffs2_convertAndWrite(int last_flag)
 {
-	return (((!strcmp(phy_partition.name, "boot")) || (!strcmp(phy_partition.name, "recovery"))) && (nand_page_oob_info.writesize == 4096));
-}
+	yaffs_page src = {0};
+	yaffs_page dst = {0};
+	int count = 0;
+	unsigned int size_threshold = 0;
+	int ret = NAND_SUCCESS;
+	unsigned int remaindata = 0;
 
-static int yaffs2_nand_write_chunk(__u8 *data, __u32 objId, __u32 chunkId, __u32 nBytes)
-{
-	unsigned char spare[nand_page_oob_info.oobsize];
-	yaffs_ExtendedTags t;
-    yaffs_PackedTags2 *pt;
-    memset(spare, 0xff, sizeof(spare));
-    pt = (yaffs_PackedTags2 *)spare;
-    yaffs2_InitialiseTags(&t);
-    t.chunkId = chunkId;
-    t.serialNumber = 1;
-    t.byteCount = nBytes;
-	t.objectId = objId;
-	t.sequenceNumber = YAFFS_LOWEST_SEQUENCE_NUMBER;
-	t.chunkUsed = 1;
-
-	yaffs2_PackTags2(pt, &t);
-
-	memcpy(temBuf + nand_page_oob_info.writesize, spare, nand_page_oob_info.oobsize);
-	//dump_all_buffer(outpos, temBuf, nand_page_oob_info.writesize + nand_page_oob_info.oobsize);
-	outpos += (nand_page_oob_info.writesize + nand_page_oob_info.oobsize);
-    return nand_write_fdl(nand_page_oob_info.writesize + nand_page_oob_info.oobsize, temBuf);
-}
-
-/* convert 2k yaffs2 image object header to 4k header*/
-static int yaffs2_convert_header(chunk_data *chunk)
-{
-	memset(temBuf, 0xff, nand_page_oob_info.writesize + nand_page_oob_info.oobsize);
-	memcpy(temBuf, chunk->p_data, PAGE_SIZE_2K);
-
-	return yaffs2_nand_write_chunk(temBuf, chunk->objectId, 0, 0xffff);
-}
-
-/* convert 2k yaffs2 image chunk to 4k chunk*/
-static int yaffs2_convert_chunk(chunk_data *chunk1, chunk_data *chunk2)
-{
-	unsigned long nbBytes, chunkId;
-
-	memset(temBuf, 0xff, nand_page_oob_info.writesize + nand_page_oob_info.oobsize);
-	memcpy(temBuf, chunk1->p_data, chunk1->dataSize);
-
-	nbBytes = chunk1->dataSize;
-	chunkId = chunk1->chunkId / 2 + 1;
-
-	if (chunk2) {
-		memcpy(temBuf + nbBytes, chunk2->p_data, chunk2->dataSize);
-		nbBytes += chunk2->dataSize;
+	src.oobsize = NAND_OOB_64;
+	src.pagesize = PAGE_SIZE_2K;
+	src.p_pagedata = g_BigBUF;
+	dst.oobsize = nand_page_oob_info.oobsize;
+	dst.pagesize = nand_page_oob_info.writesize;
+	dst.p_pagedata = temBuf;
+	count = dst.pagesize/src.pagesize;
+	size_threshold = (src.oobsize + src.pagesize)*count;
+	if(last_flag){
+		size_threshold = src.oobsize + src.pagesize;
 	}
-    //printf("4kchunk, objId=%d, chunkId=%d, dataSize=%d\n", chunk1->objectId, chunkId, nbBytes);
-	return yaffs2_nand_write_chunk(temBuf, chunk1->objectId, chunkId, nbBytes);
-}
-
-int yaffs2_convertAndWrite(void)
-{
-	unsigned long ret = NAND_SUCCESS;
-	yaffs_PackedTags2 *pt;
-	yaffs_ObjectHeader *oh;
-	yaffs_PackedTags2 checkpt;
-	yaffs_ObjectHeader checkoh;
-
-	while ((g_BigSize - g_ReadBufLen) >= (2048 + 64)) {
-		if (check_image_type == 0) {
-			check_image_type = 1;
-			memset(&checkoh, 0xff, sizeof(yaffs_ObjectHeader));
-			memset(&checkpt, 0xff, sizeof(yaffs_PackedTags2));
-
-			memcpy(&checkoh, g_BigBUF, sizeof(yaffs_ObjectHeader));
-			memcpy(&checkpt, g_BigBUF + 2048, sizeof(yaffs_PackedTags2));
-			if ((checkoh.type != YAFFS_OBJECT_TYPE_DIRECTORY) || (checkpt.t.objectId != 1) || (checkpt.t.chunkId != 0)) {
-				printf("yaffs image is not default parameter, need pagesize 2KB!\n");
-				g_prevstatus = NAND_INVALID_SIZE;
-				FDL2_SendRep(g_prevstatus);
-				return 0;
-			}
-		}
-
-		memset(&chunk, 0xff, sizeof(chunk_data));
-
-		memcpy(&(chunk.p_data), g_BigBUF + g_ReadBufLen, PAGE_SIZE_2K);
-		g_ReadBufLen += PAGE_SIZE_2K;
-
-		memcpy(&(chunk.p_spare), g_BigBUF + g_ReadBufLen, NAND_OOB_64);
-		g_ReadBufLen += NAND_OOB_64;
-
-		pt = (yaffs_PackedTags2 *)&(chunk.p_spare);
-		chunk.dataSize = pt->t.byteCount;
-		chunk.chunkId = pt->t.chunkId;
-		chunk.objectId = pt->t.objectId;
-
-		if (chunk.chunkId == 0) {
-			/* header */
-			ret = yaffs2_convert_header(&chunk);
-			if (ret != NAND_SUCCESS)
-				goto fail;
-
-			oh = (yaffs_ObjectHeader *)&(chunk.p_data);
-			if (oh->type == YAFFS_OBJECT_TYPE_FILE) {
-				totalchunk = (oh->fileSize + 2048 - 1) / 2048;
-				chunknumber = 0;
-				memset(&chunk_odd, 0xff, sizeof(chunk_data));
-				memset(&chunk_even, 0xff, sizeof(chunk_data));
-			}
-
-			memset(&chunk, 0xff, sizeof(chunk_data));
-		} else {
-			/* data */
-			chunknumber ++;
-			if (chunk.chunkId % 2) {
-				/* odd */
-				memcpy(&chunk_odd, &chunk, sizeof(chunk_data));
-				if (chunk.chunkId == totalchunk) {
-					/* last odd chunk */
-					ret = yaffs2_convert_chunk(&chunk_odd, NULL);
-					if (ret != NAND_SUCCESS)
-						goto fail;
-
-					memset(&chunk_odd, 0xff, sizeof(chunk_data));
-				}
-			} else {
-				/* even */
-				memcpy(&chunk_even, &chunk, sizeof(chunk_data));
-				ret = yaffs2_convert_chunk(&chunk_odd, &chunk_even);
-				if (ret != NAND_SUCCESS)
-					goto fail;
-
-				memset(&chunk_odd, 0xff, sizeof(chunk_data));
-				memset(&chunk_even, 0xff, sizeof(chunk_data));
-			}
-
-			if (chunk.chunkId == totalchunk) {
-				chunknumber = 0;
-				totalchunk = 0;
+	while ((g_BigSize - g_ReadBufLen) >= size_threshold) {
+		//we have received more than one page data.
+		count = yaffs_page_translate(&src, &dst);
+		if(count > 0){
+			//update global buffer
+			g_ReadBufLen += count*(src.oobsize + src.pagesize);
+			//update src data stream pointer
+			src.p_pagedata = (unsigned char*)&src.p_pagedata[count*(src.oobsize + src.pagesize)];
+			//restore one page data
+		    ret = nand_write_fdl(dst.pagesize+ dst.oobsize, dst.p_pagedata);
+			if(ret != NAND_SUCCESS){
+				return NAND_SYSTEM_ERROR;
 			}
 		}
 	}
 
-	g_BigSize -= g_ReadBufLen;
-	memcpy(g_BigBUF, g_BigBUF + g_ReadBufLen, g_BigSize);
-	memset(g_BigBUF + g_BigSize, 0xff, yaffs_buffer_size - g_BigSize);
+	remaindata = g_BigSize - g_ReadBufLen;
+	memcpy(g_BigBUF, g_BigBUF + g_ReadBufLen, remaindata);
+	memset(g_BigBUF + remaindata, 0xff, yaffs_buffer_size - remaindata);
+	g_BigSize = remaindata;
 	g_ReadBufLen = 0;
 
-	return NAND_SUCCESS;
-
-fail:
 	return ret;
 }
 
@@ -1193,6 +1088,7 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 #endif
 
     set_dl_op_val(start_addr, size, STARTDATA, FAIL, 1);
+
     if (packet->packet_body.size == 12)
     {
 	memset(g_fixnv_buf, 0xff, FIXNV_SIZE + 4);
@@ -1220,9 +1116,9 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	if (size >= phy_partition.size) {
 		printf("\n\nimage file size : 0x%08x is bigger than partition size : 0x%08x\n", size, phy_partition.size);
 		ret = NAND_INVALID_SIZE;
+		break;
 	}
-	if (NAND_SUCCESS != ret)
-        	break;
+
 
 #ifdef CONFIG_BOARD_788
 	if (strcmp(phy_partition.name, "system") == 0)
@@ -1282,6 +1178,7 @@ int FDL2_DataStart (PACKET_T *packet, void *arg)
 	g_BootimgCurAddr = 0;
 	g_BootimgWritesize = 0;
 	check_image_type = 0;
+	check_flag = 0;
 
 	set_dl_op_val(start_addr, size, STARTDATA, SUCCESS, 1);
         FDL_SendAckPacket (BSL_REP_ACK);	
@@ -1385,8 +1282,20 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 	unsigned long pos, size, ret, crc;
     	unsigned long i, fix_nv_size, fix_nv_checksum, ii, realii;
 	unsigned short sum = 0, *dataaddr;
+	int imgsize = 0x0;
+	int blksize = 0x0;
+	int first_nv_ok = 0;
 
 	set_dl_op_val(0, 0, ENDDATA, FAIL, 1);
+
+	//step1: check if dwonload size exceed partition size limit.
+	if ((check_flag == 1) && (phy_partition.size < (get_end_write_pos() - phy_partition.offset))) {
+		check_flag = 0;
+		printf("partition : %s write pos exceed,please increase partition page num\n", phy_partition.name);
+		printf("size = 0x%x offset = 0x%x endpos = 0x%x\n", phy_partition.size,  phy_partition.offset, get_end_write_pos());
+		return 0;
+	}
+
     	if (CHECKSUM_OTHER_DATA != g_checksum) {
 		/* It's fixnv data */
         	fix_nv_size = g_sram_addr - (unsigned long) g_fixnv_buf;
@@ -1425,6 +1334,12 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			if (ret == NAND_SUCCESS) {
 				printf("write fixnv start\n");
 				cmd_yaffs_mount(fixnvpoint);
+
+				/* download size check */
+				imgsize = FIXNV_SIZE + 4;
+				blksize = nand_page_oob_info.erasesize;
+				if (((yaffs_get_reserved_block_num() + 2) * blksize+imgsize) > phy_partition.size)
+					printf("partition:%s write pos exceed, please increase partition size\n", phy_partition.name);
     				cmd_yaffs_mwrite_file(fixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
 				ret = cmd_yaffs_ls_chk(fixnvfilename);
 				cmd_yaffs_umount(fixnvpoint);
@@ -1446,10 +1361,19 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			printf("\nerase backupfixnv end\n");
 			g_prevstatus = ret;
 			if (ret == NAND_SUCCESS) {
+				printf("write backupfixnv start\n");
 				cmd_yaffs_mount(backupfixnvpoint);
+
+
+				/* download size check */
+				imgsize = FIXNV_SIZE + 4;
+				blksize = nand_page_oob_info.erasesize;
+				if (((yaffs_get_reserved_block_num() + 2) * blksize + imgsize) > phy_partition.size)
+					printf("partition:%s write pos exceed,please increase partition size\n", phy_partition.name);
     				cmd_yaffs_mwrite_file(backupfixnvfilename, (char *)g_fixnv_buf, (FIXNV_SIZE + 4));
 				ret = cmd_yaffs_ls_chk(backupfixnvfilename);
 				cmd_yaffs_umount(backupfixnvpoint);
+				printf("write backupfixnv end\n");
 				g_prevstatus = NAND_SUCCESS;
 			}
 		}
@@ -1462,7 +1386,7 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 		for (i = 0; i < 3; i++) {
 			pos = 0;
 			while (pos < g_NBLFixBufDataSize) {
-				if ((g_NBLFixBufDataSize  pos) >= 2048)
+				if ((g_NBLFixBufDataSize - pos) >= 2048)
 					size = 2048;
 				else
 					size = g_NBLFixBufDataSize - pos;
@@ -1496,6 +1420,11 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 			*dataaddr = 0;
 
 			cmd_yaffs_mount(productinfopoint);
+			/* download size check */
+			imgsize = PRODUCTINFO_SIZE + 4;
+			blksize = nand_page_oob_info.erasesize;
+			if (((yaffs_get_reserved_block_num() + 2) * blksize + imgsize) > phy_partition.size)
+				printf("partition:%s write pos exceed,please increase partition size\n", phy_partition.name);
     			cmd_yaffs_mwrite_file(productinfofilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
 			ret = cmd_yaffs_ls_chk(productinfofilename);
 			cmd_yaffs_mwrite_file(bkproductinfofilename, g_PhasecheckBUF, (PRODUCTINFO_SIZE + 4));
@@ -1575,23 +1504,24 @@ int FDL2_DataEnd (PACKET_T *packet, void *arg)
 	else {
 		//printf("data end, g_BigSize = %d\n", g_BigSize);
 		if (yaffs2_is4kImg())
-			g_prevstatus = yaffs2_convertAndWrite();
-		else if (mkboot_is4kImg())
-			g_prevstatus = bootimg_convertAndWrite();
+			g_prevstatus = yaffs2_convertAndWrite(1);
 		else {
-		ii = 0;
-		while (ii < g_BigSize) {
-			realii = min(g_BigSize - ii, code_yaffs_onewrite);
-			if (strcmp(phy_partition.name, "cache") == 0)
-				g_prevstatus = NAND_SUCCESS;
-			else
-				g_prevstatus = nand_write_fdl((unsigned int)realii, 
-					(unsigned char *)(g_BigBUF + ii));
-			if (NAND_SUCCESS != g_prevstatus) {
-				break;
+			ii = 0;
+			while (ii < g_BigSize) {
+				realii = min(g_BigSize - ii, code_yaffs_onewrite);
+				//printf(".");
+				if (!strcmp(phy_partition.name, "cache") )
+					g_prevstatus = NAND_SUCCESS;
+				else
+				g_prevstatus = nand_write_fdl((unsigned int)realii, (unsigned char *)(g_BigBUF + ii));
+				if (NAND_SUCCESS != g_prevstatus) {
+					//printf("\n");
+					printf("1big buffer write error.\n");
+                    break;
+				}
+				ii += realii;
 			}
-			ii += realii;
-			}
+			//printf("\n");
 		}
 		g_BigSize = 0;
 	}
@@ -1665,10 +1595,9 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
 		if (g_BigSize < (code_yaffs_buflen / 2)) {
 			g_prevstatus = NAND_SUCCESS;
 		} else {
+				check_flag = 1;
 				if (yaffs2_is4kImg())
-					g_prevstatus = yaffs2_convertAndWrite();
-				else if (mkboot_is4kImg())
-					g_prevstatus = bootimg_convertAndWrite();
+					g_prevstatus = yaffs2_convertAndWrite(0);
 				else {
 			for (ii = 0; ii < g_BigSize; ii += code_yaffs_onewrite) {
 				if (strcmp(phy_partition.name, "cache") == 0)
@@ -1717,6 +1646,7 @@ int FDL2_DataMidst (PACKET_T *packet, void *arg)
 				}
 		}
 #else
+		check_flag = 1;
 		if (strcmp(phy_partition.name, "cache") == 0)
 			g_prevstatus = NAND_SUCCESS;
 		else
@@ -2124,6 +2054,24 @@ int FDL2_ReadFlash (PACKET_T *packet, void *arg)
     	}
 }
 
+static void local_nand_format_partion(struct real_mtd_partition mtd_part,unsigned int filler)
+{
+	unsigned long  offset,size,start,end;
+
+	if (mtd_part.yaffs == 1)
+		return; /* if the data format is not raw,then just return */
+
+	offset = mtd_part.offset;//the begin of the partion
+	size = mtd_part.size;//the total size of the partion
+	start = (offset + nand_page_oob_info.writesize - 1) & (~(nand_page_oob_info.writesize - 1));
+	end = (offset + size + nand_page_oob_info.writesize - 1) & (~(nand_page_oob_info.writesize - 1));
+	memset(temBuf, filler, nand_page_oob_info.writesize);//generate a filler
+	nand_set_write_pos(start);
+
+	while (nand_check_write_pos(end))
+		nand_write_fdl(nand_page_oob_info.writesize, temBuf);//fill one page
+}
+
 int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 {
     unsigned long *data = (unsigned long *) (packet->packet_body.content);
@@ -2141,7 +2089,8 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 	set_dl_op_val(addr, size, ERASEFLASH, FAIL, 1);
 	if ((addr == 0) && (size = 0xffffffff)) {
 		printf("Scrub to erase all of flash\n");
-		nand_erase_allflash();
+		/* nand_erase_allflash(); */
+		nand_erase_partition(0,0xffffffff,0);
 		ret = NAND_SUCCESS;
 		set_dl_op_val(addr, size, ERASEFLASH, SUCCESS, 1);
 	} else {
@@ -2242,8 +2191,19 @@ int FDL2_EraseFlash (PACKET_T *packet, void *arg)
 		} else {
 			ret = log2phy_table(&phy_partition);
 			phy_partition_info(phy_partition, __LINE__);
-			if (NAND_SUCCESS == ret)
-				ret = nand_erase_partition(phy_partition.offset, phy_partition.size);
+
+			if (NAND_SUCCESS == ret) {
+				ret = nand_erase_partition(phy_partition.offset, phy_partition.size, 1);
+				if ((strcmp(phy_partition.name, "vmjaluna") == 0) ||
+					(strcmp(phy_partition.name, "modem") == 0) ||
+					(strcmp(phy_partition.name, "dsp") == 0) ||
+					(strcmp(phy_partition.name, "2ndbl") == 0) ||
+					(strcmp(phy_partition.name, "boot_logo") == 0) ||
+					(strcmp(phy_partition.name, "fastboot_logo") == 0)) {
+					//fill the area with specific data
+					local_nand_format_partion(phy_partition,0xffffffff);
+				}
+			}
 
 			if (NAND_SUCCESS == ret)
 				set_dl_op_val(addr, size, ERASEFLASH, SUCCESS, 1);

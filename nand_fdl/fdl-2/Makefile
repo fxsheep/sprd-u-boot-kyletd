@@ -59,7 +59,7 @@ FDL2_COBJS_LIST = migrate.o fdl2_signature.o fdl_main.o
 ifdef CONFIG_EMMC_BOOT
 FDL2_COBJS_LIST += newfs_msdos.o fdl_emmc_command.o fdl_partition.o phasecheck.o
 else
-FDL2_COBJS_LIST += fdl_nand.o flash_command.o parsemtdparts.o fdl_yaffs2.o
+FDL2_COBJS_LIST += fdl_nand.o flash_command.o parsemtdparts.o fdl_yaffs2.o yaffs_format_data_translate.o
 endif
 
 FDL2_COBJS = $(addprefix $(obj),$(FDL2_COBJS_LIST))

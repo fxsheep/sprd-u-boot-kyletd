@@ -545,7 +545,8 @@ static void sc8810_nand_hw_init(void)
 	REG_AHB_SOFT_RST &= ~BIT_5;
 
 	sc8810_nand_wp_en(0);
-	nfc_reg_write(NFC_TIMING, ((6 << 0) | (6 << 5) | (10 << 10) | (6 << 16) | (5 << 21) | (5 << 26)));	
+	//nfc_reg_write(NFC_TIMING, ((6 << 0) | (6 << 5) | (10 << 10) | (6 << 16) | (5 << 21) | (5 << 26)));
+	nfc_reg_write(NFC_TIMING, ((12 << 0) | (7 << 5) | (10 << 10) | (6 << 16) | (5 << 21) | (7 << 26)));
 	nfc_reg_write(NFC_TIMING+0X4, 0xffffffff);//TIMEOUT
 	//set_nfc_param(0);//53MHz
 }
@@ -673,6 +674,7 @@ static void sc8810_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 			nfc_mcr_inst_init();
 			nfc_mcr_inst_add(cmd, NF_MC_CMD_ID);
 			nfc_mcr_inst_add(0x00, NF_MC_ADDR_ID);
+			nfc_mcr_inst_add(0x10, NF_MC_NOP_ID);//add nop clk for twrh timing param
 			nfc_mcr_inst_add(7, NF_MC_RWORD_ID);
 			nfc_mcr_inst_exc_for_id();
 			sc8810_nfc_wait_command_finish(NFC_DONE_EVENT);
@@ -711,6 +713,7 @@ static void sc8810_nand_hwcontrol(struct mtd_info *mtd, int cmd,
 			break;	
 		case NAND_CMD_PAGEPROG:
 			memcpy((void *)NFC_MBUF_ADDR, io_wr_port, g_info.b_pointer);
+			nfc_mcr_inst_add(0x10, NF_MC_NOP_ID);//add nop clk for twrh timing param
 			sc8810_nand_data_add(g_info.b_pointer, chip->options & NAND_BUSWIDTH_16, 0);
 			nfc_mcr_inst_add(cmd, NF_MC_CMD_ID);
 			nfc_mcr_inst_add(0, NF_MC_WAIT_ID);
@@ -824,7 +827,7 @@ void nand_spl_hardware_config(struct nand_chip *this, u8 id[5])
 }
 
 #ifndef CONFIG_NAND_SPL
-void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5])
+void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, unsigned char id[8])
 {
 	int index;
 	int array;
@@ -832,6 +835,9 @@ void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5]
 	/*for (index = 0; index < 5; index ++)
 		printk(" %02x ", id[index]);
 	printk("\n");*/
+
+	for (index = 0; index < 5; index ++)
+		this->nandid[index] = id[index];
 
 	array = sizeof(nand_config_table) / sizeof(struct sc8810_nand_page_oob);
 	for (index = 0; index < array; index ++) {
@@ -861,6 +867,7 @@ void nand_hardware_config(struct mtd_info *mtd, struct nand_chip *this, u8 id[5]
 				mtd->oobsize = nand_config_table[index].oobsize;
 			break;
 		}
+		mtdoobsize = nand_config_table[index].oobsize;
 	} else 
 		printk("The type of nand flash is not in table, so use default configuration!\n");
 }
@@ -943,7 +950,7 @@ static int sprd_scan_one_block(int blk, int erasesize, int writesize)
 	int i, cmd;
 	int status = 1, ii;
 	u32 size = 0;
-	int oobsize = (writesize / 1024) * 32;
+	int oobsize = mtdoobsize;
 	int column, page_addr;
 
 	page_addr = blk * (erasesize / writesize);
@@ -1034,6 +1041,7 @@ void read_chip_id(void)
 	nfc_mcr_inst_init();
 	nfc_mcr_inst_add(cmd, NF_MC_CMD_ID);
 	nfc_mcr_inst_add(0x00, NF_MC_ADDR_ID);
+	nfc_mcr_inst_add(0x10, NF_MC_NOP_ID);//add nop clk for twrh timing param
 	nfc_mcr_inst_add(7, NF_MC_RWORD_ID);
 	nfc_mcr_inst_exc_for_id();
 	sc8810_nfc_wait_command_finish(NFC_DONE_EVENT);
@@ -1065,5 +1073,12 @@ void nand_scan_patition(int blocks, int erasesize, int writesize)
 			printf("erasing block : %d    %d % \r", blk, (blk * 100 ) / blocks);
 		}
 	}
+}
+int nand_scan_block(int block, int erasesize, int writesize){
+	int ret = 0;
+	ret = nand_ctl_erase_block(block, erasesize, writesize);
+	ret = ret&1;
+
+	return ret;
 }
 #endif

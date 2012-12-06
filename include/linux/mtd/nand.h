@@ -410,6 +410,7 @@ struct nand_chip {
 	int 		state;
 	/* sprd definition ecc correct mode : 2 bit correct, sc8810 support 1, 2, 4, 8, 12,14, 24 */
 	int		eccbitmode;
+	uint8_t		nandid[8];
 
 	uint8_t		*oob_poi;
 	struct nand_hw_control  *controller;

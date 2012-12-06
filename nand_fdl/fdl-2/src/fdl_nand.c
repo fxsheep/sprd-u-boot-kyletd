@@ -55,6 +55,12 @@ int nand_flash_init(void)
 	return 0;
 }
 
+int get_end_write_pos(void)
+{
+    return cur_write_pos;
+}
+
+
 int nand_format(void)
 {
 #ifdef FDL2_DEBUG
@@ -117,7 +123,7 @@ int nand_erase_allflash(void)
 #endif
 }
 
-int nand_erase_partition(unsigned int addr, unsigned int size)
+int nand_erase_partition(unsigned int addr, unsigned int size, int skip_bad)
 {
 	struct mtd_partition cur_partition;
 	int erase_blk, ret = 0;
@@ -131,23 +137,29 @@ int nand_erase_partition(unsigned int addr, unsigned int size)
 	cur_partition.offset = addr;
 	cur_partition.size = size;
 
+	if (cur_partition.size == 0xffffffff){
+		cur_partition.size = nand->size;
+	}
+
 	for (erase_blk = 0; erase_blk < (cur_partition.size / nand->erasesize); erase_blk ++) {
 		printf("erasing block : %d    %d % \r", (cur_partition.offset / nand->erasesize + erase_blk), (erase_blk * 100 ) / (cur_partition.size / nand->erasesize));
 
-		if (((cur_partition.offset + erase_blk * nand->erasesize) != 0x0) && nand_block_isbad(nand, cur_partition.offset + erase_blk * nand->erasesize)) {
-			printf("\nerase block : %d is bad\n", (cur_partition.offset / nand->erasesize + erase_blk));
+		if (((cur_partition.offset + erase_blk * nand->erasesize) != 0x0) && skip_bad && nand_block_isbad(nand, cur_partition.offset + erase_blk * nand->erasesize)) {
+			//printf("\nerase block : %d is bad\n", (cur_partition.offset / nand->erasesize + erase_blk));
+			printf("skip bad block:	0x%x\n", cur_partition.offset + erase_blk * nand->erasesize);
 		} else {
-			ret = nand_erase_fdl(cur_partition.offset + erase_blk * nand->erasesize, nand->erasesize);
+			//ret = nand_erase_fdl(cur_partition.offset + erase_blk * nand->erasesize, nand->erasesize);
+			ret = nand_scan_block(cur_partition.offset /nand->erasesize+erase_blk,nand->erasesize,nand->writesize);
 			if (ret != 0) {
 				/* erase failed */
 				ret = nand->block_markbad(nand, cur_partition.offset + erase_blk * nand->erasesize);
 				if (ret != 0) {
 					/* mark failed */
-					printf("mark 0x%x bad error\n", cur_partition.offset + erase_blk * nand->erasesize);
+					printf("mark bad block:	0x%x	error!\n", cur_partition.offset + erase_blk * nand->erasesize);
 				   	return NAND_SYSTEM_ERROR + 1;
 				} else {
 					/* mark success */
-					printf("skip bad block 0x%x\n", cur_partition.offset + erase_blk * nand->erasesize);
+					printf("mark bad block:	0x%x	sucess!\n", cur_partition.offset + erase_blk * nand->erasesize);
 				}
 			}	
 		}
@@ -855,6 +867,8 @@ int nand_read_fdl(struct real_mtd_partition *phypart, unsigned int off, unsigned
 	unsigned char buffer[FDL_NAND_BUF_LEN];
 	unsigned long addr = phypart->offset;
 
+	printf("%s: phypart = %s, off = %d,size = %d\n",__FUNCTION__,phypart->name,off,size);
+
 	if ((nand_curr_device < 0) || (nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE))
 	  	return NAND_SYSTEM_ERROR;
 	nand = &nand_info[nand_curr_device];
@@ -901,4 +915,12 @@ int nand_read_NBL(void *buf)
 {
 	printf("function: %s\n", __FUNCTION__);
 	return NAND_SUCCESS;
+}
+
+void nand_set_write_pos(unsigned int pos){
+	cur_write_pos = pos;
+}
+
+unsigned int nand_check_write_pos(unsigned int  pos){
+	return (cur_write_pos <= pos);
 }

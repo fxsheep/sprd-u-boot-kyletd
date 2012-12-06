@@ -102,6 +102,9 @@ static int isMounted = 0;
 #define MOUNT_POINT5 "/cache"
 #endif
 
+
+#define YAFFS_RESERVED_BLOCK_NUM     5
+
 extern nand_info_t nand_info[];
 
 /* XXX U-BOOT XXX */
@@ -250,7 +253,7 @@ int yaffs_StartUp(void)
 #endif
 
 		// /flash
-	flashDev->nReservedBlocks = 5;
+	flashDev->nReservedBlocks = YAFFS_RESERVED_BLOCK_NUM;
 	//flashDev->nShortOpCaches = (options.no_cache) ? 0 : 10;
 	flashDev->nShortOpCaches = 10; // Use caches
 	flashDev->useNANDECC = 0; // use YAFFS's ECC
@@ -301,7 +304,7 @@ int yaffs_StartUp(void)
 
 #ifdef  SPRD_MOUNT_PARTITION
 	// /backupfixnv
-	backupfixnvDev->nReservedBlocks = 5;
+	backupfixnvDev->nReservedBlocks = YAFFS_RESERVED_BLOCK_NUM;
 	backupfixnvDev->nShortOpCaches = 10; // Use caches
 	backupfixnvDev->useNANDECC = 1; // use YAFFS's ECC
 
@@ -359,7 +362,7 @@ int yaffs_StartUp(void)
 
 
 	// /runtimenv
-	runtimenvDev->nReservedBlocks = 5;
+	runtimenvDev->nReservedBlocks = YAFFS_RESERVED_BLOCK_NUM;
 	runtimenvDev->nShortOpCaches = 10; // Use caches
 	runtimenvDev->useNANDECC = 1; // use YAFFS's ECC
 
@@ -417,7 +420,7 @@ int yaffs_StartUp(void)
 
 
 	// /productinfo
-	productinfoDev->nReservedBlocks = 5;
+	productinfoDev->nReservedBlocks = YAFFS_RESERVED_BLOCK_NUM;
 	productinfoDev->nShortOpCaches = 10; // Use caches
 	productinfoDev->useNANDECC = 1; // use YAFFS's ECC
 
@@ -474,7 +477,7 @@ int yaffs_StartUp(void)
 	//yaffs_dump_dev(productinfoDev);
 
 	// /fixnv
-	fixnvDev->nReservedBlocks = 5;
+	fixnvDev->nReservedBlocks = YAFFS_RESERVED_BLOCK_NUM;
 	fixnvDev->nShortOpCaches = 10; // Use caches
 	fixnvDev->useNANDECC = 1; // use YAFFS's ECC
 
@@ -531,7 +534,7 @@ int yaffs_StartUp(void)
 	//yaffs_dump_dev(fixnvDev);
 
 	//data partition 
-	dataDev->nReservedBlocks = 5;
+	dataDev->nReservedBlocks = YAFFS_RESERVED_BLOCK_NUM;
 	dataDev->nShortOpCaches = 10; // Use caches
 	dataDev->useNANDECC = 1; // use YAFFS's ECC
 
@@ -860,6 +863,22 @@ void cmd_yaffs_rm(const char *path)
 		printf("yaffs_unlink returning error: %d\n", retval);
 }
 
+void cmd_yaffs_mv(const char *oldPath, const char *newPath)
+{
+	checkMount();
+
+	int retval = yaffs_rename(newPath, oldPath);
+
+	if ( retval < 0)
+		printf("yaffs_unlink returning error: %d\n", retval);
+}
+
+
+int yaffs_get_reserved_block_num(void)
+{
+	return (int)YAFFS_RESERVED_BLOCK_NUM;
+}
+
 int cmd_yaffs_rm_chk(const char *path)
 {
 	checkMount();
@@ -870,12 +889,4 @@ int cmd_yaffs_rm_chk(const char *path)
 	return retval;
 }
 
-void cmd_yaffs_mv(const char *oldPath, const char *newPath)
-{
-	checkMount();
 
-	int retval = yaffs_rename(newPath, oldPath);
-
-	if ( retval < 0)
-		printf("yaffs_unlink returning error: %d\n", retval);
-}

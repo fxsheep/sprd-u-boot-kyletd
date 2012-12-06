@@ -100,7 +100,7 @@ int set_recovery_message(const struct recovery_message *in)
 
 	size = pagesize*(MISC_COMMAND_PAGE + 1);
 
-	ret = nand_read_skip_bad(nand, part->offset, SCRATCH_ADDR, size);
+	ret = nand_read_skip_bad(nand, part->offset, &size, (void *)SCRATCH_ADDR);
 	if(ret != 0){
 		dprintf("%s: nand read error %d\n", __FUNCTION__, ret);
 		return -1;

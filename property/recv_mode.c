@@ -81,6 +81,15 @@ int recovery_init (void)
 		return 1;
 	}
 
+	if (!strcmp("boot-update",msg.command)) {
+		valid_command = 1;
+		strcpy(msg.command, "");	// to safe against multiple reboot into recovery
+		strcpy(msg.status, "OKAY");
+		set_recovery_message(&msg);	// send recovery message
+		// Boot in update mode
+		return 2;
+	}
+
 	if (!strcmp("update-radio",msg.command)) {
 		valid_command = 1;
 		strcpy(partition_name, "FOTA");
