@@ -25,7 +25,7 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(BOARD).o
 
-COBJS	:= openphone.o sprd_kp.o lcd_nt35516_mipi.o lcd_otm_8018b_mipi.o
+COBJS	:= openphone.o sprd_kp.o
 SOBJS	:=
 
 SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)

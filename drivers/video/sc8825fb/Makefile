@@ -28,6 +28,15 @@ LIB	:= $(obj)libsc8825fb.o
 
 #ifdef CONFIG_LCD
 COBJS-$(CONFIG_TIGER) += sprdfb_main.o sprdfb_panel.o sprdfb_dispc.o sprdfb_mcu.o sprdfb_rgb.o sprdfb_mipi.o sprdfb_i2c.o sprdfb_spi.o sprdfb_dsi.o mipi_dsih_api.o mipi_dsih_dphy.o mipi_dsih_hal.o
+
+COBJS-$(CONFIG_FB_LCD_S6D0139) += lcd_s6d0139.o
+COBJS-$(CONFIG_FB_LCD_NT35516_MCU) += lcd_nt35516_mcu.o
+COBJS-$(CONFIG_FB_LCD_NT35516_MIPI) += lcd_nt35516_mipi.o
+COBJS-$(CONFIG_FB_LCD_NT35516_RGB_I2C) += lcd_nt35516_rgb_i2c.o
+COBJS-$(CONFIG_FB_LCD_NT35516_RGB_SPI) += lcd_nt35516_rgb_spi.o
+COBJS-$(CONFIG_FB_LCD_NT35510_MIPI) += lcd_nt35510_mipi.o
+COBJS-$(CONFIG_FB_LCD_NT35512_MIPI) += lcd_nt35512_mipi.o
+COBJS-$(CONFIG_FB_LCD_OTM8018B_MIPI) += lcd_otm_8018b_mipi.o
 #endif
 
 COBJS	:= $(COBJS-y)
