@@ -862,9 +862,10 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	}
 	secure_check(MODEM_ADR, 0, MODEM_ADR + MODEM_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
 
-
 	//array_value((unsigned char *)MODEM_ADR, MODEM_SIZE);
+#endif
 
+#if !BOOT_NATIVE_LINUX
 	////////////////////////////////////////////////////////////////
 	/* VMJALUNA_PART */
 	printf("Reading vmjaluna to 0x%08x\n", VMJALUNA_ADR);
