@@ -72,6 +72,9 @@
 
 #define NAND_MC_BUFFER_SIZE (24)
 
+static int mtderasesize = 0;
+static int mtdwritesize = 0;
+static int mtdoobsize = 0;
 
 #define mtd_to_tiger(m) (&g_tiger)
 struct sprd_tiger_nand_param {
@@ -1200,7 +1203,82 @@ void McuReadNandType(unsigned char *array)
 }
 #endif
 
+static unsigned long nfc_read_status(void)
+{
+	unsigned long status = 0;
+
+	sprd_tiger_nand_read_status(&g_tiger);	
+	status = s_oob_data[0];
+
+	return status;
+}
+
+#ifndef CONFIG_NAND_SPL
+static int sprd_scan_one_block(int blk, int erasesize, int writesize)
+{
+	int i, cmd;
+	int status = 1, ii;
+	u32 size = 0;
+	int oobsize = mtdoobsize;
+	int column, page_addr;
+
+	page_addr = blk * (erasesize / writesize);
+	for (ii = 0; ii < 2; ii ++) {
+		printf("please debug here : %s %d\n", __FUNCTION__, __LINE__);
+		sprd_tiger_nand_ins_init(&g_tiger);
+		sprd_tiger_nand_ins_add(NAND_MC_CMD(NAND_CMD_READ0), &g_tiger);
+		sprd_tiger_nand_ins_add(NAND_MC_CMD(NAND_CMD_READSTART), &g_tiger);
+		if ((s_oob_data[0] != 0xff) || (s_oob_data[1] != 0xff))
+			break;
+	} //for (ii = 0; ii < 2; ii ++)
+
+	if ((s_oob_data[0] == 0xff) && (s_oob_data[1] == 0xff))
+		status = 0; //good block
+	else
+		status = 1; //bad block
+
+	return status;
+}
+
+static unsigned long nand_ctl_erase_block(int blk, int erasesize, int writesize)
+{
+	int cmd, status;
+	int page_addr;
+
+	page_addr = blk * (erasesize / writesize);
+	sprd_tiger_erase(&g_tiger, page_addr);
+	status = nfc_read_status();
+
+	return status;
+}
+#endif
+
+
+#ifndef CONFIG_NAND_SPL
 void nand_scan_patition(int blocks, int erasesize, int writesize)
 {
+	int blk;
+	int ret;
+	int status;
 
+	//read_chip_id();
+	for (blk = 0; blk < blocks; blk ++) {
+		ret = sprd_scan_one_block(blk, erasesize, writesize);
+		if (ret != 0) {
+			printf("\n%d is bad, scrub to erase it, ", blk);
+			ret = nand_ctl_erase_block(blk, erasesize, writesize);
+			printf("0x%02x\n", ret);
+		} else {
+			ret = nand_ctl_erase_block(blk, erasesize, writesize);
+			printf("erasing block : %d    %d % \r", blk, (blk * 100 ) / blocks);
+		}
+	}
 }
+int nand_scan_block(int block, int erasesize, int writesize){
+	int ret = 0;
+	ret = nand_ctl_erase_block(block, erasesize, writesize);
+	ret = ret&1;
+
+	return ret;
+}
+#endif
