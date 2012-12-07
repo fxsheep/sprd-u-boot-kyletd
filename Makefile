@@ -1342,6 +1342,11 @@ sp6825ga_native_config	: unconfig
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 sp6825ga spreadtrum sc8825
 
+sp8825ga_openphone_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 sp8825ga_openphone spreadtrum sc8825
+
 #########################################################################
 #########################################################################
 
