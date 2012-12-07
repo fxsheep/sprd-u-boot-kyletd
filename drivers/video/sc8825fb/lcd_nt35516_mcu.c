@@ -19,7 +19,7 @@
 
 #define printk printf
 
-//#define  LCD_DEBUG
+#define  LCD_DEBUG
 #ifdef LCD_DEBUG
 #define LCD_PRINT printk
 #else

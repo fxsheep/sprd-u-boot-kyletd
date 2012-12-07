@@ -32,6 +32,11 @@ typedef struct LCM_Init_Code_tag {
 	unsigned char data[MAX_DATA];
 }LCM_Init_Code;
 
+typedef struct LCM_force_cmd_code_tag{
+	unsigned int datatype;
+	LCM_Init_Code real_cmd_code;
+}LCM_Force_Cmd_Code;
+
 #define LCM_TAG_SHIFT 24
 #define LCM_TAG_MASK  ((1 << 24) -1)
 #define LCM_SEND(len) ((1 << LCM_TAG_SHIFT)| len)
@@ -171,6 +176,11 @@ static LCM_Init_Code init_data[] = {
 #endif
 };
 
+static LCM_Force_Cmd_Code rd_prep_code[]={
+	{0x39, {LCM_SEND(8), {0x6, 0, 0xF0, 0x55, 0xAA, 0x52, 0x08, 0x01}}},
+	{0x37, {LCM_SEND(2), {0x3, 0}}},
+};
+
 static LCM_Init_Code disp_on =  {LCM_SEND(1), {0x29}};
 
 static LCM_Init_Code sleep_in =  {LCM_SEND(1), {0x10}};
@@ -186,7 +196,7 @@ static int32_t nt35516_mipi_init(struct panel_spec *self)
 	mipi_set_cmd_mode_t mipi_set_cmd_mode = self->info.mipi->ops->mipi_set_cmd_mode;
 	mipi_gen_write_t mipi_gen_write = self->info.mipi->ops->mipi_gen_write;
 
-	LCD_PRINT("s6d0139_init\n");
+	LCD_PRINT("lcd_nt35516_init\n");
 
 	mipi_set_cmd_mode();
 
@@ -205,7 +215,39 @@ static int32_t nt35516_mipi_init(struct panel_spec *self)
 static uint32_t nt35516_readid(struct panel_spec *self)
 {
 	/*Jessica TODO: need read id*/
-	return 0x16;
+	int32_t i = 0;
+	uint32 j =0;
+	LCM_Force_Cmd_Code * rd_prepare = rd_prep_code;
+	uint8_t read_data[3] = {0};
+	int32_t read_rtn = 0;
+	unsigned int tag = 0;
+
+	mipi_set_cmd_mode_t mipi_set_cmd_mode = self->info.mipi->ops->mipi_set_cmd_mode;
+	mipi_force_write_t mipi_force_write = self->info.mipi->ops->mipi_force_write;
+	mipi_force_read_t mipi_force_read = self->info.mipi->ops->mipi_force_read;
+
+	printk("lcd_nt35516_mipi read id!\n");	
+	mipi_set_cmd_mode();
+	for(j = 0; j < 4; j++){
+		for(i = 0; i < ARRAY_SIZE(rd_prep_code); i++){
+			tag = (rd_prepare->real_cmd_code.tag >> 24);
+			if(tag & LCM_TAG_SEND){
+				mipi_force_write(rd_prepare->datatype, rd_prepare->real_cmd_code.data, (rd_prepare->real_cmd_code.tag & LCM_TAG_MASK));
+			}else if(tag & LCM_TAG_SLEEP){
+				udelay((rd_prepare->real_cmd_code.tag & LCM_TAG_MASK) * 1000);
+			}
+			rd_prepare++;	
+		}
+
+		read_rtn = mipi_force_read(0xc5, 3,(uint8_t *)read_data);
+		printk("lcd_nt35516_mipi read id 0xc5 value is 0x%x, 0x%x, 0x%x!\n", read_data[0], read_data[1], read_data[2]);	
+
+		if((0x55 == read_data[0])&&(0x16 == read_data[1])&&(0x00 == read_data[2])){
+			printk("lcd_nt35516_mipi read id success!\n");	
+			return 0x16;
+		}
+	}
+	return 0x0;
 }
 
 static struct panel_operations lcd_nt35516_mipi_operations = {
