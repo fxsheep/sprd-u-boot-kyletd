@@ -273,9 +273,15 @@ int is_factorymode()
 void addbuf(char *buf)
 {
 }
+
 void addcmdline(char *buf)
 {
-#if !BOOT_NATIVE_LINUX
+#if BOOT_NATIVE_LINUX_MODEM
+	char* nv_infor = (char*)(((volatile u32*)CALIBRATION_FLAG)+1);
+	buf = nv_infor;
+	*nv_infor = 0;
+#endif
+#if (!BOOT_NATIVE_LINUX) || BOOT_NATIVE_LINUX_MODEM
 	/* fixnv=0x????????,0x????????*/
 	int str_len = strlen(buf);
 	sprintf(&buf[str_len], " fixnv=0x");
@@ -305,6 +311,11 @@ void addcmdline(char *buf)
 	sprintf(&buf[str_len], ",0x");
 	str_len = strlen(buf);
 	sprintf(&buf[str_len], "%x", RUNTIMENV_SIZE);
+#endif
+#if BOOT_NATIVE_LINUX_MODEM
+	str_len = strlen(buf);
+	buf[str_len] = '\0';
+	printf("nv_infor:[%08x]%s \n", nv_infor, nv_infor);
 #endif
 }
 

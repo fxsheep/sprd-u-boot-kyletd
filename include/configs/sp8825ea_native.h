@@ -333,7 +333,8 @@
 #define PWR_KEY_DETECT_CNT 12 /*this should match the count of boot_pwr_check() function */
 #define ALARM_LEAD_SET_MS 0 /* time set for alarm boot in advancd */
 
-#define SIPC_APCP_START_ADDR			0x81C00000
+#define SIPC_APCP_START_ADDR		0x81C00000
 #define SIPC_APCP_RESET_ADDR_SIZE	4096
+#define CALIBRATION_FLAG           0X81C01000
 
 #endif /* __CONFIG_H */

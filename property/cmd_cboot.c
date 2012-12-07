@@ -154,6 +154,9 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
         else if(flag == 2)
               normal_mode();
     }else{
+#if BOOT_NATIVE_LINUX_MODEM
+        *(volatile u32*)CALIBRATION_FLAG = 0xca;
+#endif
         calibration_detect(0);
         //if calibrate success, it will here
         DBG("%s: power done again\n", __FUNCTION__);
