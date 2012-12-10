@@ -277,6 +277,11 @@ int32_t sprdfb_dsi_init(struct sprdfb_device *dev)
 
 	if(SPRDFB_MIPI_MODE_VIDEO == mipi->work_mode){
 		dsi_dpi_init(dev->panel);
+	}else{
+		//Jessica:TODO:
+		//if no this code, read id will fail.
+		//but need more test to avoid side effect.
+		//dsi_core_write_function(DSI_CTL_BEGIN, R_DSI_HOST_PHY_IF_CTRL, 0x1);
 	}
 
 	return 0;
@@ -340,7 +345,7 @@ static int32_t sprdfb_dsi_gen_read(uint8_t *param, uint16_t param_length, uint8_
 {
 	uint16_t result;
 	result = mipi_dsih_gen_rd_cmd(&(dsi_ctx.dsi_inst), 0, param, param_length, bytes_to_read, read_buffer);
-	if(0 != result){
+	if(0 == result){
 		FB_PRINT("sprdfb: [%s] error (%d)\n", __FUNCTION__, result);
 		return -1;
 	}
@@ -362,7 +367,7 @@ static int32_t sprdfb_dsi_dcs_read(uint8_t command, uint8_t bytes_to_read, uint8
 {
 	uint16_t result;
 	mipi_dsih_dcs_rd_cmd(&(dsi_ctx.dsi_inst), 0, command, bytes_to_read, read_buffer);
-	if(0 != result){
+	if(0 == result){
 		FB_PRINT("sprdfb: [%s] error (%d)\n", __FUNCTION__, result);
 		return -1;
 	}

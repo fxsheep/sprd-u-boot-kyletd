@@ -218,9 +218,10 @@ static uint32_t otm8018b_readid(struct panel_spec *self)
 	mipi_force_write_t mipi_force_write = self->info.mipi->ops->mipi_force_write;
 	mipi_force_read_t mipi_force_read = self->info.mipi->ops->mipi_force_read;
 
-	printk("lcd_otm8018b_mipi read id!\n");	
+	printk("lcd_otm8018b_mipi read id!\n");
 	mipi_set_cmd_mode();
 	for(j = 0; j < 4; j++){
+		rd_prepare = rd_prep_code;
 		for(i = 0; i < ARRAY_SIZE(rd_prep_code); i++){
 			tag = (rd_prepare->real_cmd_code.tag >> 24);
 			if(tag & LCM_TAG_SEND){
@@ -228,20 +229,20 @@ static uint32_t otm8018b_readid(struct panel_spec *self)
 			}else if(tag & LCM_TAG_SLEEP){
 				udelay((rd_prepare->real_cmd_code.tag & LCM_TAG_MASK) * 1000);
 			}
-			rd_prepare++;	
+			rd_prepare++;
 		}
 
 		read_rtn = mipi_force_read(0xa1, 3,(uint8_t *)read_data);
 		printk("lcd_otm8018b_mipi read id 0xa1 value is 0x%x, 0x%x, 0x%x, 0x%x, 0x%x!\n",
-			read_data[0], read_data[1], read_data[2], read_data[3], read_data[4]);	
+			read_data[0], read_data[1], read_data[2], read_data[3], read_data[4]);
 
 		if((0x01 == read_data[0])&&(0x8b == read_data[1])&&(0x80 == read_data[2])&&(0x09 == read_data[3])&&(0xff == read_data[4])){
-			printk("lcd_otm8018b_mipi read id success!\n");	
+			printk("lcd_otm8018b_mipi read id success!\n");
 			return 0x18;
 		}
 	}
 
-	printk("lcd_otm8018b_mipi identify fail!\n");	
+	printk("lcd_otm8018b_mipi identify fail!\n");
 	return 0x0;
 }
 

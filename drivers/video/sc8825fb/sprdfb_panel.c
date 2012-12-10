@@ -292,7 +292,7 @@ static struct panel_spec *adapt_panel_from_readid(struct sprdfb_device *dev)
 			panel_ready(dev);
 			return lcd_panel[i].panel;
 		} else {							//zxdbg for LCD adaptor
-			FB_PRINT("sprdfb: [%s]: LCD Panel 0x%x attached fail!go next ", __FUNCTION__, lcd_panel[i].lcd_id);
+			FB_PRINT("sprdfb: [%s]: LCD Panel 0x%x attached fail!go next\n ", __FUNCTION__, lcd_panel[i].lcd_id);
 			sprdfb_panel_remove(dev);				//zxdebug modify for LCD adaptor 
 		}
 	}
