@@ -610,9 +610,6 @@ PUBLIC void SDHOST_internalClk_OnOff (SDHOST_HANDLE sdhost_handler,SDHOST_CLK_ON
             {
                 //Enable internal clock
                 sdhost_handler->host_cfg->HOST_CTL1 |= BIT_0;
-
-                //Wait internal clock stable
-                while (0 == (sdhost_handler->host_cfg->HOST_CTL1 & BIT_1)) {}
             }
             break;
 
@@ -648,12 +645,8 @@ PUBLIC void SDHOST_SD_clk_OnOff (SDHOST_HANDLE sdhost_handler,SDHOST_CLK_ONOFF_E
     {
         case CLK_ON:
             {
-                SDHOST_internalClk_OnOff (sdhost_handler,CLK_ON);
                 //Enable internal clock
                 sdhost_handler->host_cfg->HOST_CTL1 |= BIT_2;
-
-                //Wait internal clock stable
-                while (0 == (sdhost_handler->host_cfg->HOST_CTL1 & BIT_1)) {} //maybe it is not nessarry
             }
             break;
 
@@ -690,8 +683,6 @@ PUBLIC uint32 SDHOST_SD_Clk_Freq_Set (SDHOST_HANDLE sdhost_handler,uint32 sdio_c
     SCI_ASSERT (0 != sdio_clk);/*assert verified*/
 
     sdio_clk = (sdio_clk > SDIO_SD_MAX_CLK) ? (SDIO_SD_MAX_CLK) : (sdio_clk);
-
-    SDHOST_SD_clk_OnOff (sdhost_handler,CLK_OFF);
 
     //SDCLK Frequency Select ,Configure SDCLK select
     clkDiv = sdhost_handler->baseClock/sdio_clk;

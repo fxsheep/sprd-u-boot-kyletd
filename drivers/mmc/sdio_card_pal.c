@@ -455,11 +455,10 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_
 
                 SDHOST_SD_POWER (handle->sdio_port,POWR_ON);
                 SDHOST_SD_Clk_Freq_Set (handle->sdio_port,400000);
-                SDHOST_internalClk_OnOff (handle->sdio_port,CLK_ON);
                 SDHOST_SD_clk_OnOff (handle->sdio_port,CLK_ON);
-
-                __udelay (100*1000);
-                //      OSTimeDlyHMSM (0, 0, 2, 0);
+                udelay(1000);
+                SDHOST_internalClk_OnOff (handle->sdio_port,CLK_ON);
+                udelay(1000);
             }
             break;
 
@@ -469,8 +468,9 @@ PUBLIC BOOLEAN SDIO_Card_Pal_Pwr (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_PWR_
                 SDHOST_RST (handle->sdio_port,RST_ALL);
                 SDHOST_SD_clk_OnOff (handle->sdio_port,CLK_OFF);
                 SDHOST_internalClk_OnOff (handle->sdio_port,CLK_OFF);
-                __udelay (250*1000);
-                //      OSTimeDlyHMSM (0, 0, 0, 200);
+                udelay(1000);
+                SDHOST_SD_clk_OnOff (handle->sdio_port,CLK_OFF);
+                udelay(1000);
             }
             break;
 
@@ -511,7 +511,12 @@ PUBLIC BOOLEAN SDIO_Card_Pal_SetClk (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_C
         }
 	break;
     }
-#endif	
+#endif
+
+    SDHOST_internalClk_OnOff (handle->sdio_port,CLK_OFF);
+    udelay(1000);
+    SDHOST_SD_clk_OnOff (handle->sdio_port,CLK_OFF);
+    udelay(1000);
 
     switch (clkType)
     {
@@ -564,7 +569,9 @@ PUBLIC BOOLEAN SDIO_Card_Pal_SetClk (SDIO_CARD_PAL_HANDLE handle,SDIO_CARD_PAL_C
     }
 
     SDHOST_SD_clk_OnOff (handle->sdio_port,CLK_ON);
-
+    udelay(1000);
+    SDHOST_internalClk_OnOff (handle->sdio_port,CLK_ON);
+    udelay(1000);
     return TRUE;
 
 }
@@ -735,6 +742,7 @@ PUBLIC SDIO_CARD_PAL_ERROR_E SDIO_Card_Pal_SendCmd (
 #ifdef OS_NONE
    	uint32  isr_status;
 #endif
+	SDIO_CARD_PRINT(("%s : cmd:%x, cmdIndex:%x, argument:%x\r\n", __FUNCTION__, cmd, s_cmdDetail[cmd].cmdIndex, argument));
 	
     SDIO_CARD_PAL_ASSERT (	/*assert verified*/
         (SDIO_CARD_PAL_MAGICNUM == handle->MagicNum)

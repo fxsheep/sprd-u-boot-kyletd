@@ -1577,7 +1577,7 @@ PUBLIC BOOLEAN CARD_SDIO_InitCard(CARD_SDIO_HANDLE cardHandle, CARD_SPEED_MODE s
 		return FALSE;
 	}
 #if defined (CONFIG_SC8825) || defined(CONFIG_SC7710G2)
-	SDIO_Card_Pal_SetSpeedMode(cardHandle->sdioPalHd, EMMC_SPEED_SDR50);
+	SDIO_Card_Pal_SetSpeedMode(cardHandle->sdioPalHd, EMMC_SPEED_SDR25);
 	SDIO_Card_Pal_SetClk(cardHandle->sdioPalHd, SDIO_CARD_PAL_50MHz);
 #else
 	SDIO_Card_Pal_SetClk(cardHandle->sdioPalHd,SDIO_CARD_PAL_25MHz);
