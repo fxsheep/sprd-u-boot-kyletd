@@ -15,8 +15,8 @@ static unsigned char board_key_map[]={
 #endif
 };
 
-#define CONFIG_KEYPAD_ROW_CNT 5
-#define CONFIG_KEYPAD_COL_CNT 5
+#define CONFIG_KEYPAD_ROW_CNT 8 
+#define CONFIG_KEYPAD_COL_CNT 8
 #define CONFIG_KEYPAD_LONG_CNT 0xc
 #define CONFIG_KEYPAD_DEBOUNCE_CNT 0x5
 #endif //_KEY_MAP_H_

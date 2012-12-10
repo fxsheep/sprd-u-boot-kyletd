@@ -8,11 +8,11 @@
 
 #define REG_GR_GEN0 (*((volatile unsigned int *)(GR_GEN0)))
 
-#define KPD_ROW_MIN_NUM         4  /* when config keypad type, the value of */
-#define KPD_COL_MIN_NUM         3  /* when config keypad type, the value of */
+#define KPD_ROW_MIN_NUM         2  /* when config keypad type, the value of */
+#define KPD_COL_MIN_NUM         2  /* when config keypad type, the value of */
 
-#define KPDCTL_ROW              (0xf << 16)  /* enable bit for rows(row4 --- row7) */
-#define KPDCTL_COL              (0x1f << 20)  /* enable bit for cols(col3 --- col4) */
+#define KPDCTL_ROW              (0x3f << 10)  /* enable bit for rows(row4 --- row7) */
+#define KPDCTL_COL              (0x3f << 18)  /* enable bit for cols(col3 --- col4) */
 
 #define KPD_REG_BASE                    KPD_BASE
 
@@ -57,7 +57,7 @@
 #define CFG_COL_POLARITY    (0xFF00 & KPDPOLARITY_COL)
 #define CFG_CLK_DIV         1
 
-#define IRQ_KPD_INT 10
+#define IRQ_KPD_INT 14
 
 #define INT_DIS (INTC_BASE + 0xc)
 #define REG_INT_DIS (*((volatile unsigned int *)(INT_DIS)))

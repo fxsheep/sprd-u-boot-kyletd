@@ -66,7 +66,7 @@ void board_keypad_init(void)
     REG_KPD_CLK_DIV_CNT = CFG_CLK_DIV & KPDCLK0_CLK_DIV0;
     REG_KPD_LONG_KEY_CNT = CONFIG_KEYPAD_LONG_CNT;
     REG_KPD_DEBOUNCE_CNT = CONFIG_KEYPAD_DEBOUNCE_CNT;//0x8;0x13
-    key_type = ((((~(0xffffffff << (sprd_key_map->total_col - KPD_COL_MIN_NUM))) << 20) | ((~(0xffffffff << (sprd_key_map->total_row- KPD_ROW_MIN_NUM))) << 16)) & (KPDCTL_ROW | KPDCTL_COL));
+    key_type = ((((~(0xffffffff << (sprd_key_map->total_col - KPD_COL_MIN_NUM))) << 18) | ((~(0xffffffff << (sprd_key_map->total_row- KPD_ROW_MIN_NUM))) << 10)) & (KPDCTL_ROW | KPDCTL_COL));
     REG_KPD_CTRL = 0x7 | key_type;
     
     //open all press & release & long key operation flags
