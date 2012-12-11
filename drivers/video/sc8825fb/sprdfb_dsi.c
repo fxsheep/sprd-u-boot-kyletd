@@ -278,10 +278,7 @@ int32_t sprdfb_dsi_init(struct sprdfb_device *dev)
 	if(SPRDFB_MIPI_MODE_VIDEO == mipi->work_mode){
 		dsi_dpi_init(dev->panel);
 	}else{
-		//Jessica:TODO:
-		//if no this code, read id will fail.
-		//but need more test to avoid side effect.
-		//dsi_core_write_function(DSI_CTL_BEGIN, R_DSI_HOST_PHY_IF_CTRL, 0x1);
+		dsi_core_write_function(DSI_CTL_BEGIN, R_DSI_HOST_PHY_IF_CTRL, 0x1);
 	}
 
 	return 0;
