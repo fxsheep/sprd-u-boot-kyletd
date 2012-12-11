@@ -650,14 +650,14 @@ void lcd_display_logo(int backlight_set,ulong bmp_img,size_t size)
 	extern void set_backlight(uint32_t value);
 	if(backlight_set == BACKLIGHT_ON){
 		lcd_display_bitmap((ulong)bmp_img, 0, 0);
-#ifdef CONFIG_SC8810
+#if defined(CONFIG_SC8810) || defined(CONFIG_SC8825)
 		Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
 #endif
 		lcd_display();
 		set_backlight(255);
 	}else{
 		memset((unsigned int)lcd_base, 0, size);
-#ifdef CONFIG_SC8810
+#if defined(CONFIG_SC8810) || defined(CONFIG_SC8825)
 		Dcache_CleanRegion((unsigned int)(lcd_base), size);//Size is to large.
 #endif
 		lcd_display();
