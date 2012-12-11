@@ -307,14 +307,15 @@ int format_sd_partition(void)
 	unsigned long sd_data_size = 0;
 	unsigned long base_sector = 0;
 	g_dl_eMMCStatus.curUserPartition = PARTITION_SD;
-	if (!emmc_real_erase_partition(g_dl_eMMCStatus.curUserPartition)) {
-		return -1;
-	}
-
 	part_size = efi_GetPartSize(g_dl_eMMCStatus.curUserPartition);
 	sd_data_size = newfs_msdos_main(g_eMMCBuf,part_size);
 	g_dl_eMMCStatus.curEMMCArea = PARTITION_USER;
 	base_sector = efi_GetPartBaseSec(g_dl_eMMCStatus.curUserPartition);
+
+	if (!Emmc_Erase(g_dl_eMMCStatus.curEMMCArea,base_sector,part_size / EFI_SECTOR_SIZE))  {
+		return -1;
+	}
+
 	if (!Emmc_Write(g_dl_eMMCStatus.curEMMCArea, base_sector,sd_data_size / EFI_SECTOR_SIZE, g_eMMCBuf)) {
 		return -1;
 	}
