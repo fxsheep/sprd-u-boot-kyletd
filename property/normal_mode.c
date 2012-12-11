@@ -747,7 +747,7 @@ void vlx_entry()
 	MMU_InvalideICACHEALL();
 #endif
 #endif
-#ifdef CONFIG_SC8810
+#if (defined CONFIG_SC8810) || (defined CONFIG_SC8825)
 	MMU_DisableIDCM();
 #endif
 
