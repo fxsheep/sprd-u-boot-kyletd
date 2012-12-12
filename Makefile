@@ -1252,15 +1252,20 @@ sp6820ga_config	: unconfig
 	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 788 spreadtrum sc8810
-cori_config	: unconfig
+cori2g_config	: unconfig
 	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
-	@$(MKCONFIG) $@ arm armv7 cori spreadtrum sc8810
+	@$(MKCONFIG) $@ arm armv7 cori2g spreadtrum sc8810
 	
 amazing_config	: unconfig
 	@mkdir -p $(obj)include
 	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
 	@$(MKCONFIG) $@ arm armv7 amazing spreadtrum sc8810
+
+kyletd_config	: unconfig
+	@mkdir -p $(obj)include
+	@echo "CONFIG_NAND_U_BOOT = y" >> $(obj)include/config.mk
+	@$(MKCONFIG) $@ arm armv7 kyletd spreadtrum sc8810
 
 sp8810ea_config	: unconfig
 	@mkdir -p $(obj)include
