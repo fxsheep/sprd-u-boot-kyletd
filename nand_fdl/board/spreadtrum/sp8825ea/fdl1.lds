@@ -44,7 +44,7 @@ SECTIONS
 	__bss0_start = .;
 	.bss0 :
 	{
-		sdram.o 	(.bss)
+		emc.o 	        (.bss)
 		drv_usb.o 	(.bss)
 		virtual_com.o 	(.bss)
 	}

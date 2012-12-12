@@ -37,6 +37,8 @@ extern   "C"
 #define GR_IRQ                          (GREG_BASE + 0x0010)
 #define GR_ICLR                         (GREG_BASE + 0x0014)
 #define GR_GEN1                         (GREG_BASE + 0x0018)
+#define GR_GEN1_SET                     (GREG_BASE + 0x1018)
+#define GR_GEN1_CLR                     (GREG_BASE + 0x2018)
 #define GR_GEN3                         (GREG_BASE + 0x001C)
 //#define   GR_HWRST                        (GREG_BASE + 0x0020)
 #define BOOT_FLAG                       (GREG_BASE + 0x0020)   //It's called GR_HWRST in other chip define
@@ -59,6 +61,9 @@ extern   "C"
 #define GR_POWCTL1                  (GREG_BASE + 0x006C)
 #define GR_PLL_SCR                      (GREG_BASE + 0x0070)
 #define GR_CLK_EN                       (GREG_BASE + 0x0074)
+#define GR_DDR_PHY_RETENTION            (GREG_BASE + 0x0080)
+#define GR_DDR_PHY_RETENTION_SET        (GREG_BASE + 0x1080)
+#define GR_DDR_PHY_RETENTION_CLR        (GREG_BASE + 0x2080)
 //reserved
 #define GR_CLK_GEN5                     (GREG_BASE + 0x007C)
 //reserved

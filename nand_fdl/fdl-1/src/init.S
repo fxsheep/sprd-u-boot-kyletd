@@ -122,18 +122,24 @@ reset:
 	/*set stack limit to 0*/
 	MOV R10, #0
 	ldr sp, =FDL1_STACK
+#if defined (CONFIG_SC8825) || defined (CONFIG_SC7710G2)
+	ldr r0, _bss0_start
+	ldr r1, _bss0_end
+	bl  clear_bss
+#endif
 
+#if 0
 	MOV R0, #0
 	MOV R1, #0
 	MOV R2, #0
 	MOV R3, #0
 	bl  DMC_Init
+#else
+	LDR R0, =400000000
+	bl  DMC_Dev_Init
+#endif
 
 #if defined (CONFIG_SC8825) || defined (CONFIG_SC7710G2)
-	ldr r0, _bss0_start
-	ldr r1, _bss0_end
-	bl  clear_bss
-
 	ldr r0, _bss1_start
 	ldr r1, _bss1_end
 	bl  clear_bss
@@ -142,6 +148,7 @@ reset:
 	ldr r1, _bss_end
 	bl  clear_bss
 #endif
+
 	b   main
 
 clear_bss:
