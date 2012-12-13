@@ -294,6 +294,10 @@ int32_t sprdfb_dsi_uninit(struct sprdfb_device *dev)
 	} else {
 		dsi_ctx.is_inited = 0;
 	}
+
+	dsi_core_write_function(DSI_CTL_BEGIN, R_DSI_HOST_PHY_IF_CTRL, 0);
+	mdelay(3);
+
 	return 0;
 }
 
