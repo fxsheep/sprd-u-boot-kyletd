@@ -56,12 +56,11 @@ retry_adc:
 
     adc_value = get_vbat_value();
 	
-	printf("is_bat_low adc_value:%d,comp_vbat:%d\n",adc_value,comp_vbat);
-#ifndef CONFIG_TIGER	
+    printf("is_bat_low adc_value:%d,comp_vbat:%d\n",adc_value,comp_vbat);
+
     if(CHGMNG_AdcvalueToVoltage (adc_value) < comp_vbat)
       return 1;
     else
-#endif	
       return 0;
 	
 }
