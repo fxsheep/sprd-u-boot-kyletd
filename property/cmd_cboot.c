@@ -49,7 +49,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 
     boot_pwr_check();
 	
-#ifndef CONFIG_SC8810	
+#ifdef CONFIG_SC8800G
     CHG_ShutDown();
     if(charger_connected()){
         mdelay(10);
@@ -67,6 +67,7 @@ int do_cboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 #ifndef CONFIG_MACH_CORI
 	if(is_bat_low()){
 				printf("shut down again for low battery\n");
+				mdelay(10000);
 				power_down_devices();
 				while(1)
 				  ;
