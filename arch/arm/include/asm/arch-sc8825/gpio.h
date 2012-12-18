@@ -19,7 +19,7 @@
  
 #define WARN(num, fmt...) printf(fmt)
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
-#define GPIO_MAX_PIN_NUM 	176
+#define GPIO_MAX_PIN_NUM 	271
 
 #define ARCH_NR_GPIOS	GPIO_MAX_PIN_NUM
 

@@ -109,7 +109,7 @@ extern   "C"
 **                               Macro Define for GPIO                   **
 **---------------------------------------------------------------------------*/
 #define GPIO_INVALID_ID             0x0FF
-#define GPIO_MAX_PIN_NUM            176
+#define GPIO_MAX_PIN_NUM            271
 #define GPIO_MAX_REC_NUM            10
 
 

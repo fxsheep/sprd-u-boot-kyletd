@@ -35,7 +35,7 @@
 #include <version.h>
 
 #ifdef CONFIG_SC8825
-#define SVC_STACK_TEMP 0x0028000 //for tiger
+#define SVC_STACK_TEMP 0x0027F60 //for tiger
 #define SPL_STACK 0x808f0000
 #else
 #define SVC_STACK_TEMP 0x40008000
