@@ -274,7 +274,17 @@ dsih_error_t mipi_dsih_hal_dcs_rd_tx_type(dsih_ctrl_t * instance, unsigned no_of
             break;                                                                                                                     
     }                                                                                                                                  
     return err;                                                                                                                        
-}                                                                                                                                      
+}
+
+/*Jessica add begin: to support max read packet size command */
+dsih_error_t mipi_dsih_hal_max_rd_packet_size_type(dsih_ctrl_t * instance, int lp)
+{
+    dsih_error_t err = OK;
+    mipi_dsih_write_part(instance, R_DSI_HOST_CMD_MODE_CFG, lp, 10, 1);
+    return err;
+}
+/*Jessica add end*/
+
 dsih_error_t mipi_dsih_hal_gen_wr_tx_type(dsih_ctrl_t * instance, unsigned no_of_param, int lp)                                        
 {                                                                                                                                      
     switch (no_of_param)                                                                                                               

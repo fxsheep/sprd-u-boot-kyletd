@@ -100,7 +100,9 @@ void mipi_dsih_hal_tear_effect_ack_en(dsih_ctrl_t * instance, int enable);
                                                                                                                                         
 void mipi_dsih_hal_cmd_ack_en(dsih_ctrl_t * instance, int enable);                                                                      
 dsih_error_t mipi_dsih_hal_dcs_wr_tx_type(dsih_ctrl_t * instance, unsigned no_of_param, int lp);                                        
-dsih_error_t mipi_dsih_hal_dcs_rd_tx_type(dsih_ctrl_t * instance, unsigned no_of_param, int lp);                                        
+dsih_error_t mipi_dsih_hal_dcs_rd_tx_type(dsih_ctrl_t * instance, unsigned no_of_param, int lp);     
+/*Jessica add to support max rd packet size command*/
+dsih_error_t mipi_dsih_hal_max_rd_packet_size_type(dsih_ctrl_t * instance, int lp);
 dsih_error_t mipi_dsih_hal_gen_wr_tx_type(dsih_ctrl_t * instance, unsigned no_of_param, int lp);                                        
 dsih_error_t mipi_dsih_hal_gen_rd_tx_type(dsih_ctrl_t * instance, unsigned no_of_param, int lp);                                        
 void mipi_dsih_hal_max_rd_size_type(dsih_ctrl_t * instance, int lp);                                                                    

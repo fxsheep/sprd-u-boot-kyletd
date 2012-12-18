@@ -82,6 +82,8 @@ dsih_error_t mipi_dsih_open(dsih_ctrl_t * instance)
     mipi_dsih_hal_dcs_wr_tx_type(instance, 1, 1);
     mipi_dsih_hal_dcs_wr_tx_type(instance, 3, 1); /* long packet*/
     mipi_dsih_hal_dcs_rd_tx_type(instance, 0, 1);
+    /*Jessica add to support max rd packet size command*/
+    mipi_dsih_hal_max_rd_packet_size_type(instance, 1);
     mipi_dsih_hal_gen_wr_tx_type(instance, 0, 1);
     mipi_dsih_hal_gen_wr_tx_type(instance, 1, 1);
     mipi_dsih_hal_gen_wr_tx_type(instance, 2, 1);
