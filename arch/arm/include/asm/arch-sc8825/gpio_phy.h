@@ -29,7 +29,7 @@ enum gpio_die {
 	D_DIE = 1,
 };
 
-#define NR_D_DIE_GPIOS 160
+#define NR_D_DIE_GPIOS 16
 
 /*
 	gpio is locate in Digital Die(D die) or Analog Die(A die),
@@ -37,9 +37,9 @@ enum gpio_die {
 static __inline int __get_gpio_die( u32 gpio)
 {
 	if (gpio < NR_D_DIE_GPIOS)
-		return D_DIE;
-	else if (gpio < GPIO_MAX_PIN_NUM)
 		return A_DIE;
+	else if (gpio < GPIO_MAX_PIN_NUM)
+		return D_DIE;
 	else {
 		WARN(1, "wrong gpio %d\r\n", gpio);
 		return -1;
@@ -47,11 +47,11 @@ static __inline int __get_gpio_die( u32 gpio)
 }
 static __inline u32 __get_base_addr (u32 gpio_id)
 {
-    if (gpio_id >= NR_D_DIE_GPIOS)
+    if (gpio_id < NR_D_DIE_GPIOS)
     {
-       return ( (gpio_id - NR_D_DIE_GPIOS) >>4) * 0x80 + ANA_GPIO_BASE;
+       return ANA_GPIO_BASE;
     }
-
+    gpio_id -= NR_D_DIE_GPIOS;
     return (gpio_id>>4) * 0x80 + (u32) GPIO_BASE;
 }
 

@@ -23,7 +23,8 @@
 //#include <mach/regs_cpc.h>
 #include <asm/arch/mfp.h>
 #include <asm/arch/sc8810_reg_base.h>
-#include <asm/arch/sc8810_cpc.h>
+//#include <asm/arch/sc8810_cpc.h>
+#include <common.h>
 #include <asm/io.h>
 
 /*
@@ -87,7 +88,7 @@ static int __mfp_config_pin(unsigned long c)
 	pin_reg = __mfp_get_pin_reg(pin_offset);
 
 	MFP_DBG("register is :0x%x, old config is %x\r\n",
-		__mfp_get_physical(pin_offset),
+		__mfp_get_pin_reg(pin_offset),
 		__raw_readl(pin_reg));
 
 	//local_irq_save(flags);
