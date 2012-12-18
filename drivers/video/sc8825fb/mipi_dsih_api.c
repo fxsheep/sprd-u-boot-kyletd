@@ -111,7 +111,7 @@ dsih_error_t mipi_dsih_open(dsih_ctrl_t * instance)
     }
     #endif
     /* dividing by 6 is aimed for max PHY frequency, 1GHz */
-    mipi_dsih_hal_tx_escape_division(instance, 6); //6    //Jessica
+    mipi_dsih_hal_tx_escape_division(instance, 3); //6    //Jessica
     instance->status = INITIALIZED;
     return OK;
 }
@@ -383,7 +383,7 @@ dsih_error_t mipi_dsih_dpi_video(dsih_ctrl_t * instance, dsih_dpi_video_t * vide
         }
     }
     /* TX_ESC_CLOCK_DIV must be less than 20000KHz */
-    mipi_dsih_hal_tx_escape_division(instance, 6);
+    mipi_dsih_hal_tx_escape_division(instance, 3); //6 //Jessica
     /* video packetisation */
     if (video_params->video_mode == VIDEO_BURST_WITH_SYNC_PULSES)
     { /* BURST */

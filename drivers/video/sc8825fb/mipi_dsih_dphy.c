@@ -157,7 +157,7 @@ dsih_error_t mipi_dsih_dphy_configure(dphy_t * phy, uint8_t no_of_lanes, uint32_
     }
 
   /* Jessica add - begin*/  
-    data[0] =  0x40;//0x44;//0x44;//0x40;                 //0x40: ok for 200    clock lane lpx
+    data[0] =  0x41;//0x44;//0x44;//0x40;                 //0x40: ok for 200    clock lane lpx /*about 52ns*/
     mipi_dsih_dphy_write(phy, 0x60, data, 1);
     data[0] =  0x0;//0xA6;//0xC6;//0xC6;//0x86;                 //0x48: ok for 200     prepare time
     mipi_dsih_dphy_write(phy, 0x61, data, 1);
@@ -165,7 +165,7 @@ dsih_error_t mipi_dsih_dphy_configure(dphy_t * phy, uint8_t no_of_lanes, uint32_
     data[0] =  0x0;//0x6a;//0x6a;//0x4a;                  //0x4a: ok for 200    zero time
     mipi_dsih_dphy_write(phy, 0x62, data, 1);
 
-    data[0] =  0x40;//0x44;//0x40;//0x40;              // 0x40: ok for 200          data lane lpx
+    data[0] =  0x41;//0x44;//0x40;//0x40;              // 0x40: ok for 200          data lane lpx /*about 52ns*/
     mipi_dsih_dphy_write(phy, 0x70, data, 1);
 
     data[0] =  0x0;//0x84;//0x96;//0x96;//0x86;                //0x48: ok for 200         prepare time
@@ -186,7 +186,8 @@ dsih_error_t mipi_dsih_dphy_configure(dphy_t * phy, uint8_t no_of_lanes, uint32_
     /* hs frequency range [7]|[6:1]|[0]*/                                                                                                                              
     data[0] = (0 << 7) | (ranges[range].hs_freq << 1) | 0;    
    //data[0] = (0 << 7) | (0x23 << 1) | 0; 
-    //mipi_dsih_dphy_write(phy, 0x44, data, 1);//Jessica remove for more accurate frequency
+   /*From ASIC, we need unmask this code to make the frequency correct*/
+    mipi_dsih_dphy_write(phy, 0x44, data, 1);       //Jessica remove for more accurate frequency
     /* setup PLL */                                                                                                                                                    
     /* vco range  [7]|[6:3]|[2:1]|[0] */                                                                                                                               
     data[0] = (1 << 7) | (ranges[range].vco_range << 3) | (0 << 1) | 0;                                                                                                

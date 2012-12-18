@@ -212,7 +212,8 @@ int32_t sprdfb_dsi_init(struct sprdfb_device *dev)
 	dsi_instance->core_write_function = dsi_core_write_function;
 	dsi_instance->log_error = dsi_log_error;
 	dsi_instance->log_info = NULL;
-	dsi_instance->max_bta_cycles = 0;//10;
+	/*in our rtl implementation, this is max rd time, not bta time and use 15bits*/
+	dsi_instance->max_bta_cycles = 0x6000;//10;
 	dsi_instance->max_hs_to_lp_cycles = 4;//110;
 	dsi_instance->max_lp_to_hs_cycles = 15;//10;
 	dsi_instance->max_lanes = mipi->lan_number;
