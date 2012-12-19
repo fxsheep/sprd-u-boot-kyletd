@@ -32,7 +32,8 @@ CFLAGS	+= -DCONFIG_PRELOADER -DCONFIG_NAND_SPL -g
 
 SOBJS	= start.o _udivsi3.o _divsi3.o _umodsi3.o cpu_spec.o
 ifdef CONFIG_EMMC_BOOT
-COBJS	= emmc_boot.o mmc.o lowlevel_init.o div0.o adi_drv.o sdram.o sdram_prod.o chip_cfg.o sec_boot.o string.o serial_sc8800x.o
+COBJS	= emmc_boot.o mmc.o lowlevel_init.o div0.o adi_drv.o sdram.o sdram_prod.o chip_cfg.o 
+COBJS += sec_boot.o string.o serial_sc8800x.o
 else
 ifdef CONFIG_NAND_SC8810
 COBJS	= nand_boot.o nand_ecc.o sc8810_nand.o lowlevel_init.o div0.o adi_drv.o sdram.o sdram_prod.o chip_cfg.o sec_boot.o string.o serial_sc8800x.o timer.o
@@ -42,7 +43,7 @@ endif
 endif
 
 ifdef CONFIG_SC8825
-COBJS   += mcu.o
+COBJS   += mcu.o emc.o
 endif
 
 #SRCS	:= $(SRCTREE)/nand_spl/nand_boot_fsl_nfc.c
@@ -50,6 +51,7 @@ SRCS	:= $(SRCTREE)/arch/arm/cpu/armv7/start.S
 SRCS	+= $(SRCTREE)/arch/arm/cpu/armv7/sc8825/lowlevel_init.c
 SRCS	+= $(SRCTREE)/arch/arm/cpu/armv7/sc8825/clk_config.c
 SRCS    += $(SRCTREE)/arch/arm/cpu/armv7/sc8825/sdram.c
+SRCS    += $(SRCTREE)/arch/arm/cpu/armv7/sc8825/emc.c
 SRCS    += $(SRCTREE)/arch/arm/cpu/armv7/sc8825/adi_drv.c
 SRCS    += $(SRCTREE)/arch/arm/cpu/armv7/sc8825/remap.c
 SRCS    += $(SRCTREE)/arch/arm/lib/_udivsi3.S
