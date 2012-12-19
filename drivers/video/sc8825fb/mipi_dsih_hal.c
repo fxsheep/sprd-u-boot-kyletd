@@ -512,10 +512,12 @@ dsih_error_t mipi_dsih_phy_lp2hs_config(dsih_ctrl_t * instance, uint8_t no_of_by
     return OK;                                                                                                                         
 }                                                                                                                                      
 dsih_error_t mipi_dsih_phy_bta_time(dsih_ctrl_t * instance, uint16_t no_of_byte_cycles)                                                
-{                                                                                                                                      
-    if (no_of_byte_cycles < 0x8000) /* 12-bit field */                                                                                 
-    {                                                                                                                                  
-        mipi_dsih_write_part(instance, R_DSI_HOST_PHY_TMR_CFG, no_of_byte_cycles, 0, 12);                                              
+{ 
+	/*Jessica modified: From ASIC, the second table in spec is correct, this 15 bits are max rd time*/
+    if (no_of_byte_cycles < 0x8000) /* 15-bit field */
+    {
+        //mipi_dsih_write_part(instance, R_DSI_HOST_PHY_TMR_CFG, no_of_byte_cycles, 0, 12);
+	mipi_dsih_write_part(instance, R_DSI_HOST_PHY_TMR_CFG, no_of_byte_cycles, 0, 15);
     }                                                                                                                                  
     else                                                                                                                               
     {                                                                                                                                  
