@@ -107,6 +107,7 @@ static LCM_Init_Code init_data[] = {
 {LCM_SEND(7), {5, 0, 0xEB,0x03,0xEF,0x03,0xFF}},
 // User Command Set
 {LCM_SEND(2), {0x35,0x00}}, // Tearing Effect On
+{LCM_SEND(5), {3, 0, 0x44, 0x03, 0x98}}, //set te scan line to 920
 {LCM_SEND(2), {0x3A,0x77}}, // Interface Pixel Format
 {LCM_SEND(2), {0x36,0x00}}, // Memory Data Access Control
 {LCM_SEND(1), {0x22}}, // all pixel off
