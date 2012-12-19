@@ -3044,7 +3044,8 @@ extern unsigned int __machine_arch_type;
 #define MACH_TYPE_G2PHONE		2012
 #define MACH_TYPE_OPENPHONE		2013
 #define MACH_TYPE_8810_OPENPHONE	2014
-#define MACH_TYPE_SP8810	2015
+//#define MACH_TYPE_SP8810	        2015
+#define MACH_TYPE_SP8810	        2013
 #define MACH_TYPE_TIGER_OPENPHONE	2014
 #define MACH_TYPE_SC8825		2014
 
