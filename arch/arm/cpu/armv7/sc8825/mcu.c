@@ -19,6 +19,21 @@ SC6800     -gtp -cpu ARM926EJ-S -D_REF_SC6800_ -D_BL_NF_SC6800_
 
 #define REG32(x)   (*((volatile uint32 *)(x)))
 
+#if 1
+extern uint32 LPDDR1_MEM_DS; //lpddr1 driver strength,refer to multiPHY p155
+extern uint32 LPDDR2_MEM_DS; //lpddr1 driver strength,
+
+extern uint32 B0_SDLL_PHS_DLY; //byte0 sll dll phase delay 
+extern uint32 B1_SDLL_PHS_DLY; //byte1 sll dll phase delay 
+extern uint32 B2_SDLL_PHS_DLY; //byte2 sll dll phase delay 
+extern uint32 B3_SDLL_PHS_DLY; //byte3 sll dll phase delay 
+
+extern uint32 B0_DQS_STEP_DLY; //byte0 dqs step delay
+extern uint32 B1_DQS_STEP_DLY; //byte1 dqs step delay
+extern uint32 B2_DQS_STEP_DLY; //byte2 dqs step delay
+extern uint32 B3_DQS_STEP_DLY; //byte3 dqs step delay
+#endif
+
 typedef enum MCU_CLK_TYPE_TAG
 {
     ARM100_EMC50_AHB100,
@@ -358,8 +373,12 @@ void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
     uint32 ret;
     MCU_Init();
-#if defined USE_SPL_DATA
+    
     ret = GET_SPL_Data();
+
+#if 0    
+#if defined USE_SPL_DATA
+
     if (ret != 0)
     {
         DMC_Init(0, 0, 0, 0);
@@ -376,6 +395,26 @@ void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
     }
 #else
     DMC_Init(0, 0, 0, 0);
+#endif
+#else
+    if (ret == 0) //chesum is pass       
+    {
+        LPDDR1_MEM_DS = emc_data->mem_drv;
+        LPDDR2_MEM_DS = emc_data->mem_drv;
+        
+        B0_SDLL_PHS_DLY = emc_data->sdll_phase&0xff;
+        B1_SDLL_PHS_DLY = (emc_data->sdll_phase&0xff00)>>8;
+        B2_SDLL_PHS_DLY = (emc_data->sdll_phase&0xff0000)>>16;
+        B3_SDLL_PHS_DLY = (emc_data->sdll_phase&0xff000000)>>24;
+        
+        B0_DQS_STEP_DLY = emc_data->dqs_step&0xff;
+        B1_DQS_STEP_DLY = (emc_data->dqs_step&0xff00)>>8;
+        B2_DQS_STEP_DLY = (emc_data->dqs_step&0xff0000)>>16;
+        B3_DQS_STEP_DLY = (emc_data->dqs_step&0xff000000)>>24;        
+    }
+
+    DMC_Dev_Init(400000000);
+
 #endif
 }
 
