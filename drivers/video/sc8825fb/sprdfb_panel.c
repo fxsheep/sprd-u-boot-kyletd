@@ -93,11 +93,11 @@ static struct panel_cfg lcd_panel[] = {
 };
 
 #elif defined CONFIG_SP8825GA_OPENPHONE
-extern struct panel_spec lcd_nt35516_mcu_spec;
+extern struct panel_spec lcd_nt35516_mipi_spec;
 static struct panel_cfg lcd_panel[] = {
     [0]={
         .lcd_id = 0x16,
-        .panel = &lcd_nt35516_mcu_spec ,
+        .panel = &lcd_nt35516_mipi_spec ,
         },
 };
 
