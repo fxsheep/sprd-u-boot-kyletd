@@ -783,7 +783,7 @@ void normal_mode(void)
 #define MODEM_MEMORY_SIZE  (22 * 1024 * 1024)
 #ifdef CONFIG_SC8810
 #define MODEM_MEMORY_ADDR 0
-#elif defined (CONFIG_SC8825) || defined （CONFIG_TIGER）
+#elif defined (CONFIG_SC8825) || defined (CONFIG_TIGER)
 #define MODEM_MEMORY_ADDR 0x80000000
 #endif
 void write_modem_memory()
