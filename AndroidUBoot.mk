@@ -13,13 +13,12 @@ export PRODUCT_OUT UBOOT_OUT
 $(UBOOT_OUT):
 	@echo "Start U-Boot build"
 
-$(UBOOT_CONFIG): u-boot/include/configs/$(addsuffix .h,$(UBOOT_DEFCONFIG))
+$(UBOOT_CONFIG): u-boot/include/configs/$(addsuffix .h,$(UBOOT_DEFCONFIG)) $(UBOOT_OUT)
 	@mkdir -p $(UBOOT_OUT)
 	$(MAKE) -C u-boot CROSS_COMPILE=$(LOCAL_TOOLCHAIN) O=../$(UBOOT_OUT) distclean
 	$(MAKE) -C u-boot CROSS_COMPILE=$(LOCAL_TOOLCHAIN) O=../$(UBOOT_OUT) $(UBOOT_DEFCONFIG)_config
 
-$(INSTALLED_UBOOT_TARGET) : $(UBOOT_CONFIG) $(UBOOT_OUT)
-	$(MAKE) -C u-boot CROSS_COMPILE=$(LOCAL_TOOLCHAIN) O=../$(UBOOT_OUT) clean
+$(INSTALLED_UBOOT_TARGET) : $(UBOOT_CONFIG)
 	$(MAKE) -C u-boot CROSS_COMPILE=$(LOCAL_TOOLCHAIN) O=../$(UBOOT_OUT) -j4
 	$(MAKE) -C u-boot CROSS_COMPILE=$(LOCAL_TOOLCHAIN) O=../$(UBOOT_OUT) fdl2 -j4
 	@cp $(UBOOT_BUILT_SPL) $(PRODUCT_OUT)
