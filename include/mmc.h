@@ -169,6 +169,22 @@
 #define MMC_RSP_R6      (MMC_RSP_PRESENT|MMC_RSP_CRC|MMC_RSP_OPCODE)
 #define MMC_RSP_R7      (MMC_RSP_PRESENT|MMC_RSP_CRC|MMC_RSP_OPCODE)
 
+#define     SDIO_BASE_CLK_96M       96000000        // 96 MHz
+#define     SDIO_BASE_CLK_80M       80000000        // 80 MHz
+#define     SDIO_BASE_CLK_64M       64000000        // 64 MHz
+#define     SDIO_BASE_CLK_50M       50000000        // 50 MHz   ,should cfg MPLL to 300/350/400???
+#define     SDIO_BASE_CLK_48M       48000000        // 48 MHz
+#define     SDIO_BASE_CLK_40M       40000000        // 40 MHz
+#define     SDIO_BASE_CLK_32M       32000000        // 32 MHz
+#define     SDIO_BASE_CLK_26M       26000000        // 26  MHz
+#define     SDIO_BASE_CLK_25M       25000000        // 25  MHz
+#define     SDIO_BASE_CLK_20M       20000000        // 20  MHz
+#define     SDIO_BASE_CLK_16M       16000000        // 16 MHz
+#define     SDIO_BASE_CLK_8M        8000000         // 8  MHz
+
+#define MMC_CMD_BCR	(3 << 5)
+#define MMC_RSP_SPI_S1 (1 << 7)
+
 
 struct mmc_cid {
 	unsigned long psn;
@@ -291,5 +307,4 @@ int atmel_mci_init(void *regs);
 #else
 int mmc_legacy_init(int verbose);
 #endif
-
 #endif /* _MMC_H_ */

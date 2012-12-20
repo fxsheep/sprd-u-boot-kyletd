@@ -10,6 +10,7 @@ void alarm_mode(void);
 void calibration_detect(int key);
 void engtest_mode(void);
 void sleep_mode(void);
+void watchdog_mode(void);
 int is_bat_low(void);
 int alarm_flag_check(void);
 
@@ -18,6 +19,7 @@ int alarm_flag_check(void);
 #define NORMAL_MODE   0x77665503
 #define ALARM_MODE   0x77665504
 #define SLEEP_MODE   0x77665505
+#define WATCHDOG_REBOOT 0x77665506
 
 #define BOOT_NORAML 0xf1
 #define BOOT_FASTBOOT 0xf2

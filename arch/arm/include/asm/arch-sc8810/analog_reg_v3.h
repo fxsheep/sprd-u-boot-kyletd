@@ -319,6 +319,7 @@ extern   "C"
 #define HWRST_STATUS_NORMAL (0X40)
 #define HWRST_STATUS_ALARM (0X50)
 #define HWRST_STATUS_SLEEP (0X60)
+#define HWRST_STATUS_NORMAL2 (0Xf0) /* modem sets 0x1f0 (0xf0 after masking) */
 
 //ryan:add for poweroff debug.
 ///ANA_LDO_PD_SET

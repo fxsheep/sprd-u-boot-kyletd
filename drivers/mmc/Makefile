@@ -35,7 +35,8 @@ COBJS-$(CONFIG_OMAP3_MMC) += omap3_mmc.o
 COBJS-$(CONFIG_OMAP_HSMMC) += omap_hsmmc.o
 COBJS-$(CONFIG_PXA_MMC) += pxa_mmc.o
 COBJS-$(CONFIG_S5P_MMC) += s5p_mmc.o
-
+COBJS-$(CONFIG_MV_SDHCI) += mv_sdhci.o
+COBJS-$(CONFIG_SDHCI) += sdhci.o
 COBJS-$(CONFIG_SP8810_MMC) += sp8810_mmc.o
 COBJS-$(CONFIG_TIGER_MMC) += sp8810_mmc.o
 COBJS-$(CONFIG_EMMC_BOOT) += sdio_card_pal.o sdhost_phy.o card_sdio.o

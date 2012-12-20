@@ -30,11 +30,24 @@
 #include <part.h>
 #include <malloc.h>
 #include <linux/list.h>
-#include <mmc.h>
 #include <div64.h>
+#include <asm/errno.h>
+#include <asm/io.h>
+#include <asm/arch/sc8810_reg_base.h>
+#include <asm/arch/mfp.h>
+#include <asm/arch/sc8810_reg_ahb.h>
+
+#include <asm/arch/ldo.h>
+#include <asm/arch/sdio_reg_v3.h>
+#include <asm/arch/chip_drv_common_io.h>
+#include <asm/arch/sc8810_reg_global.h>
+#include <asm/arch/sc8810_module_config.h>
 
 static struct list_head mmc_devices;
 static int cur_dev_num = -1;
+#ifdef CONFIG_EMMC_BOOT
+static block_dev_desc_t sprd_mmc_dev;
+#endif
 
 int __board_mmc_getcd(u8 *cd, struct mmc *mmc) {
 	return -1;
@@ -129,6 +142,19 @@ mmc_write_blocks(struct mmc *mmc, ulong start, lbaint_t blkcnt, const void*src)
 static ulong
 mmc_bwrite(int dev_num, ulong start, lbaint_t blkcnt, const void*src)
 {
+#ifdef CONFIG_EMMC_BOOT
+	if(dev_num == 1)
+	{
+		if(Emmc_Write(0, start, blkcnt, (uint8*)src))
+		{
+			return blkcnt;
+		}       
+		else
+		{
+			return 0;
+		}
+	}
+#endif
 	lbaint_t cur, blocks_todo = blkcnt;
 
 	struct mmc *mmc = find_mmc_device(dev_num);
@@ -196,6 +222,19 @@ int mmc_read_blocks(struct mmc *mmc, void *dst, ulong start, lbaint_t blkcnt)
 
 static ulong mmc_bread(int dev_num, ulong start, lbaint_t blkcnt, void *dst)
 {
+#ifdef CONFIG_EMMC_BOOT
+	if(dev_num == 1)
+	{
+		if(Emmc_Read(0, start, blkcnt, (uint8*)dst))
+		{
+			return blkcnt;
+		}       
+		else
+		{
+			return 0;
+		}
+	}
+#endif
 	lbaint_t cur, blocks_todo = blkcnt;
 
 	if (blkcnt == 0)
@@ -480,6 +519,7 @@ int sd_change_freq(struct mmc *mmc)
 	timeout = 3;
 
 retry_scr:
+	memset(scr, 0, 8);
 	data.dest = (char *)&scr;
 	data.blocksize = 8;
 	data.blocks = 1;
@@ -851,6 +891,18 @@ int mmc_register(struct mmc *mmc)
 	mmc->block_dev.if_type = IF_TYPE_MMC;
 	mmc->block_dev.dev = cur_dev_num++;
 	mmc->block_dev.removable = 1;
+#ifdef CONFIG_EMMC_BOOT
+	if(cur_dev_num == 2){
+		mmc->block_dev.part_type = PART_TYPE_EFI;
+		mmc->block_dev.lun = 0;
+		mmc->block_dev.type = 0;
+
+		/* FIXME fill in the correct size (is set to 32MByte) */
+		mmc->block_dev.blksz = 512;
+		
+		mmc->block_dev.lba = Emmc_GetCapacity(0);;
+	}
+#endif
 	mmc->block_dev.block_read = mmc_bread;
 	mmc->block_dev.block_write = mmc_bwrite;
 
@@ -863,6 +915,10 @@ int mmc_register(struct mmc *mmc)
 
 block_dev_desc_t *mmc_get_dev(int dev)
 {
+#ifdef CONFIG_EMMC_BOOT
+	if(dev ==1)
+           return ((block_dev_desc_t *) & sprd_mmc_dev);
+#endif
 	struct mmc *mmc = find_mmc_device(dev);
 
 	return mmc ? &mmc->block_dev : NULL;
@@ -946,3 +1002,32 @@ int mmc_initialize(bd_t *bis)
 
 	return 0;
 }
+#ifdef CONFIG_EMMC_BOOT
+#define MMCSD_SECTOR_SIZE 512
+int mmc_legacy_init(int dev)
+{
+	int retries, rc = -ENODEV;
+	uint32_t cid_resp[4];
+	uint32_t *resp;
+	uint16_t rca = 0;
+
+	if(TRUE == Emmc_Init())
+	{       
+		sprd_mmc_dev.if_type = IF_TYPE_UNKNOWN;
+		sprd_mmc_dev.if_type = IF_TYPE_MMC;
+		sprd_mmc_dev.part_type = PART_TYPE_EFI;
+		sprd_mmc_dev.dev = 1;
+		sprd_mmc_dev.lun = 0;
+		sprd_mmc_dev.type = 0;
+
+		/* FIXME fill in the correct size (is set to 32MByte) */
+		sprd_mmc_dev.blksz = MMCSD_SECTOR_SIZE;
+		
+		sprd_mmc_dev.lba = Emmc_GetCapacity(0);;
+		sprd_mmc_dev.removable = 1;
+		sprd_mmc_dev.block_read = mmc_bread;
+		sprd_mmc_dev.block_write = mmc_bwrite;			  
+	}
+	return rc;
+}
+#endif

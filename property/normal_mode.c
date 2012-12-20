@@ -1,4 +1,6 @@
 #include "normal_mode.h"
+#include <mmc.h>
+#include <fat.h>
 
 unsigned spl_data_buf[0x1000] __attribute__((align(4)))={0};
 unsigned harsh_data_buf[8]__attribute__((align(4)))={0};
@@ -768,10 +770,68 @@ void normal_mode(void)
 	vibrator_hw_init();
 #endif
     set_vibrator(1);
+
 #if BOOT_NATIVE_LINUX
     vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS, BACKLIGHT_ON);
 #else
     vlx_nand_boot(BOOT_PART, NULL, BACKLIGHT_ON);
 #endif
 
+}
+#ifdef CONFIG_GENERIC_MMC
+#define MODEM_MEMORY_NAME "modem_memory.log"
+#define MODEM_MEMORY_SIZE  (22 * 1024 * 1024)
+#ifdef CONFIG_SC8810
+#define MODEM_MEMORY_ADDR 0
+#elif defined (CONFIG_SC8825) || defined （CONFIG_TIGER）
+#define MODEM_MEMORY_ADDR 0x80000000
+#endif
+void write_modem_memory()
+{
+	struct mmc *mmc;
+	block_dev_desc_t *dev_desc=NULL;
+	int ret;
+	char bufread[50];
+	mmc = find_mmc_device(0);
+	if(mmc){
+		ret = mmc_init(mmc);
+		if(ret < 0){
+			printf("mmc init failed %d\n", ret);
+			return;
+		}
+	}else{
+		printf("no mmc card found\n");
+		return;
+	}
+
+	dev_desc = &mmc->block_dev;
+	if(dev_desc==NULL){
+		printf("no mmc block device found\n");
+		return;
+	}
+	ret = fat_register_device(dev_desc, 1);
+	if(ret < 0){
+		printf("fat regist fail %d\n", ret);
+		return;
+	}
+	ret = file_fat_detectfs();
+	if(ret){
+		printf("detect fs failed\n");
+		return;
+	}
+
+	printf("writing %s\n",  MODEM_MEMORY_NAME);
+	ret = file_fat_write(MODEM_MEMORY_NAME, MODEM_MEMORY_ADDR, MODEM_MEMORY_SIZE);
+	if(ret <= 0){
+		printf("sd file write error %d\n", ret);
+	}
+}
+#endif
+void watchdog_mode(void)
+{
+	printf("watchdog_mode\n");
+#ifdef CONFIG_GENERIC_MMC
+	write_modem_memory();
+#endif
+	vlx_nand_boot(BOOT_PART, "wdgreboot", BACKLIGHT_ON);
 }
