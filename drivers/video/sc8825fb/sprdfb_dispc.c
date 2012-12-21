@@ -272,6 +272,7 @@ static int32_t sprdfb_dispc_uninit(struct sprdfb_device *dev)
 static int32_t sprdfb_dispc_refresh (struct sprdfb_device *dev)
 {
 	FB_PRINT("sprdfb:[%s]\n",__FUNCTION__);
+	uint32_t i;
 
 	if(SPRDFB_PANEL_IF_DPI != dev->panel_if_type){
 		sprdfb_panel_invalidate(dev->panel);
@@ -292,14 +293,22 @@ static int32_t sprdfb_dispc_refresh (struct sprdfb_device *dev)
 			dispc_set_bits((1 << 4), DISPC_CTRL);
 			is_first_frame = 0;
 		}else{
-			while(!(dispc_read(DISPC_INT_RAW) & (0x10)));
+			for(i=0;i<1000;i++){
+				if(!(dispc_read(DISPC_INT_RAW) & (0x10))){
+					udelay(100);
+				}
+			}
 			FB_PRINT("sprdfb:[%s] got dispc update int (%d)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
 			dispc_set_bits((1<<5), DISPC_INT_CLR);
                    }
 	}else{
 		/* start refresh */
 		dispc_set_bits((1 << 4), DISPC_CTRL);
-		while(!(dispc_read(DISPC_INT_RAW) & (1<<0)));
+		for(i=0;i<1000;i++){
+			if(!(dispc_read(DISPC_INT_RAW) & (1<<0))){
+				udelay(100);
+			}
+		}
 		FB_PRINT("sprdfb:[%s] got dispc done int (%d)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
 		dispc_set_bits((1<<0), DISPC_INT_CLR);
 	}
