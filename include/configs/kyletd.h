@@ -111,7 +111,7 @@
 #define DYNAMIC_CRC_TABLE
 /* Start copying real U-boot from the second page */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
-#define CONFIG_SYS_NAND_U_BOOT_SIZE	0x68000
+#define CONFIG_SYS_NAND_U_BOOT_SIZE	0x80000
 #define RAM_TYPPE_IS_SDRAM	0
 
 /* Load U-Boot to this address */
