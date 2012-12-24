@@ -85,20 +85,30 @@
 #define CONFIG_SYS_PROMPT_HUSH_PS2 "> "
 #endif
 
-#define FIXNV_SIZE		(64 * 1024)
+#define FIXNV_SIZE		(120 * 1024)
 #define PRODUCTINFO_SIZE	(3 * 1024)
 #define MODEM_SIZE		(0x800000)
 #define DSP_SIZE        (0x3E0400) /* 3968K */
 #define VMJALUNA_SIZE       (0x64000) /* 400K */
 #define RUNTIMENV_SIZE      (256 * 1024)
+#define FIRMWARE_SIZE     	(0x9F8000) 
 #define CONFIG_SPL_LOAD_LEN (0x4000)
 
-#define PRODUCTINFO_ADR		(0x00490000)
+#define PRODUCTINFO_ADR		(0x0049e000)
+
+#define EMMC_SECTOR_SIZE    512
 
 /*#define CMDLINE_NEED_CONV */
 
 #define WATCHDOG_LOAD_VALUE	0x4000
 #define CONFIG_SYS_STACK_SIZE	0x400
+
+/* SDIO GPIO HANDSHAKE */
+#define AP_CP_RTS 208
+#define CP_AP_RDY 209
+#define CP_AP_RTS 210
+#define AP_CP_RDY 211
+#define CP_AP_LIV 215
 
 //#define	CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* 256 kB for U-Boot */
 
@@ -107,7 +117,7 @@
 #define DYNAMIC_CRC_TABLE
 /* Start copying real U-boot from the second page */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x40000
-#define CONFIG_SYS_NAND_U_BOOT_SIZE	0x68000
+#define CONFIG_SYS_NAND_U_BOOT_SIZE	0x80000
 #define RAM_TYPPE_IS_SDRAM	0
 
 /* Load U-Boot to this address */
@@ -278,6 +288,7 @@
 #define CONFIG_USB_GADGET_SC8800G
 #define CONFIG_USB_DWC
 #define CONFIG_USB_GADGET_DUALSPEED
+#define CONFIG_CALIBRATION_MODE_NEW
 //#define CONFIG_USB_ETHER
 #define CONFIG_CMD_FASTBOOT
 #define SCRATCH_ADDR    (CONFIG_SYS_SDRAM_BASE + 0x100000)

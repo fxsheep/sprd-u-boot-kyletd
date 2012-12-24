@@ -48,7 +48,8 @@ COBJS-y += sleep_mode.o
 COBJS-y += vbat_check.o
 COBJS-y += backupnvitem.o
 COBJS-y += reboot_mode.o
-
+COBJS-y += sprd8810_dsp_sleep.o
+COBJS-y += calibration_mode.o
 
 
 COBJS	:= $(sort $(COBJS-y))

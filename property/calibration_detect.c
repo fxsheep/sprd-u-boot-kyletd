@@ -211,6 +211,8 @@ extern void udc_power_off(void);
 
 extern int get_cal_enum_ms(void);
 extern int get_cal_io_ms(void);
+extern void calibration_mode(const uint8_t *pcmd, int length);		
+
 unsigned int check_caliberate(uint8_t * buf, int len)
 {
 	unsigned int command = 0;
@@ -235,6 +237,7 @@ extern int power_button_pressed(void);
 static int count_ms;
 static unsigned long long start_time;
 static unsigned long long now_time;
+static int s_is_calibration_mode = 0;
 
 static int recheck_power_button(void)
 {
@@ -413,6 +416,7 @@ void calibration_detect(int key)
             return;
         }
         sprintf(cmd_buf, "calibration=%d,%d", caliberate_mode&0xff, (caliberate_mode&(~0xff))>>8);
+        s_is_calibration_mode=1;
         vlx_nand_boot(BOOT_PART, cmd_buf, BACKLIGHT_OFF);
 	}	
     
@@ -423,4 +427,9 @@ void calibration_detect(int key)
 }
 
 #endif // CONFIG_MODEM_CALI_UART
+
+int poweron_by_calibration(void)
+{
+	return s_is_calibration_mode;
+}
 

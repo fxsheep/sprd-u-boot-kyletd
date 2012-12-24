@@ -240,7 +240,7 @@ struct FDL_ChannelHandler gUart1Channel =
 };
 
 DECLARE_GLOBAL_DATA_PTR;
-
+int __dl_log_share__ = 0;
 void serial_setbrg(void)
 {
 	SIO_SetBaudrate(&gUart1Channel, 115200);
@@ -253,9 +253,12 @@ int serial_getc(void)
 void serial_putc(const char c)
 {
 	SIO_PutChar(&gUart1Channel, c);
+ 
 	/* If \n, also do \r */
-	if (c == '\n')
-		serial_putc ('\r');
+	if(__dl_log_share__ == 0){
+		if (c == '\n')
+			serial_putc ('\r');
+	}
 }
 
 /*
@@ -270,8 +273,10 @@ int serial_tstc (void)
 
 void serial_puts (const char *s)
 {
-	while (*s) {
-		serial_putc (*s++);
+	if(__dl_log_share__ == 0){
+		while(*s!=0){
+			serial_putc(*s++);
+		}
 	}
 }
 
@@ -286,5 +291,49 @@ int serial_init (void)
 	/* clear input buffer */
 	if(serial_tstc())
 	  serial_getc();
+	return 0;
+}
+
+/*
+*   add UART0 driver for modem boot
+*/
+
+void serial0_setbrg(void)
+{
+	SIO_SetBaudrate(&gUart0Channel, 115200);
+}
+int serial0_getc(void)
+{
+	return SIO_GetChar (&gUart0Channel);
+}
+
+void serial0_putc(const char c)
+{
+	SIO_PutChar(&gUart0Channel, c);
+}
+
+/*
+ *  * Test whether a character is in the RX buffer
+ *   */
+int serial0_tstc (void)
+{
+	UartPort_T *port  = (&gUart0Channel)->priv;
+	/* If receive fifo is empty, return false */
+	return SIO_RX_READY( SIO_GET_RX_STATUS( port->regBase) ) ;
+}
+
+void serial0_puts (const char *s)
+{
+	while (*s) {
+		serial0_putc (*s++);
+	}
+}
+
+int serial0_init (void)
+{
+	SIO_Open(&gUart0Channel, 115200);
+	/* clear input buffer */
+	if(serial0_tstc())
+	  serial0_getc();
 	return 0;
 }

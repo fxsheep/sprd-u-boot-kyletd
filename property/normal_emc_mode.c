@@ -789,8 +789,87 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		return;
 	}
 	secure_check(DSP_ADR, 0, DSP_ADR + DSP_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
+#elif defined(CONFIG_CALIBRATION_MODE_NEW)
+	if(poweron_by_calibration()){
+		/* recovery damaged fixnv*//*to do later*/
+		fixnv_right = 0;
+		memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+		if(0 == nv_read_partition(p_block_dev, PARTITION_FIX_NV1, (char *)FIXNV_ADR, FIXNV_SIZE + 4)){
+			if (1 == nv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+				fixnv_right = 1;//right
+		}
 
+
+		/* DSP_PART */
+        printf("Reading dsp to 0x%08x\n", DSP_ADR);
+
+		if (!get_partition_info(p_block_dev, PARTITION_DSP, &info)) {
+        	if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, DSP_SIZE/EMMC_SECTOR_SIZE+1, (uint8*)DSP_ADR)){
+				printf("dsp nand read error \n");
+				return;
+			}
+		}
+		else{
+			return;
+		}
+
+		/* MODEM_IMG_PART */
+		printf("Reading modem to 0x%08x\n", FIRMWARE_ADR);
+		
+		size = (FIRMWARE_SIZE +(EMMC_SECTOR_SIZE - 1)) & (~(EMMC_SECTOR_SIZE - 1));
+		if(size <= 0) {
+			printf("modem image should not be zero\n");
+			return;
+		}
+		if (!get_partition_info(p_block_dev, PARTITION_FIRMWARE, &info)) {
+			 if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, size/EMMC_SECTOR_SIZE, (uint8*)FIRMWARE_ADR)){
+				printf("modem emmc read error \n");
+				return;
+			}
+		}
+		else{
+			return;
+		}
+
+		/*MODEM FDL PART*/   
+		printf("Reading vmjaluna to 0x%08x\n", VMJALUNA_ADR);
+		size = (VMJALUNA_SIZE +(EMMC_SECTOR_SIZE - 1)) & (~(EMMC_SECTOR_SIZE - 1));
+		if(size <= 0) {
+			printf("vmjuluna image should not be zero\n");
+			return;
+		}
+		if (!get_partition_info(p_block_dev, PARTITION_VM, &info)) {
+			 if(TRUE !=  Emmc_Read(PARTITION_USER, info.start, size/EMMC_SECTOR_SIZE, (uint8*)VMJALUNA_ADR)){
+				printf("vmjaluna nand read error \n");
+				return;
+			}
+		}
+		else{
+			return;
+		}
+		
+		printf("call bootup modem in vlx_nand_boot,0x%x 0x%x\n",FIXNV_ADR, FIXNV_SIZE);
+
+		bootup_modem((char *)VMJALUNA_ADR,0x3000);
+		calibration_mode(cmdline, 10);
+		memset(VMJALUNA_ADR,0,VMJALUNA_SIZE);
+		memset(FIXNV_ADR,0,FIXNV_SIZE+4);
+		memset(MODEM_ADR,0,MODEM_SIZE);
+		memset(DSP_ADR,0,DSP_SIZE);
+		memset(RUNTIMENV_ADR,0,RUNTIMENV_SIZE+4);
+	}
 #endif
+
+#if BOOT_NATIVE_LINUX
+        /*
+            force dsp sleep in native 8810 verson to reduce power consumption
+        */
+        extern void DSP_ForceSleep(void);
+        DSP_ForceSleep();
+        printf("dsp nand read ok1 %d\n", ret);
+#endif
+
+
 	////////////////////////////////////////////////////////////////
 	/* KERNEL_PART */
 	printf("Reading kernel to 0x%08x\n", KERNEL_ADR);

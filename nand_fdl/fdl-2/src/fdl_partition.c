@@ -1,9 +1,9 @@
 #include "../../../disk/part_uefi.h"
 
 PARTITION_CFG const g_sprd_emmc_partition_cfg[] = {
-	{PARTITION_VM, 512, PARTITION_RAW},		/* 512KB */
-	{PARTITION_MODEM, 10 * 1024, PARTITION_RAW},	/* 10 * 1024KB */
-	{PARTITION_DSP, 5 * 1024, PARTITION_RAW},
+	{PARTITION_VM, 512, PARTITION_RAW},		/* 512KB , save modem fdl in samsung stingray*/
+	{PARTITION_MODEM, 10 * 1024, PARTITION_RAW},	/* 10 * 1024KB not used in samsung stingray*/
+	{PARTITION_DSP, 5 * 1024, PARTITION_RAW},       /*save dsp image in samsung stingray*/
 	{PARTITION_FIX_NV1, 3840, PARTITION_RAW},
 	{PARTITION_FIX_NV2, 3840, PARTITION_RAW},
 	{PARTITION_RUNTIME_NV1, 3840, PARTITION_RAW},
@@ -19,6 +19,10 @@ PARTITION_CFG const g_sprd_emmc_partition_cfg[] = {
 	{PARTITION_RECOVERY, 10 * 1024, PARTITION_RAW},
 	{PARTITION_FASTBOOT_LOGO, 1 * 1024, PARTITION_RAW},
 	{PARTITION_MISC, 256, PARTITION_RAW},
+#ifdef CONFIG_SP7702
+	{PARTITION_FIRMWARE, 10*1024, PARTITION_RAW},   /*save modem image in samsung stingray0*/
+#else
 	{PARTITION_SD, 1000 * 1024, PARTITION_RAW},
+#endif
         {0, 0, 0}
 };

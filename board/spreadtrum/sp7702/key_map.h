@@ -4,15 +4,9 @@
 #include <linux/key_code.h>
 
 static unsigned char board_key_map[]={
-#if 0
-    0x27, KEY_HOME,
-    0x42, KEY_BACK,
-    0x41, KEY_VOLUMEUP,
-#else
     0x00, KEY_BACK,//DOWN
     0x01, KEY_HOME,//CAM
     0x10, KEY_MENU,//UP
-#endif
 };
 
 #define CONFIG_KEYPAD_ROW_CNT 5

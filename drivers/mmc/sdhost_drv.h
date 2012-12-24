@@ -5,7 +5,8 @@
 #include "asm/arch/sci_types.h"
 
 #define OS_NONE
-
+#define SDIO_TRUE  (1)
+#define SDIO_FALSE (0)
 
 //---0x2050_0028---Host Control &Power Control & Block Gap Control & Wakeup Control Register
 
@@ -570,7 +571,7 @@ PUBLIC void SDHOST_Slot_select(SDHOST_SLOT_NO slot_NO);
 //		uint32 value :the frequency that be used acctually
 //  Note: This function must be applied according different platform
 /*****************************************************************************/
-extern PUBLIC uint32 SDHOST_BaseClk_Set(uint32 sdio_base_clk);
+extern PUBLIC uint32 SDHOST_BaseClk_Set(SDHOST_SLOT_NO slot_NO,uint32 sdio_base_clk);
 /*****************************************************************************/
 //  Description: select appropriate pin function that is controlled by SDIO host
 //  Author: Jason.wu

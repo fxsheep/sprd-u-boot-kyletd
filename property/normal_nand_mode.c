@@ -526,6 +526,109 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		return;
 	}
 	secure_check(DSP_ADR, 0, DSP_ADR + DSP_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
+#elif defined(CONFIG_CALIBRATION_MODE_NEW)
+	if(poweron_by_calibration())
+	{
+		/* recovery damaged fixnv or backupfixnv */
+		orginal_right = 0;
+		memset((unsigned char *)FIXNV_ADR, 0xff, 0x20000);
+		cmd_yaffs_mount(fixnvpoint);
+		ret = cmd_yaffs_ls_chk(fixnvfilename);
+		if (ret == (FIXNV_SIZE + 4)) {
+			cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
+			if (1 == nv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
+				orginal_right = 1;//right
+		}
+		cmd_yaffs_umount(fixnvpoint);
+		
+		printf("Reading fixnv to 0x%08x \n", FIXNV_ADR);
+		/* DSP_PART */
+		printf("Reading dsp to 0x%08x\n", DSP_ADR);
+		ret = find_dev_and_part(DSP_PART, &dev, &pnum, &part);
+		if (ret) {
+		        printf("No partition named %s\n", DSP_PART);
+		        return;
+		} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
+		        printf("Partition %s not a NAND device\n", DSP_PART);
+		        return;
+		}
+		off = part->offset;
+		nand = &nand_info[dev->id->num];
+		flash_page_size = nand->writesize;
+		size = (DSP_SIZE + (flash_page_size - 1)) & (~(flash_page_size - 1));
+		if(size <= 0) {
+		        printf("dsp image should not be zero\n");
+		        return;
+		}
+		ret = nand_read_offset_ret(nand, off, &size, (void*)DSP_ADR, &off);
+		if(ret != 0) {
+		        printf("dsp nand read error %d\n", ret);
+		        return;
+		}
+
+		printf("Reading firmware to 0x%08x\n", FIRMWARE_ADR);
+		ret = find_dev_and_part(FIRMWARE_PART, &dev, &pnum, &part);
+		if (ret) {
+		        printf("No partition named %s\n", FIRMWARE_PART);
+		        return;
+		} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
+		        printf("Partition %s not a NAND device\n", FIRMWARE_PART);
+		        return;
+		}
+		off = part->offset;
+		nand = &nand_info[dev->id->num];
+		size = (FIRMWARE_SIZE +(flash_page_size - 1)) & (~(flash_page_size - 1));
+		if(size <= 0) {
+		        printf("firmware image should not be zero\n");
+		        return;
+		}
+		ret = nand_read_offset_ret(nand, off, &size, (void*)FIRMWARE_ADR, &off);
+		if(ret != 0) {
+		        printf("firmware nand read error %d\n", ret);
+		        return;
+		}
+
+		printf("Reading vmjaluna to 0x%08x\n", VMJALUNA_ADR);
+		ret = find_dev_and_part(VMJALUNA_PART, &dev, &pnum, &part);
+		if (ret) {
+		        printf("No partition named %s\n", VMJALUNA_PART);
+		        return;
+		} else if (dev->id->type != MTD_DEV_TYPE_NAND) {
+		        printf("Partition %s not a NAND device\n", VMJALUNA_PART);
+		        return;
+		}
+		off = part->offset;
+		nand = &nand_info[dev->id->num];
+		size = (VMJALUNA_SIZE +(flash_page_size - 1)) & (~(flash_page_size - 1));
+		if(size <= 0) {
+		        printf("modem image should not be zero\n");
+		        return;
+		}
+		ret = nand_read_offset_ret(nand, off, &size, (void*)VMJALUNA_ADR, &off);
+		if(ret != 0) {
+		        printf("modem nand read error %d\n", ret);
+		        return;
+		}
+		printf("call bootup modem in vlx_nand_boot,0x%x 0x%x\n",FIXNV_ADR, FIXNV_SIZE);
+
+		bootup_modem((char *)VMJALUNA_ADR,0x3000);
+		calibration_mode(cmdline, 10);	
+		memset(VMJALUNA_ADR,0,VMJALUNA_SIZE);
+		memset(FIXNV_ADR,0,FIXNV_SIZE+4);
+		memset(MODEM_ADR,0,MODEM_SIZE);
+		memset(DSP_ADR,0,DSP_SIZE);
+		memset(RUNTIMENV_ADR,0,RUNTIMENV_SIZE+4);
+	}
+
+#if BOOT_NATIVE_LINUX
+	/*
+        force dsp sleep in native 8810 verson to reduce power consumption
+	*/ 
+	extern void DSP_ForceSleep(void);
+	DSP_ForceSleep();
+	printf("dsp nand read ok1 %d\n", ret);
+#endif	
+
 #endif
 	////////////////////////////////////////////////////////////////
 	/* KERNEL_PART */

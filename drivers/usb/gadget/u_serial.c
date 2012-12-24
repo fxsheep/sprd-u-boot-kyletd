@@ -1642,3 +1642,12 @@ void gserial_disconnect(struct gserial *gser)
 
 	spin_unlock_irqrestore(&port->port_lock, flags);
 }
+void gs_reset_usb_param(void)
+{
+	vcom_port = 0;
+	usb_write_done = 0;
+	usb_read_done = 0;
+	usb_trans_status = 0;
+	usb_serial_configed = 0;
+	usb_port_open = 0;
+}

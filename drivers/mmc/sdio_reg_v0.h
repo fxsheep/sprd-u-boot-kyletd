@@ -109,6 +109,48 @@ typedef struct SDIO_REG_CFG_TAG
 }
 SDIO_REG_CFG;
 
+#define TRANS_MODE_ATA_CMPLETE_SIG_EN 	BIT_0
+#define TRANS_MODE_MULTI_BLOCK         BIT_1
+#define TRANS_MODE_READ                BIT_2
+#define TRANS_MODE_CMD12_EN            BIT_3
+#define TRANS_MODE_BLOCK_COUNT_EN      BIT_4
+#define TRANS_MODE_DMA_EN              BIT_5
+#define CMD_HAVE_DATA                  BIT_6
+
+#define SDIO_CMD_TYPE_NML        (0<<22)
+#define SDIO_CMD_TYPE_SUSPEND    (1<<22)
+#define SDIO_CMD_TYPE_RESUME     (2<<22)
+#define SDIO_CMD_TYPE_ABORT      (3<<22)
+
+#define SDIO_CMD_DATA_PRESENT    BIT_21
+
+#define SDIO_CMD_INDEX_CHK       BIT_20
+#define SDIO_CMD_CRC_CHK         BIT_19
+
+#define	SDIO_CMD_NO_RSP        (0<<16)
+#define	SDIO_CMD_RSP_136       (1<<16)
+#define	SDIO_CMD_RSP_48        (2<<16)
+#define	SDIO_CMD_RSP_48_BUSY   (3<<16)
+
+#define SDIO_TRANS_COMP_ATA      BIT_6
+#define SDIO_TRANS_MULTIBLK      BIT_5
+#define SDIO_TRANS_DIR_READ      BIT_4
+#define SDIO_TRANS_AUTO_CMD12_EN BIT_2
+#define SDIO_TRANS_BLK_CNT_EN    BIT_1
+#define SDIO_TRANS_DMA_EN        BIT_0
+
+
+#define SDIO_NO_RSP	             (0)
+
+#define SDIO_R1			(SDIO_CMD_RSP_48|SDIO_CMD_CRC_CHK|SDIO_CMD_INDEX_CHK)
+#define SDIO_R2			(SDIO_CMD_RSP_136|SDIO_CMD_CRC_CHK)
+#define SDIO_R3			(SDIO_CMD_RSP_48)
+#define SDIO_R4			(SDIO_CMD_RSP_48)
+#define SDIO_R5			(SDIO_CMD_RSP_48|SDIO_CMD_CRC_CHK|SDIO_CMD_INDEX_CHK)
+#define SDIO_R6			(SDIO_CMD_RSP_48|SDIO_CMD_CRC_CHK|SDIO_CMD_INDEX_CHK)
+#define SDIO_R7			(SDIO_CMD_RSP_48|SDIO_CMD_CRC_CHK|SDIO_CMD_INDEX_CHK)
+#define SDIO_R1B			(SDIO_CMD_RSP_48_BUSY|SDIO_CMD_CRC_CHK|SDIO_CMD_INDEX_CHK)
+#define SDIO_R5B			(SDIO_CMD_RSP_48_BUSY|SDIO_CMD_CRC_CHK|SDIO_CMD_INDEX_CHK)
 
 /**----------------------------------------------------------------------------*
 **                         Local Function Prototype                           **

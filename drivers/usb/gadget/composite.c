@@ -1299,3 +1299,7 @@ void __exit usb_composite_unregister(struct usb_composite_driver *driver)
 		return;
 	usb_gadget_unregister_driver(&composite_driver);
 }
+void calibration_reset_composite(void)
+{
+	composite = NULL;
+}

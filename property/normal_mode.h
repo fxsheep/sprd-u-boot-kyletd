@@ -18,13 +18,11 @@
 #include <malloc.h>
 #include <asm/arch/secure_boot.h>
 
-
 extern unsigned spl_data_buf[0x1000] __attribute__((align(4)));
 extern unsigned harsh_data_buf[8]__attribute__((align(4)));
 extern void *spl_data;
 extern void *harsh_data;
 extern unsigned char raw_header[8192];
-
 
 #define VMJALUNA_PART "vmjaluna"
 #define MODEM_PART "modem"
@@ -34,44 +32,52 @@ extern unsigned char raw_header[8192];
 #define RUNTIMEVN_PART "runtimenv"
 #define DSP_PART "dsp"
 #define SPL_PART "spl"
+#define FIRMWARE_PART "firmware"
+#define SIMLOCK_PART "simlock"
 
 #ifdef CONFIG_TIGER
-#define DSP_ADR			0x80020000
+#define DSP_ADR		0x80020000
 #define VMJALUNA_ADR		0x80400000
 #define FIXNV_ADR		0x80480000
-#define RUNTIMENV_ADR		0x804a0000
+#define RUNTIMENV_ADR	0x804a0000
 #define MODEM_ADR		0x80500000
 #define RAMDISK_ADR 		0x85500000
 #if BOOT_NATIVE_LINUX
 //pls make sure uboot running area
-#define VLX_TAG_ADDR            (0x82000100)
+#define VLX_TAG_ADDR		(0x82000100)
 #define KERNEL_ADR		(0x82008000)
-
 #else
-
 #define KERNEL_ADR		0x84508000
-#define VLX_TAG_ADDR            0x85100000 //after initrd
+#define VLX_TAG_ADDR		0x85100000 //after initrd
+#endif //BOOT_NATIVE_LINUX
 
-#endif
-
-#else
-#define DSP_ADR			0x00020000
+#elif defined(CONFIG_SP7702)
+#define DSP_ADR		0x00020000
 #define VMJALUNA_ADR		0x00400000
 #define FIXNV_ADR		0x00480000
-#define RUNTIMENV_ADR		0x004a0000
+#define RUNTIMENV_ADR	0x004a0000
+#define MODEM_ADR		0x00500000
+#define RAMDISK_ADR 		0x05500000
+#define FIRMWARE_ADR		0x01600000
+//pls make sure uboot running area
+#define VLX_TAG_ADDR		(0x100)
+#define KERNEL_ADR		(0x8000)
+
+#else
+#define DSP_ADR		0x00020000
+#define VMJALUNA_ADR		0x00400000
+#define FIXNV_ADR		0x00480000
+#define RUNTIMENV_ADR	0x004a0000
 #define MODEM_ADR		0x00500000
 #define RAMDISK_ADR 		0x05500000
 
 #if BOOT_NATIVE_LINUX
 //pls make sure uboot running area
-#define VLX_TAG_ADDR            (0x100)
+#define VLX_TAG_ADDR		(0x100)
 #define KERNEL_ADR		(0x8000)
-
 #else
-
 #define KERNEL_ADR		0x04508000
-#define VLX_TAG_ADDR            0x5100000 //after initrd
-
+#define VLX_TAG_ADDR		0x5100000 //after initrd
 #endif
 #endif
 /////////////////////////////////////////////////////////
