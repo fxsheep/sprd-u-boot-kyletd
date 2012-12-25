@@ -833,5 +833,9 @@ void watchdog_mode(void)
 #ifdef CONFIG_GENERIC_MMC
 	write_modem_memory();
 #endif
+#if BOOT_NATIVE_LINUX
+	vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS " wdgreboot", BACKLIGHT_ON);
+#else
 	vlx_nand_boot(BOOT_PART, "wdgreboot", BACKLIGHT_ON);
+#endif
 }

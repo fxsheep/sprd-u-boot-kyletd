@@ -123,5 +123,9 @@ SEND_RECOVERY_MSG:
 void recovery_mode(void)
 {
     printf("%s\n", __func__);
+#if BOOT_NATIVE_LINUX
+    vlx_nand_boot(RECOVERY_PART, CONFIG_BOOTARGS, BACKLIGHT_ON);
+#else
     vlx_nand_boot(RECOVERY_PART, NULL, BACKLIGHT_ON);
+#endif
 }

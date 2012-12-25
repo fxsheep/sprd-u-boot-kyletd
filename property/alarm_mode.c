@@ -19,7 +19,7 @@ void alarm_mode(void)
     printf("%s\n", __func__);
 
 #if BOOT_NATIVE_LINUX
-    vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS, BACKLIGHT_OFF);
+    vlx_nand_boot(BOOT_PART, CONFIG_BOOTARGS " androidboot.mode=alarm", BACKLIGHT_OFF);
 #else
     vlx_nand_boot(BOOT_PART, "androidboot.mode=alarm", BACKLIGHT_OFF);
 #endif
