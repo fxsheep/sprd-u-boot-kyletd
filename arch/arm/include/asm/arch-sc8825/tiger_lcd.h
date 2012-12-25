@@ -63,6 +63,23 @@
 
 #define LCD_PWM0_EN BIT_8
 
+
+/* panel property */
+/* lcdc refresh, TE on, double timing, partial update*/
+#define PANEL_CAP_NORMAL               0x0
+
+/* only not support partial update*/
+#define PANEL_CAP_NOT_PARTIAL_UPDATE   0x1
+
+/* write register, grame have the same timing */
+#define PANEL_CAP_UNIQUE_TIMING        0x2
+
+/* lcd not support TE */
+#define PANEL_CAP_NOT_TEAR_SYNC        0x4
+
+/* only do command/data register, such as some mono oled display device */
+#define PANEL_CAP_MANUAL_REFRESH       0x8
+
 enum{
 	SPRDFB_PANEL_TYPE_MCU = 0,
 	SPRDFB_PANEL_TYPE_RGB,
@@ -241,6 +258,7 @@ struct info_mcu {
 
 /* LCD abstraction */
 struct panel_spec {
+	uint32_t cap;
 	uint16_t width;
 	uint16_t height;
 	uint32_t fps;

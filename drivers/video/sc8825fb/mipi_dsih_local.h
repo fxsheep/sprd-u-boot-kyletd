@@ -42,7 +42,7 @@
 //typedef unsigned int    uint32_t; 
 
 #define DSIH_PIXEL_TOLERANCE  2                                                        
-#define DSIH_FIFO_ACTIVE_WAIT 200    /* no of tries to access the fifo*/               
+#define DSIH_FIFO_ACTIVE_WAIT 500    /* no of tries to access the fifo*/
 #define DSIH_PHY_ACTIVE_WAIT  200                                                      
 #define ONE_MS_ACTIVE_WAIT    50000 /* 50MHz processor */                              
 #define DEFAULT_BYTE_CLOCK    864000 /* a value to start PHY PLL - random */           

@@ -296,20 +296,32 @@ static int32_t sprdfb_dispc_refresh (struct sprdfb_device *dev)
 			for(i=0;i<1000;i++){
 				if(!(dispc_read(DISPC_INT_RAW) & (0x10))){
 					udelay(100);
+				}else{
+					break;
 				}
 			}
-			FB_PRINT("sprdfb:[%s] got dispc update int (%d)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
+			if(i >= 1000){
+				FB_PRINT("sprdfb:[%s] wait dispc update  int time out!! (0x%x)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
+			}else{
+				FB_PRINT("sprdfb:[%s] got dispc update int (0x%x)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
+			}
 			dispc_set_bits((1<<5), DISPC_INT_CLR);
                    }
 	}else{
 		/* start refresh */
 		dispc_set_bits((1 << 4), DISPC_CTRL);
-		for(i=0;i<1000;i++){
-			if(!(dispc_read(DISPC_INT_RAW) & (1<<0))){
-				udelay(100);
+		for(i=0;i<500;i++){
+			if(0x1 != (dispc_read(DISPC_INT_RAW) & (1<<0))){
+				udelay(1000);
+			}else{
+				break;
 			}
 		}
-		FB_PRINT("sprdfb:[%s] got dispc done int (%d)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
+		if(i >= 1000){
+			FB_PRINT("sprdfb:[%s] wait dispc done int time out!! (0x%x)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
+		}else{
+			FB_PRINT("sprdfb:[%s] got dispc done int (0x%x)\n", __FUNCTION__, dispc_read(DISPC_INT_RAW));
+		}
 		dispc_set_bits((1<<0), DISPC_INT_CLR);
 	}
 

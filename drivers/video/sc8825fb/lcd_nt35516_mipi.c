@@ -281,6 +281,7 @@ static struct info_mipi lcd_nt35516_mipi_info = {
 };
 
 struct panel_spec lcd_nt35516_mipi_spec = {
+	//.cap = PANEL_CAP_NOT_TEAR_SYNC,
 	.width = 540,
 	.height = 960,
 	.type = LCD_MODE_DSI,
