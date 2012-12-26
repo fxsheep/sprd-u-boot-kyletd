@@ -36,48 +36,48 @@ extern unsigned char raw_header[8192];
 #define SIMLOCK_PART "simlock"
 
 #ifdef CONFIG_TIGER
-#define DSP_ADR		0x80020000
-#define VMJALUNA_ADR		0x80400000
-#define FIXNV_ADR		0x80480000
-#define RUNTIMENV_ADR	0x804a0000
-#define MODEM_ADR		0x80500000
-#define RAMDISK_ADR 		0x85500000
+#define DSP_ADR          0x80020000
+#define VMJALUNA_ADR     0x80400000
+#define FIXNV_ADR        0x80480000
+#define RUNTIMENV_ADR    0x804a0000
+#define MODEM_ADR        0x80500000
+#define RAMDISK_ADR      0x85500000
 #if BOOT_NATIVE_LINUX
 //pls make sure uboot running area
-#define VLX_TAG_ADDR		(0x82000100)
-#define KERNEL_ADR		(0x82008000)
+#define VLX_TAG_ADDR     (0x82000100)
+#define KERNEL_ADR       (0x82008000)
 #else
-#define KERNEL_ADR		0x84508000
-#define VLX_TAG_ADDR		0x85100000 //after initrd
+#define KERNEL_ADR       0x84508000
+#define VLX_TAG_ADDR     0x85100000 //after initrd
 #endif //BOOT_NATIVE_LINUX
 
 #elif defined(CONFIG_SP7702)
-#define DSP_ADR		0x00020000
-#define VMJALUNA_ADR		0x00400000
-#define FIXNV_ADR		0x00480000
-#define RUNTIMENV_ADR	0x004a0000
-#define MODEM_ADR		0x00500000
-#define RAMDISK_ADR 		0x05500000
-#define FIRMWARE_ADR		0x01600000
+#define DSP_ADR          0x00020000
+#define VMJALUNA_ADR     0x00400000
+#define FIXNV_ADR        0x00480000
+#define RUNTIMENV_ADR    0x004a0000
+#define MODEM_ADR        0x00500000
+#define RAMDISK_ADR      0x04c00000
+#define FIRMWARE_ADR     0x01600000
 //pls make sure uboot running area
-#define VLX_TAG_ADDR		(0x100)
-#define KERNEL_ADR		(0x8000)
+#define VLX_TAG_ADDR     (0x100)
+#define KERNEL_ADR       (0x8000)
 
 #else
-#define DSP_ADR		0x00020000
-#define VMJALUNA_ADR		0x00400000
-#define FIXNV_ADR		0x00480000
-#define RUNTIMENV_ADR	0x004a0000
-#define MODEM_ADR		0x00500000
-#define RAMDISK_ADR 		0x05500000
+#define DSP_ADR          0x00020000
+#define VMJALUNA_ADR     0x00400000
+#define FIXNV_ADR        0x00480000
+#define RUNTIMENV_ADR    0x004a0000
+#define MODEM_ADR        0x00500000
+#define RAMDISK_ADR      0x05500000
 
 #if BOOT_NATIVE_LINUX
 //pls make sure uboot running area
-#define VLX_TAG_ADDR		(0x100)
-#define KERNEL_ADR		(0x8000)
+#define VLX_TAG_ADDR     (0x100)
+#define KERNEL_ADR       (0x8000)
 #else
-#define KERNEL_ADR		0x04508000
-#define VLX_TAG_ADDR		0x5100000 //after initrd
+#define KERNEL_ADR       0x04508000
+#define VLX_TAG_ADDR     0x5100000 //after initrd
 #endif
 #endif
 /////////////////////////////////////////////////////////

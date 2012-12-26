@@ -79,7 +79,7 @@
 #define DSP_SIZE            (3968 * 1024)
 #define RUNTIMENV_SIZE	     (256 * 1024)
 #define FIRMWARE_SIZE       (0x9F8000) 
-#define CONFIG_SPL_LOAD_LEN (0x6000)
+#define CONFIG_SPL_LOAD_LEN (0x4000)
 
 #define PRODUCTINFO_ADR		(0x0049e000)
 
@@ -238,16 +238,13 @@
 #define str(s)	#s
 
 #define MTDIDS_DEFAULT "nand0=sprd-nand"
-#ifdef CONFIG_G2PHONE
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:384k@256k(boot),256k(params),6m(kernel),6m(ramdisk),6m(recovery),70m(system),30m(userdata),7m(cache)"
-#define CONFIG_BOOTARGS "mem=64M console=ttyS1,115200n8 init=/init "MTDPARTS_DEFAULT
-#elif defined CONFIG_SP8810
-#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),256k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),250m(system),180m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),3840k(productinfo),512k(kpanic),15m(firmware)"
-#define CONFIG_BOOTARGS "mem=256M init=/init "
-#endif
+
+#define MTDPARTS_DEFAULT "mtdparts=sprd-nand:256k(spl),512k(2ndbl),256k(params),512k(vmjaluna),10m(modem),3840k(fixnv),3840k(backupfixnv),5120k(dsp),3840k(runtimenv),10m(boot),10m(recovery),200m(system),220m(userdata),20m(cache),256k(misc),1m(boot_logo),1m(fastboot_logo),3840k(productinfo),512k(kpanic),15m(firmware)"
+#define CONFIG_BOOTARGS "mem=256M console=ttyS1,115200n8 init=/init "
+
 
 #define CONFIG_LOOP_PER_JIFFY  3350528
-#define COPY_LINUX_KERNEL_SIZE	(0x600000)
+//#define COPY_LINUX_KERNEL_SIZE	(0x600000)
 #define LINUX_INITRD_NAME	"modem"
 
 #define CONFIG_BOOTCOMMAND "cboot normal"
