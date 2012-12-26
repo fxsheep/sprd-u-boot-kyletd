@@ -109,14 +109,15 @@ static void chip_init(void)
 	//__raw_writel(0x1fff00, PIN_CTL_REG);
 	*(volatile unsigned int *)PIN_CTL_REG = 0x1fff00;
 }
-#ifdef CONFIG_GENERIC_MMC
+
+#if 0 //CONFIG_GENERIC_MMC
 static unsigned long sdio_func_cfg[] = {
 	MFP_CFG_X(SD0_CLK, AF0, DS3, F_PULL_NONE, S_PULL_NONE, IO_Z),
-	MFP_CFG_X(SD_CMD, AF0, DS0, F_PULL_UP,  S_PULL_NONE, IO_Z),
-	MFP_CFG_X(SD_D0, AF0, DS0, F_PULL_UP, S_PULL_NONE, IO_Z),
-	MFP_CFG_X(SD_D1, AF0, DS0, F_PULL_DOWN, S_PULL_NONE, IO_Z),
-	MFP_CFG_X(SD_D2, AF0, DS0, F_PULL_DOWN, S_PULL_NONE, IO_Z),
-	MFP_CFG_X(SD_D3, AF0, DS0, F_PULL_DOWN, S_PULL_NONE, IO_Z),
+	MFP_CFG_X(SD_CMD,  AF0, DS0, F_PULL_UP,   S_PULL_NONE, IO_Z),
+	MFP_CFG_X(SD_D0,   AF0, DS0, F_PULL_UP,   S_PULL_NONE, IO_Z),
+	MFP_CFG_X(SD_D1,   AF0, DS0, F_PULL_DOWN, S_PULL_NONE, IO_Z),
+	MFP_CFG_X(SD_D2,   AF0, DS0, F_PULL_DOWN, S_PULL_NONE, IO_Z),
+	MFP_CFG_X(SD_D3,   AF0, DS0, F_PULL_DOWN, S_PULL_NONE, IO_Z),
 };
 
 static unsigned long sdcard_detect_gpio_cfg =

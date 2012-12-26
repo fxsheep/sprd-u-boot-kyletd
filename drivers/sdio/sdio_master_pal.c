@@ -409,7 +409,7 @@ SDIO_CARD_PAL_ERROR_E SPRD_SDSlave_Pal_SendCmd(
     if(0 != s_CardErrCode){
         SDIO_CARD_PRINT(("SDIO_Card error = 0x%x",s_CardErrCode));
         SDHOST_RST(handle->sdio_port,RST_CMD_DAT_LINE);
-        SDHOST_Dump_SDIO_Registers(0);
+//        SDHOST_Dump_SDIO_Registers(0);
         return s_CardErrCode;
     }
 

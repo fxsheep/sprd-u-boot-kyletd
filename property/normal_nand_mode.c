@@ -536,8 +536,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		ret = cmd_yaffs_ls_chk(fixnvfilename);
 		if (ret == (FIXNV_SIZE + 4)) {
 			cmd_yaffs_mread_file(fixnvfilename, (unsigned char *)FIXNV_ADR);
-			if (1 == nv_is_correct_endflag((unsigned char *)FIXNV_ADR, FIXNV_SIZE))
-				orginal_right = 1;//right
+			//should do something here
 		}
 		cmd_yaffs_umount(fixnvpoint);
 		

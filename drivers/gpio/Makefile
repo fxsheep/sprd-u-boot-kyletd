@@ -31,6 +31,8 @@ COBJS-$(CONFIG_MXC_GPIO)	+= mxc_gpio.o
 COBJS-$(CONFIG_PCA953X)		+= pca953x.o
 COBJS-$(CONFIG_S5P)		+= s5p_gpio.o
 COBJS-$(CONFIG_SC7710G2)	+= sc8810_gpio.o
+COBJS-$(CONFIG_SP8810W)	+= sc8810_gpio.o
+COBJS-$(CONFIG_SP7702)	+= sc8810_gpio.o
 
 COBJS	:= $(COBJS-y)
 SRCS 	:= $(COBJS:.o=.c)

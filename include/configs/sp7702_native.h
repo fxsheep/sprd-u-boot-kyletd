@@ -59,7 +59,7 @@
 #define EXT_MEM_TYPE_DDR 1
 #endif
 
-#define CONFIG_RAM512M
+//#define CONFIG_RAM512M
 #define BB_DRAM_TYPE_256MB_32BIT
 #define  CONFIG_MTD_NAND_SC8810 1
 
@@ -91,11 +91,11 @@
 #define CONFIG_SYS_STACK_SIZE	0x400
 
 /* SDIO GPIO HANDSHAKE */
-#define AP_CP_RTS           78
-#define CP_AP_RDY           75
+#define AP_CP_RTS           38
+#define CP_AP_RDY           37
 #define CP_AP_RTS           99
-#define AP_CP_RDY           63
-#define CP_AP_LIV           98
+#define AP_CP_RDY           25
+#define CP_AP_LIV           92
 
 //#define	CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* 256 kB for U-Boot */
 
@@ -271,6 +271,7 @@
 #define CONFIG_USB_GADGET_SC8800G
 #define CONFIG_USB_DWC
 #define CONFIG_USB_GADGET_DUALSPEED
+#define CONFIG_CALIBRATION_MODE_NEW
 //#define CONFIG_USB_ETHER
 #define CONFIG_CMD_FASTBOOT
 #define SCRATCH_ADDR    (CONFIG_SYS_SDRAM_BASE + 0x100000)
@@ -312,19 +313,22 @@
  */
 #define CONFIG_CMD_MMC
 #ifdef CONFIG_CMD_MMC
-#define CONFIG_CMD_FAT			1
-#define CONFIG_FAT_WRITE	1
-#define CONFIG_MMC			1
-#define CONFIG_GENERIC_MMC		1
-#define CONFIG_SDHCI			1
-#define CONFIG_SYS_MMC_MAX_BLK_COUNT	0x1000
-#define CONFIG_MMC_SDMA			1
-#define CONFIG_MV_SDHCI			1
-#define CONFIG_DOS_PARTITION		1
-#define CONFIG_EFI_PARTITION		1
-#define CONFIG_SYS_MMC_NUM		1
-#define CONFIG_SYS_MMC_BASE		{0x20500000}
+#define CONFIG_CMD_FAT               1
+#define CONFIG_FAT_WRITE             1
+#define CONFIG_MMC                   1
+#define CONFIG_GENERIC_MMC           1
+#define CONFIG_SDHCI                 1
+#define CONFIG_SDIO_HOST             1
+//#define CONFIG_SP8810_MMC             
+//#define CONFIG_SYS_MMC_MAX_BLK_COUNT	0x1000
+#define CONFIG_MMC_SDMA              1
+#define CONFIG_MV_SDHCI              0
+#define CONFIG_DOS_PARTITION         1
+#define CONFIG_EFI_PARTITION         1
+#define CONFIG_SYS_MMC_NUM           1
+#define CONFIG_SYS_MMC_BASE          {0x20500000}
 #endif
+
 
 #define CALIBRATE_ENUM_MS 15000
 #define CALIBRATE_IO_MS 10000

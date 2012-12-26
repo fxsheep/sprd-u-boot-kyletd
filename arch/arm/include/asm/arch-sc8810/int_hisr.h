@@ -38,38 +38,6 @@ extern   "C"
 //  Author:         steve.zhan
 //  Note:  Use these three MACROS together..
 /*****************************************************************************/
-#ifndef CONFIG_EMMC_BOOT
-#define INPUT_BUFFER_INIT(_MAX_SIZE)\
-    static int input_buffer[_MAX_SIZE]; \
-    static int*  input_write_ptr  = &input_buffer[0];\
-    static int*  input_read_ptr = &input_buffer[0];\
-    static int MaxSize = _MAX_SIZE
-
-#define ISR_WRITE_BUFFER_DEF \
-    LOCAL void IsrWriteBuffer(int value) \
-    { \
-        int *save_ptr = input_write_ptr; \
-        *input_write_ptr++ = value; \
-        if (input_write_ptr > &input_buffer[MaxSize-1]) \
-            input_write_ptr = &input_buffer[0]; \
-        if (input_write_ptr == input_read_ptr) \
-            input_write_ptr = save_ptr; \
-    }
-
-
-#define THREAD_READ_BUFFER_DEF \
-    LOCAL BOOLEAN threadReadBuffer(int* value) \
-    { \
-        if (input_read_ptr != input_write_ptr) \
-        { \
-            *value = *input_read_ptr++; \
-            if (input_read_ptr > &input_buffer[MaxSize-1]) \
-                input_read_ptr = &input_buffer[0]; \
-            return FALSE; \
-        } \
-        return TRUE; \
-    }
-#else
 #define INPUT_BUFFER_INIT(VALUE_TYPE, _MAX_SIZE)\
     static VALUE_TYPE input_buffer[_MAX_SIZE]; \
     static VALUE_TYPE*  input_write_ptr  = &input_buffer[0];\
@@ -95,7 +63,6 @@ extern   "C"
         } \
         return TRUE; \
     }
-#endif
 
 /**----------------------------------------------------------------------------*
 **                         Local Function Prototype                           **

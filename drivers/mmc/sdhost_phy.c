@@ -27,16 +27,8 @@
 #include <asm/arch/sys_timer_reg_v0.h>
 #include <asm/arch/sc8810_module_config.h>
 #endif
-//#include "sc8810_reg_ahb.h"
-#if defined(PLATFORM_SC8800G) || defined(PLATFORM_SC6800H)
-//#include "ldo_drvapi.h"
-#endif
 #include "asm/arch/ldo.h"
 
-#ifndef OS_NONE
-//#include "clock_drvapi.h"
-#endif
-//#include "Ref_outport.h"
 #if defined (CONFIG_SC8810) || defined (CONFIG_SC8825)
 #define PLATFORM_SC8800G
 #endif
@@ -881,15 +873,50 @@ LOCAL void _Reset_ALL (SDHOST_HANDLE sdhost_handler)
 //      NONE
 //  Note:
 /*****************************************************************************/
+LOCAL  SDHOST_Reset_Controller(SDHOST_SLOT_NO slot_NO)
+{
+#if defined (CONFIG_TIGER)
+	REG32 (AHB_CTL0)	  |= BIT_23;
+	REG32 (AHB_SOFT_RST) |= BIT_21;
+	REG32 (AHB_SOFT_RST) &= ~BIT_21;
+#elif defined(CONFIG_SC7710G2)
+	REG32 (AHB_CTL6)	  |= BIT_1;
+	REG32 (AHB_SOFT2_RST) |= BIT_1;
+	REG32 (AHB_SOFT2_RST) &= ~BIT_1;
+#else
+#define AHB_CTL0_SDIO0_EN	(BIT_4)
+#define AHB_CTL0_SDIO1_EN	(BIT_19)
+
+#define AHB_CTL0_SDIO0_RST	(BIT_12)
+#define AHB_CTL0_SDIO1_RST	(BIT_16)
+
+	if(slot_NO == SDHOST_SLOT_0)
+	{
+		REG32 (AHB_CTL0) |= AHB_CTL0_SDIO0_EN;
+		REG32 (AHB_SOFT_RST) |= AHB_CTL0_SDIO0_RST;
+		REG32 (AHB_SOFT_RST) &= ~AHB_CTL0_SDIO0_RST;
+	}else if(slot_NO == SDHOST_SLOT_1)
+	{
+		REG32 (AHB_CTL0) |= AHB_CTL0_SDIO1_EN;
+		REG32 (AHB_SOFT_RST) |= AHB_CTL0_SDIO1_RST;
+		REG32 (AHB_SOFT_RST) &= ~AHB_CTL0_SDIO1_RST;
+	}
+		// select slot 0
+#endif
+
+	
+}
+
 LOCAL void _Reset_MODULE (SDHOST_HANDLE sdhost_handler)
 {
     SCI_ASSERT (TRUE == _RegisterVerifyHOST (sdhost_handler));/*assert verified*/
 
-    CHIP_REG_OR(AHB_SOFT_RST, AHB_SDIO_SOFT_RST);
-    CHIP_REG_AND(AHB_SOFT_RST, ~AHB_SDIO_SOFT_RST);
-
+    if(&sdio_port_ctl[SDHOST_SLOT_0] == sdhost_handler){
+		SDHOST_Reset_Controller(SDHOST_SLOT_0);
+    } else if(&sdio_port_ctl[SDHOST_SLOT_1] == sdhost_handler){
+		SDHOST_Reset_Controller(SDHOST_SLOT_1);
+    }
 }
-
 
 /*****************************************************************************/
 //  Description: Reset the specify module of host
@@ -2094,14 +2121,20 @@ PUBLIC void SDHOST_SetErrCodeFilter (SDHOST_HANDLE sdhost_handler,uint32 err_msg
 //      uint32 value: indicate which slot event happened
 //  Note:
 /*****************************************************************************/
-LOCAL SDHOST_SLOT_NO _GetIntSDHOSTSlotNum (void)
+LOCAL SDHOST_SLOT_NO _GetIntSDHOSTSlotNum (uint32 port)
 {
     uint32 tmpReg;
     SDHOST_SLOT_NO ret;
 #if defined(CONFIG_TIGER) || defined (CONFIG_SC7710G2)
     tmpReg = REG32 (EMMC_SLOT_INT_STS);
 #else
-    tmpReg = REG32 (SDIO1_SLOT_INT_STS);
+    if(port == 0){
+        tmpReg = REG32 (SDIO0_SLOT_INT_STS);
+    } 
+    else 
+    {
+        tmpReg = REG32 (SDIO1_SLOT_INT_STS);
+    }
 #endif
 
     if ( (tmpReg& (0x01<<0)))
@@ -2109,7 +2142,7 @@ LOCAL SDHOST_SLOT_NO _GetIntSDHOSTSlotNum (void)
 #if defined(CONFIG_TIGER) || defined (CONFIG_SC7710G2)
         ret = SDHOST_SLOT_7;
 #else
-        ret = SDHOST_SLOT_1;
+        ret = SDHOST_SLOT_1;  //tbd....
 #endif
     }
     else if ( (tmpReg& (0x01<<1)))
@@ -2164,7 +2197,7 @@ PUBLIC ISR_EXE_T _SDHOST_IrqHandle (uint32 isrnum)
     ISR_Buffer_T buffer;
     SDHOST_HANDLE sdhost_handler;
 
-    buffer.slotNum = _GetIntSDHOSTSlotNum();
+    buffer.slotNum = _GetIntSDHOSTSlotNum(isrnum);
     sdhost_handler = &sdio_port_ctl[buffer.slotNum];
     buffer.pSdhost_handler = &sdio_port_ctl[buffer.slotNum];
 
@@ -2217,6 +2250,19 @@ LOCAL void  SdhostHisrFunc (uint32 cnt, void *pData)
         buffer.pSdhost_handler->sigCallBack (buffer.msg, buffer.errCode, buffer.slotNum);
     }
 }
+
+LOCAL void _SDHOST_Pin_select(SDHOST_SLOT_NO slot_NO)
+{
+    if(slot_NO == SDHOST_SLOT_1){
+        *(volatile uint32*)(0x8c0003e8) = 0x280;    //SD1 CMD pullup drv3, strongest strength
+        *(volatile uint32*)(0x8c0003ec) = 0x280;    //SD1 D0 pullup drv3, strongest strength
+        *(volatile uint32*)(0x8c0003f0) = 0x280;    //SD1 D1 pullup drv3, strongest strength
+        *(volatile uint32*)(0x8c0003f4) = 0x280;    //SD1 D2 pullup drv3, strongest strength
+        *(volatile uint32*)(0x8c0003f8) = 0x280;    //SD1 D3 pullup drv3, strongest strength
+        *(volatile uint32*)(0x8c0003fc) = 0x280;    //SD1 D3 pullup drv3, strongest strength
+    }
+}
+
 /*****************************************************************************/
 //  Description: Regist host slot
 //  Author: Jason.wu
@@ -2241,24 +2287,17 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
 
     // select slot 0
 #if defined (CONFIG_TIGER)
-     REG32 (AHB_CTL0)     |= BIT_23;
-     REG32 (AHB_SOFT_RST) |= BIT_21;
-     REG32 (AHB_SOFT_RST) &= ~BIT_21;
-     sdio_port_ctl[slot_NO].open_flag = TRUE;
-     sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_384M);
+//    SDHOST_Slot_select(slot_NO); if necessary
+	sdio_port_ctl[slot_NO].open_flag = TRUE;
+	sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (slot_NO,SDIO_BASE_CLK_384M);
 #elif defined(CONFIG_SC7710G2)
-         REG32 (AHB_CTL6)     |= BIT_1;
-         REG32 (AHB_SOFT2_RST) |= BIT_1;
-         REG32 (AHB_SOFT2_RST) &= ~BIT_1;
-         sdio_port_ctl[slot_NO].open_flag = TRUE;
-         sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_384M);
+//    SDHOST_Slot_select(slot_NO); if necessary
+	sdio_port_ctl[slot_NO].open_flag = TRUE;
+	sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (slot_NO,SDIO_BASE_CLK_384M);
 #else
-	    REG32 (AHB_CTL0)     |= BIT_19;
-	    REG32 (AHB_SOFT_RST) |= BIT_16;
-	    REG32 (AHB_SOFT_RST) &= ~BIT_16;
-
-    sdio_port_ctl[slot_NO].open_flag = TRUE;
-    sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (SDIO_BASE_CLK_48M);
+    _SDHOST_Pin_select(slot_NO);
+	sdio_port_ctl[slot_NO].open_flag = TRUE;
+	sdio_port_ctl[slot_NO].baseClock = SDHOST_BaseClk_Set (slot_NO,SDIO_BASE_CLK_48M);
 #endif
 
     switch (slot_NO)
@@ -2381,6 +2420,7 @@ PUBLIC BOOLEAN SDHOST_UnRegister (SDHOST_HANDLE sdhost_handler)
 //  Note: This function must be applied according different platform
 /*****************************************************************************/
 #ifndef OS_NONE
+#if 0
 PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
 {
 #ifdef  PLATFORM_SC8800G
@@ -2410,48 +2450,12 @@ PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
     }
 
     return clk;
-#elif defined(PLATFORM_SC6800H)
-    uint32 clk = 0;
-    if (SC6800H == CHIP_GetChipType())
-    {
-        //The source clock of sdio is keeping to be 100MHz
-        DEVICE_SetClock (s_dev_sdio, SDIO_BASE_CLK_100M);
-        clk = SDIO_BASE_CLK_100M;
-    }
-    else 
-    {
-
-        REG32(AHB_CLK_CFG1) |= BIT_5;   //SD0_LPBAK_EN
-        //Select the clk source of SDIO
-        if (sdio_base_clk >= SDIO_BASE_CLK_90M)
-        {
-            DEVICE_SetClock (s_dev_sdio, SDIO_BASE_CLK_90M);
-            clk = SDIO_BASE_CLK_90M;
-        }
-        else if (sdio_base_clk >= SDIO_BASE_CLK_48M)
-        {
-            clk = SDIO_BASE_CLK_48M;
-            DEVICE_SetClock (s_dev_sdio, SDIO_BASE_CLK_48M);
-
-        }
-        else if (sdio_base_clk >= SDIO_BASE_CLK_45M)
-        {
-            clk = SDIO_BASE_CLK_45M;
-            DEVICE_SetClock (s_dev_sdio, SDIO_BASE_CLK_45M);
-        }
-        else
-        {
-            clk = SDIO_BASE_CLK_26M;
-            DEVICE_SetClock (s_dev_sdio, SDIO_BASE_CLK_26M);
-        }
-
-    }
-    return clk;
-
 #endif
 }
+#endif
 #else
-PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
+PUBLIC uint32 SDHOST_BaseClk_Set(SDHOST_SLOT_NO slot_NO,uint32 sdio_base_clk)
+
 {
 #if defined(CONFIG_TIGER)
     uint32 clk = 0;
@@ -2470,7 +2474,6 @@ PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
     {
         clk = SDIO_BASE_CLK_153M;
         REG32 (GR_CLK_GEN5) |= (2<<23);
-        //REG32 (GR_CLK_GEN5) |= (2<<17);
     }
     else
     {
@@ -2505,37 +2508,37 @@ PUBLIC uint32 SDHOST_BaseClk_Set (uint32 sdio_base_clk)
 #elif defined(PLATFORM_SC8800G)
     uint32 clk = 0;
 
-    //Select the clk source of SDIO
-    REG32 (GR_CLK_GEN5) &= ~ (BIT_17|BIT_18);
-
-    if (sdio_base_clk >= SDIO_BASE_CLK_96M)
-    {
-        clk = SDIO_BASE_CLK_96M;
-    }
-    else if (sdio_base_clk >= SDIO_BASE_CLK_64M)
-    {
-        clk = SDIO_BASE_CLK_64M;
-        REG32 (GR_CLK_GEN5) |= (1<<19);
-        //REG32 (GR_CLK_GEN5) |= (1<<17);
-    }
-    else if (sdio_base_clk >= SDIO_BASE_CLK_48M)
-    {
-        clk = SDIO_BASE_CLK_48M;
-        REG32 (GR_CLK_GEN5) |= (2<<19);
-        //REG32 (GR_CLK_GEN5) |= (2<<17);
-    }
-    else
-    {
-        clk = SDIO_BASE_CLK_26M;
-        REG32 (GR_CLK_GEN5) |= (3<<17);
-    }
-
+    //Select the clk source of SDIO1
+    if(SDHOST_SLOT_1 == slot_NO){
+    	*(volatile uint32 *)GR_CLK_GEN5 &= ~(BIT_19|BIT_20);
+    	if(sdio_base_clk >= SDIO_BASE_CLK_96M)
+        	clk = SDIO_BASE_CLK_96M;
+    	else if(sdio_base_clk >= SDIO_BASE_CLK_64M){
+        	clk = SDIO_BASE_CLK_64M;
+        	*(volatile uint32 *)GR_CLK_GEN5 |= (1<<19);
+    	} else if(sdio_base_clk >= SDIO_BASE_CLK_48M) {
+        	clk = SDIO_BASE_CLK_48M;
+        	*(volatile uint32 *)GR_CLK_GEN5 |= (2<<19);
+    	} else {
+        	clk = SDIO_BASE_CLK_26M;
+        	*(volatile uint32 *)GR_CLK_GEN5 |= (3<<19);
+    	}
+    } else if(SDHOST_SLOT_0 == slot_NO){
+    	*(volatile uint32 *)GR_CLK_GEN5 &= ~(BIT_17|BIT_18);
+    	if(sdio_base_clk >= SDIO_BASE_CLK_96M)
+        	clk = SDIO_BASE_CLK_96M;
+    	else if(sdio_base_clk >= SDIO_BASE_CLK_64M){
+        	clk = SDIO_BASE_CLK_64M;
+        	*(volatile uint32 *)GR_CLK_GEN5 |= (1<<17);
+    	} else if(sdio_base_clk >= SDIO_BASE_CLK_48M) {
+        	clk = SDIO_BASE_CLK_48M;
+        	*(volatile uint32 *)GR_CLK_GEN5 |= (2<<17);
+    	} else {
+        	clk = SDIO_BASE_CLK_26M;
+        	*(volatile uint32 *)GR_CLK_GEN5 |= (3<<17);
+    	}
+    } 
     return clk;
-#elif defined(PLATFORM_SC6800H)
-    //The source clock of sdio is keeping to be 96MHz
-    REG32 (AHB_CLK_CFG1) |= BIT_3;
-    return SDIO_BASE_CLK_96M;
-
 #endif
 }
 
@@ -2558,3 +2561,4 @@ PUBLIC void SDHOST_Slot_select (SDHOST_SLOT_NO slot_NO)
 }
 
 //===end===
+
