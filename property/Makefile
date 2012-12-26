@@ -48,9 +48,11 @@ COBJS-y += sleep_mode.o
 COBJS-y += vbat_check.o
 COBJS-y += backupnvitem.o
 COBJS-y += reboot_mode.o
-COBJS-y += sprd8810_dsp_sleep.o
-COBJS-y += calibration_mode.o
-
+COBJS-$(CONFIG_SP7702) += sprd8810_dsp_sleep.o
+COBJS-$(CONFIG_SP7702) += calibration_mode.o
+COBJS-$(CONFIG_SP8810W) += sprd8810_dsp_sleep.o
+COBJS-$(CONFIG_SP8810W) += calibration_mode.o
+COBJS-$(CONFIG_SC7710G2) += calibration_mode.o
 
 COBJS	:= $(sort $(COBJS-y))
 SRCS	:= $(COBJS:.o=.c) $(XCOBJS:.o=.c)

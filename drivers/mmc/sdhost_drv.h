@@ -5,8 +5,8 @@
 #include "asm/arch/sci_types.h"
 
 #define OS_NONE
-#define SDIO_TRUE  (1)
-#define SDIO_FALSE (0)
+//#define SDIO_TRUE  (1)
+//#define SDIO_FALSE (0)
 
 //---0x2050_0028---Host Control &Power Control & Block Gap Control & Wakeup Control Register
 

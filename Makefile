@@ -245,7 +245,10 @@ LIBS += drivers/usb/host/libusb_host.o
 LIBS += drivers/usb/musb/libusb_musb.o
 LIBS += drivers/usb/phy/libusb_phy.o
 LIBS += drivers/video/libvideo.o
+ifeq ($(BOARD),sp7702)
 LIBS += drivers/sdio/libsdio.o
+LIBS += modem_boot/bootup.o
+endif
 LIBS += drivers/video/sc8825fb/libsc8825fb.o
 LIBS += property/libproperty.o
 LIBS += drivers/watchdog/libwatchdog.o
@@ -254,7 +257,6 @@ LIBS += lib/libfdt/libfdt.o
 LIBS += api/libapi.o
 LIBS += post/libpost.o
 LIBS += drivers/usb/gadget/dwc_otg/libdwc_otg.o
-LIBS += modem_boot/bootup.o
 ifeq ($(SOC),omap3)
 LIBS += $(CPUDIR)/omap-common/libomap-common.o
 endif

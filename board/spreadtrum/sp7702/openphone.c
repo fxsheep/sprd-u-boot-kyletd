@@ -59,13 +59,13 @@ void Init_7702_modem(void)
 	__raw_writel(0x31,0x8C000114);
 	gpio_direction_output(34,1);
 	gpio_set_value(34,1);
-#ifndef CONFIG_NANDLESS
+
+#if 0 //not used in flashless mode.only do powerdown.
 	/*Modem Power On*/
 	__raw_writel(0x31,0x8C0003b8);
 	gpio_direction_output(106,1);
 	gpio_set_value(106,1);
 #endif
-	/*Wait Modem Power On 5s*/
 	//not used now
 }
 
