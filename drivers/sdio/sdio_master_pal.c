@@ -189,7 +189,13 @@ SDIO_CARD_PAL_HANDLE SPRD_SDSlave_Pal_Open(SDIO_CARD_PAL_SLOT_E slotNo)
     s_sdioCardPalHd[slotNo].MagicNum = SDIO_CARD_PAL_MAGICNUM;
     s_sdioCardPalHd[slotNo].s_CardEvent = 0;
     //s_sdioCardPalHd[slotNo].sdio_port = (SDHOST_HANDLE)SDHOST_Register((SDHOST_SLOT_NO)slotNo,_irqCardProc);
-    s_sdioCardPalHd[slotNo].sdio_port = (SDHOST_HANDLE)SDHOST_Register((SDHOST_SLOT_NO)0,_irqCardProc);
+#if defined(CONFIG_SP7702)    
+    s_sdioCardPalHd[slotNo].sdio_port = (SDHOST_HANDLE)SDHOST_Register((SDHOST_SLOT_NO)1,_irqCardProc);
+#elif defined(CONFIG_SC7710G2)
+    s_sdioCardPalHd[slotNo].sdio_port = (SDHOST_HANDLE)SDHOST_Register((SDHOST_SLOT_NO)2,_irqCardProc);
+#else
+	s_sdioCardPalHd[slotNo].sdio_port = (SDHOST_HANDLE)SDHOST_Register((SDHOST_SLOT_NO)0,_irqCardProc);
+#endif
     if(s_sdioCardPalHd[slotNo].sdio_port == NULL){
         return NULL;
     }
