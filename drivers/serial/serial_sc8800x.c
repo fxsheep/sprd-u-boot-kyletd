@@ -297,7 +297,7 @@ int serial_init (void)
 /*
 *   add UART0 driver for modem boot
 */
-
+#if defined(CONFIG_SP7702)
 void serial0_setbrg(void)
 {
 	SIO_SetBaudrate(&gUart0Channel, 115200);
@@ -337,3 +337,6 @@ int serial0_init (void)
 	  serial0_getc();
 	return 0;
 }
+#endif
+
+

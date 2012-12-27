@@ -2285,6 +2285,8 @@ PUBLIC SDHOST_HANDLE SDHOST_Register (SDHOST_SLOT_NO slot_NO,SDIO_CALLBACK fun)
         return NULL;
     }
 
+	SDHOST_Reset_Controller(slot_NO);
+
     // select slot 0
 #if defined (CONFIG_TIGER)
 //    SDHOST_Slot_select(slot_NO); if necessary
