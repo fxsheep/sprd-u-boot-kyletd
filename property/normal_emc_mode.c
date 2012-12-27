@@ -859,7 +859,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	}
 #endif
 
-#if BOOT_NATIVE_LINUX
+#if defined(CONFIG_SP7702) || defined(CONFIG_SP8810W)
         /*
             force dsp sleep in native 8810 verson to reduce power consumption
         */
