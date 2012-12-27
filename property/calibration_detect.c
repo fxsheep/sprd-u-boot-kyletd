@@ -12,6 +12,9 @@
 #include <jffs2/jffs2.h>
 #include <boot_mode.h>
 
+
+static int s_is_calibration_mode = 0;
+
 /* calibration support uart only */
 #ifdef CONFIG_MODEM_CALI_UART
 
@@ -237,7 +240,6 @@ extern int power_button_pressed(void);
 static int count_ms;
 static unsigned long long start_time;
 static unsigned long long now_time;
-static int s_is_calibration_mode = 0;
 
 static int recheck_power_button(void)
 {

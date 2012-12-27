@@ -790,6 +790,15 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 	}
 	secure_check(DSP_ADR, 0, DSP_ADR + DSP_SIZE - VLR_INFO_OFF, CONFIG_SYS_NAND_U_BOOT_DST + CONFIG_SYS_NAND_U_BOOT_SIZE - KEY_INFO_SIZ - VLR_INFO_OFF);
 #elif defined(CONFIG_CALIBRATION_MODE_NEW)
+#if defined(CONFIG_SP7702) || defined(CONFIG_SP8810W)
+	/*
+		force dsp sleep in native 8810 verson to reduce power consumption
+	*/
+	extern void DSP_ForceSleep(void);
+	DSP_ForceSleep();
+	printf("dsp nand read ok1 %d\n", ret);
+#endif
+
 	if(poweron_by_calibration()){
 		/* recovery damaged fixnv*//*to do later*/
 		fixnv_right = 0;
@@ -858,16 +867,6 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		memset(RUNTIMENV_ADR,0,RUNTIMENV_SIZE+4);
 	}
 #endif
-
-#if defined(CONFIG_SP7702) || defined(CONFIG_SP8810W)
-        /*
-            force dsp sleep in native 8810 verson to reduce power consumption
-        */
-        extern void DSP_ForceSleep(void);
-        DSP_ForceSleep();
-        printf("dsp nand read ok1 %d\n", ret);
-#endif
-
 
 	////////////////////////////////////////////////////////////////
 	/* KERNEL_PART */
