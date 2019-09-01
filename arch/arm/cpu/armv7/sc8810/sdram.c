@@ -17,6 +17,9 @@ SC6800     -gtp -cpu ARM926EJ-S -D_REF_SC6800_ -D_BL_NF_SC6800_
 #include <asm/arch/sdram.h>
 #include <asm/arch/chip.h>
 
+#include <asm/arch/adi_hal_internal.h>
+#include <asm/arch/regs_ana.h>
+#include <asm/arch/regs_ahb.h>
 EMC_PARAM_T s_emc_config = {0};
 
 /*lint -e760 -e547 ,because pclint error e63 e26 with REG32()*/
@@ -1165,6 +1168,7 @@ LOCAL uint32 __colum_to_mode(uint32 colum)
     }
     return col_mode;
 }
+
 LOCAL uint32 __row_to_mode(uint32 row)
 {
     uint32 row_mode;
@@ -1187,6 +1191,32 @@ LOCAL uint32 __row_to_mode(uint32 row)
             //break;          
     }
     return row_mode;
+}
+
+LOCAL uint32 __cs_to_map(uint32 haddr)
+{
+    uint32 cs_mode;
+    switch(haddr)
+    {
+        case 26:
+            cs_mode = 4;
+            break;
+        case 27:
+            cs_mode = 5;
+            break;
+        case 28:
+            //cs_mode = 6;
+/* in case using 4Gb DDR, 0xE000_0000~0xEFFF_FFFF will be used, so CS mapping to HADDR[29]*/
+				cs_mode = 7;
+            break;
+        case 29:
+            cs_mode = 7;
+            break;
+        default:
+            for( ; ; ) {}
+            //break;          
+    }
+    return cs_mode;
 }
 
 LOCAL BOOLEAN __is_rw_ok(uint32 addr, uint32 val)
@@ -1215,6 +1245,7 @@ LOCAL uint32 __col_row_detect(BOOLEAN is_col, SDRAM_CFG_INFO_T_PTR pCfg)
     uint32 num, max, min;
     uint32 offset, addr;
     uint32 width_offset = (DATA_WIDTH_16 == pCfg->data_width)?(WIDTH16_OFFSET):(WIDTH32_OFFSET);
+	 uint32 cs_mode;
 
     if(is_col)
     {
@@ -1238,6 +1269,10 @@ LOCAL uint32 __col_row_detect(BOOLEAN is_col, SDRAM_CFG_INFO_T_PTR pCfg)
         else
         {
             offset = num + BANK_OFFSET + (uint32)s_colum +  width_offset -  BYTE_OFFSET;    // row+bank+colum+width-byteoff
+				cs_mode = __cs_to_map(offset);
+				//set cs map to HADDR[offset]
+				REG32(0x20000000) &= ~(0x7);
+				REG32(0x20000000) |= (cs_mode);
         }
         addr   = (1 << (offset - 1)) + ZERO_ADDR;
         if(__is_rw_ok(addr, MEM_REF_DATA1))
@@ -1371,6 +1406,7 @@ LOCAL void __sdram_detect(uint32 clk)
  ** DEPENDENCIES                                                              *
  **                                                                           *
 **---------------------------------------------------------------------------*/
+#if 0
 LOCAL void SDRAM_Init (uint32 clk)
 {
     sdram_parameters = SDRAM_GetTimingPara();
@@ -1467,8 +1503,7 @@ LOCAL void SDRAM_PinDrv_Set (void)
 **---------------------------------------------------------------------------*/
 LOCAL uint32 Chip_ConfigClk (void)
 {
-    volatile uint32 i;
-    volatile uint32 arm_ahb_clk =0;
+    volatile uint32 i,arm_ahb_clk;
 
 #if defined(PLATFORM_SC6800H)
 #ifdef _BL_NF_NBL_
@@ -1538,19 +1573,18 @@ LOCAL uint32 Chip_ConfigClk (void)
 
     return arm_ahb_clk;
 }
-
+#endif
 int timer_init(void);
 unsigned long long get_ticks(void);
 void ddr_init()
 {
 	volatile unsigned int i;
-	unsigned long long now;
 	uint32 clkwr_dll = (64*s_emc_config.clk_wr)/(s_emc_config.read_value/2);
-
+	
+	unsigned long long now;
 	timer_init();
 	now = get_ticks();
 	do{}while(get_ticks() <= now+2);
-
 	REG32(0x20000004) = 0x00000049;
 	for(i = 0; i < 1000; i++);
 
@@ -1573,12 +1607,8 @@ void ddr_init()
 	//set EMC dll
 	REG32(0x20000170) = 0x0011080;
 	for(i = 0; i < 1000; i++);	
-	
-#ifndef CONFIG_BOARD_788
+
 	REG32(0x2000010C) = (0x8000|clkwr_dll);
-#else
-	REG32(0x2000010C) = 0x804A;	
-#endif
 	REG32(0x20000110) = 0x8020;
 	REG32(0x20000114) = 0x8020;
 	REG32(0x20000118) = 0x8020;
@@ -1613,10 +1643,19 @@ void ddr_init()
 	REG32(0x20000190) = 0x40048000;
 	for(i =0 ; i < 1000; i++);
 
+/*
+	REG32(0x20000180) |= BIT_14;
+	for(i =0 ; i < 1000; i++);
+
+      //detect column mode and row mode
+	__sdram_detect(0);
+	for(i =0 ; i < 1000; i++);
+*/
 	//set cs map to 2G bit
-	REG32(0x20000000) &= ~(0x7);
+//	REG32(0x20000000) &= ~(0x7);
 //	REG32(0x20000000) |= (0x7);
-	REG32(0x20000000) |= (s_emc_config.cs_pos);
+//	REG32(0x20000000) |= (s_emc_config.cs_pos);
+
 	//REG32(0x20000010) = 0x223;
 	//REG32(0x20000014) = 0x223;
 
@@ -1624,13 +1663,13 @@ void ddr_init()
 	REG32(0x20000188) = 0x1a260322;
 	//REG32(0x20000184) = 0x02371422;
 	//REG32(0x20000188) = 0x121c0322;
-	
+
 	REG32(0x20000180) |= BIT_14;
 	for(i =0 ; i < 1000; i++);
       
        //detect column mode and row mode
 	__sdram_detect(0);
-	for(i =0 ; i < 1000; i++);	
+	for(i =0 ; i < 1000; i++);
 }
 void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv, uint32 dqs_drv)
 {
@@ -1667,205 +1706,12 @@ void 	set_emc_pad(uint32 clk_drv, uint32 ctl_drv, uint32 dat_drv, uint32 dqs_drv
 	REG32(PINMAP_REG_BASE + 0x224) = dat_drv;
 	REG32(PINMAP_REG_BASE + 0x24C) = dat_drv;
 	REG32(PINMAP_REG_BASE + 0x274) = dat_drv;
-
+	
 	// CKE OUTPUT in sleep
 	REG32(PINMAP_REG_BASE + 0x1d8) |= 0x1;
 	REG32(PINMAP_REG_BASE + 0x2a8) |= 0x1;
-
-}
-
-void uart_trace(uint32 ch)
-{
-	volatile uint32 i;
-	REG32(0x84000000) = ch;
-	for(i = 0; i < 0x4000; i++);
-}
-#ifdef SPL_USB_DOWNLOAD
-typedef void (*JUMPTOHANDLER) (void);
-#ifdef CONFIG_SP8810
-#define KEY_DOWNLOAD_MODE_MAP 0x10 //keyout0-keyin7
-#else
-#define KEY_DOWNLOAD_MODE_MAP 0x01 //keyout0-keyin7
-#endif
-PUBLIC void _KeypadEnable()
-{
-	volatile uint32 i;
-	REG32(0x8b000008) |= BIT_26 | BIT_8; //enable keypad
-	//REG32(0X8B00004C) |= BIT_1;
-	//for(i = 0; i < 0x100; i++);
-	//REG32(0X8B00004C) &= ~BIT_1; //soft reset
-	//REG32(0x87000010) |= 0xfff; //clear all interrupt
-
-	//REG32(0x87000018) = 0xffff;
-	//REG32(0x87000028) = 0;//debounce
-	//REG32(0x8700001c) = 0xf;//debounce counter	
-
-	//REG32(0x87000000) |= 0x000001; //
-	//REG32(0x87000000) |= 0x000001; //
-	for(i = 0; i < 0x10000; i++);
-}
-PUBLIC void _KeypadClear()
-{
-	REG32(0x87000010) |= 0xffff; //clear all interrupt
-}
-//if download mode return 1, else return 0
-PUBLIC uint32 _Check_DownloadMode()
-{
-	volatile  uint32 key_raw_int_sts = 0;
-	volatile  uint32 key_sts = 0;
-	uint32 time;
-	volatile uint32 i;
-	//for(i = 0; i < 0x100000; i++);
-	uart_trace(0x99);
-	i = REG32(0x87000000);
 	
-	uart_trace(i & 0xff);
-	uart_trace((i >> 8) & 0xff);
-	uart_trace((i >> 16) & 0xff);
-	uart_trace((i >> 24) & 0xff);
-
-	for(time = 0; time < 10; time++)
-	{
-		//_KeypadClear();
-		//while(1)
-		{
-		for(i = 0; i < 0x200000; i++);
-		key_raw_int_sts = REG32(0x87000008);
-		key_sts = REG32(0x8700002c);		
-		
-		
-			//for(i = 0; i < 0x200000; i++);
-			uart_trace(key_raw_int_sts & 0xff);
-			uart_trace((key_raw_int_sts >> 8) & 0xff);
-			uart_trace((key_raw_int_sts >> 16) & 0xff);
-			uart_trace((key_raw_int_sts >> 24) & 0xff);
-
-
-			uart_trace(key_sts & 0xff);
-			uart_trace((key_sts >> 8)& 0xff);
-			uart_trace((key_sts >> 16)& 0xff);
-			uart_trace((key_sts >> 24)& 0xff);
-
-			uart_trace(0x11);			
-		
-		}
-		key_raw_int_sts &= BIT_0;
-		key_sts &= 0x77;
-
-		if((key_sts == KEY_DOWNLOAD_MODE_MAP))
-		{
-			uart_trace(0x66);
-			return 1; //check ok
-		}
-	}
-	return 0;
 }
-PUBLIC void _JumpToDownload()
-{
-	uart_trace(0x77);
-
-	JUMPTOHANDLER handler = (JUMPTOHANDLER)(0xffff0000);
-	handler();
-}
-LOCAL uint32 SystemCountGet()
-{
-	uint32 clock;
-	uint32 clock_c;
-	clock = REG32(0x87003004);
-	clock_c = REG32(0x87003004);
-	while(clock != clock_c)
-	{
-		clock = REG32(0x87003004);
-		clock_c = REG32(0x87003004);
-	}
-	return clock;
-}
-#define SPL_USB_DOWNLOAD_TIMEOUT 3000
-PUBLIC void _WaitUsbDownloadKey()
-{
-	uint32 time0;
-	uint32 time1;
-	uint32 key_raw_int_sts = 0;
-	uint32 key_sts = 0;
-
-	time0 = SystemCountGet();
-	while(1)
-	{
-		key_raw_int_sts = REG32(0x87000008);
-		key_sts = REG32(0x8700002c);
-		key_raw_int_sts &= BIT_0;
-		key_sts &= 0x77;
-		if((key_raw_int_sts != 0) && (key_sts == 0))
-		{
-			_JumpToDownload();
-		}
-		time1 = SystemCountGet();
-		if((time1 - time0) > SPL_USB_DOWNLOAD_TIMEOUT)
-		{
-			break;
-		}
-	}
-}
-#if 0
-PUBLIC void _WaitUsbDownloadKey()
-{
-	uint32 key_raw_int_sts = 0;
-	uint32 key_sts = 0;
-	uint32 time;
-	volatile uint32 i;
-	uart_trace(0x11);
-	uart_trace(0x22);
-	
-	//wait key1 release
-#if 0
-	while(1)
-	{
-		key_raw_int_sts = REG32(0x87000008);
-		key_raw_int_sts &= BIT_4;
-		if(key_raw_int_sts != 0)	
-		{
-			uart_trace(0x77);
-			_KeypadClear();
-			break;
-		}
-	}
-#endif
-	uart_trace(0x33);
-	i = 0 ;
-//	for(time = 0; time < 2; time++)
-	{
-		//usb download key press
-		while(1)
-		{	
-			//_KeypadClear();
-			//for(i = 0; i < 0x200000; i++)
-			key_raw_int_sts = REG32(0x87000008);
-			key_sts = REG32(0x8700002c);
-			
-			uart_trace(0x44);
-			uart_trace(key_sts & 0xff);
-			uart_trace((key_sts >> 8) & 0xff);
-
-			uart_trace(key_raw_int_sts & 0xff);
-			//key_sts >>=  8;
-			key_raw_int_sts &= BIT_0;
-			key_sts &= 0x77;
-			if((key_raw_int_sts != 0) && (key_sts == 0))
-			{
-				uart_trace(0x88);
-				_JumpToDownload();
-				//break;;
-			}
-			if(i > 0x3000000)
-			{
-				break;
-			}
-		}
-	}
-	return ;	
-}
-#endif
-#endif
 
 #define ARMCLK_CONFIG_EN	1
 void sc8810_emc_Init()
@@ -1922,22 +1768,42 @@ void sc8810_emc_Init()
 	
 	REG32(0x20900224) = (3 << 4) | (1 << 8) | (7 << 14) | (0 << 12/*select mpll*/);
 #endif
-#ifdef SPL_USB_DOWNLOAD
-	_KeypadEnable();
-	//if not in download mode
-	//if(_Check_DownloadMode() == 0)
-	{
-	//	return;	
-	}
-	_WaitUsbDownloadKey();
-	
-#endif
 	ddr_init();
 }
 
+static const int dcdc_ctl_vol[] = {
+	650, 700, 800, 900, 1000, 1100, 1200, 1300, 1400,
+};
+PUBLIC void dcdc_calibrate(int chan, int to_vol)
+{
+	int i;
+	uint32 cal_vol, ctl_vol = to_vol;
+	for (i = 0; i < ARRAY_SIZE(dcdc_ctl_vol) - 1; i++) {
+		if (ctl_vol < dcdc_ctl_vol[i + 1])
+			break;
+	}
+	if (i >= ARRAY_SIZE(dcdc_ctl_vol) - 1)
+		goto exit;
+	cal_vol = ((ctl_vol - dcdc_ctl_vol[i]) * 32 / 100) % 32;
+	if (chan == 10) {
+	ANA_REG_SET(ANA_DCDCARM_CTL_CAL, cal_vol | (0x1f - cal_vol) << 8);
+	ANA_REG_SET(ANA_DCDCARM_CTL, i | (0x07 - i) << 4);
+	}
+	else if (chan == 11) {
+		ANA_REG_SET(ANA_DCDC_CTL_CAL, cal_vol | (0x1f - cal_vol) << 8);
+		ANA_REG_SET(ANA_DCDC_CTL, i | (0x07 - i) << 4);
+	}
+	for(i = 0; i < 0x1000; ++i){};
+exit:
+	return ;
+}
 PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*/
 {
 	volatile uint32 i = 0;
+	if (REG32(0x209003fc) == CHIP_ID_8810S) { 
+		dcdc_calibrate(10, 1300);//vddarm 1.30v
+		dcdc_calibrate(11, 1200);//vddcore 1.20v
+	}
 	EMC_PARAM_T_PTR emc_ptr = EMC_GetPara();
 	
 	s_emc_config.arm_clk = emc_ptr->arm_clk/1000000/4;
@@ -1965,5 +1831,5 @@ PUBLIC void Chip_Init (void) /*lint !e765 "Chip_Init" is used by init.s entry.s*
 	REG32(0x20000038) = 0x1c31F;
 	REG32(0x20000040) = 0x1c31F;
 	REG32(0x20000048) = 0x1c31F;
+	
 }
-
