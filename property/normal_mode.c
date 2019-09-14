@@ -107,6 +107,7 @@ unsigned short calc_checksum(unsigned char *dat, unsigned long len)
 #define NUM_PCS_ARFCN_BANDS	(7)
 #define NUM_GSM850_ARFCN_BANDS	(6)
 #define MAX_COMPENSATE_POINT	(75)
+#define SAMSUNG_NV_MARK_OFFSET	(65536)
 
 static unsigned long XCheckNVStruct(unsigned char *lpPhoBuf, unsigned long dwPhoSize)
 {
@@ -246,6 +247,13 @@ unsigned long LogSwitch_Function(unsigned char *lpPhoBuf, unsigned long dwPhoSiz
 int fixnv_is_correct(unsigned char *array, unsigned long size)
 {
 	unsigned short sum = 0, *dataaddr;
+	
+	if ((array[SAMSUNG_NV_MARK_OFFSET] == 0x5A) && (array[SAMSUNG_NV_MARK_OFFSET + 1] == 0x5A) \
+		&& (array[SAMSUNG_NV_MARK_OFFSET + 2] == 0x5A) && (array[SAMSUNG_NV_MARK_OFFSET + 3] == 0x5A)) {
+		/* Samsung version */
+		printf("NV data is right!!!.\n");
+		return 1;
+	}
 
 	if ((array[size - 4] == 0xff) && (array[size - 3] == 0xff) && (array[size - 2] == 0xff) \
 		&& (array[size - 1] == 0xff)) {
@@ -719,6 +727,9 @@ void creat_cmdline(char * cmdline,boot_img_hdr *hdr)
 #else
     sprintf(&buf[str_len], " ram=256M");
 #endif
+    sprintf(&buf[str_len], " memblock=debug");
+
+	
 
 	addcmdline(buf);
 	ret =read_spldata();

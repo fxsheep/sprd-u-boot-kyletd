@@ -653,11 +653,7 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 			if (nv_read_partition(p_block_dev, PARTITION_FIX_NV2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0) {
 				if (-1 == fixnv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
-//
-//
-//					TODO:Implement Samsung FIXNV partition verifier
-//
-//					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+					memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 					printf("nv and backup nv are all wrong!\n");
 				}
 			} else {
@@ -670,12 +666,12 @@ void vlx_nand_boot(char * kernel_pname, char * cmdline, int backlight_set)
 		printf("read nv fail, read backup nv\n");
 		if (nv_read_partition(p_block_dev, PARTITION_FIX_NV2, (char *)FIXNV_ADR, FIXNV_SIZE + 4) == 0) {
 			if (-1 == fixnv_is_correct((unsigned char *)FIXNV_ADR, FIXNV_SIZE)) {
-//				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+				memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 				printf("nv and backup nv are all wrong!\n");
 			}
 		} else {
 			printf("read backup nv fail\n");
-//			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
+			memset((unsigned char *)FIXNV_ADR, 0xff, FIXNV_SIZE + EMMC_SECTOR_SIZE);
 			printf("nv and backup nv are all wrong!\n");
 		}
 	}
