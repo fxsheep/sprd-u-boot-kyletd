@@ -727,7 +727,6 @@ void creat_cmdline(char * cmdline,boot_img_hdr *hdr)
 #else
     sprintf(&buf[str_len], " ram=256M");
 #endif
-    sprintf(&buf[str_len], " memblock=debug");
 
 	
 
