@@ -149,7 +149,7 @@
  * Board has 2 32MB banks of DRAM but there is a bug when using
  * both so only the first is configured
  */
-#define CONFIG_NR_DRAM_BANKS	1
+#define CONFIG_NR_DRAM_BANKS	2
 
 #define PHYS_SDRAM_1		0x00000000
 #define PHYS_SDRAM_1_SIZE	0x10000000
