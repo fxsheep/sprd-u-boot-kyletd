@@ -60,18 +60,28 @@ void nand_boot(void)
 #endif
 
 	serial_puts("U-Boot SPL loaded\n");
-	if(TRUE == Emmc_Init()){                           
-//                      Emmc_Read(PARTITION_BOOT2, 0, CONFIG_SYS_EMMC_U_BOOT_SECTOR_NUM, (uint8 *)CONFIG_SYS_NAND_U_BOOT_DST);    
-                      Emmc_Read(PARTITION_USER, CONFIG_SYS_EMMC_S_BOOT_SECTOR_OFFSET, CONFIG_SYS_EMMC_S_BOOT_SECTOR_NUM, (uint8 *)CONFIG_SYS_NAND_S_BOOT_DST);    
+	serial_puts("Booting from MMC...\n");
+	if(TRUE == Emmc_Init()){
+		Emmc_Read(PARTITION_BOOT2, 0, 1, (uint8 *)CONFIG_SYS_NAND_U_BOOT_DST);
+		if(*(uint32 *)(CONFIG_SYS_NAND_U_BOOT_DST + 20) == 0x38363537){	
+			serial_puts("S-Boot found\n");
+			Emmc_Read(PARTITION_USER, CONFIG_SYS_EMMC_S_BOOT_SECTOR_OFFSET, CONFIG_SYS_EMMC_S_BOOT_SECTOR_NUM, (uint8 *)CONFIG_SYS_NAND_S_BOOT_DST);
+		        uboot = (void *)CONFIG_SYS_NAND_S_BOOT_START;
+		}
+		else{
+                        serial_puts("Assuming U-Boot\n");
+			Emmc_Read(PARTITION_BOOT2, 0, CONFIG_SYS_EMMC_U_BOOT_SECTOR_NUM, (uint8 *)CONFIG_SYS_NAND_U_BOOT_DST);    
+                        uboot = (void *)CONFIG_SYS_NAND_U_BOOT_START;
+		}
 	}   
-
+	else{
+		serial_puts("MMC init failed!\n");
+	}
 	/*
 	 * Jump to U-Boot image
 	 */
 #ifdef SPRD_EVM_TAG_ON
 	SPRD_EVM_TAG(3);
 #endif
-	uboot = (void *)CONFIG_SYS_NAND_U_BOOT_START;
-	secure_check(CONFIG_SYS_NAND_U_BOOT_START, 0, CONFIG_SYS_NAND_U_BOOT_START + CONFIG_SYS_NAND_U_BOOT_SIZE - VLR_INFO_OFF, INTER_RAM_BEGIN + CONFIG_SPL_LOAD_LEN - KEY_INFO_SIZ - CUSTOM_DATA_SIZ);
 	(*uboot)();
 }
