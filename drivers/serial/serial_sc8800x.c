@@ -155,7 +155,6 @@ LOCAL int SIO_GetSingleChar (struct FDL_ChannelHandler  *channel)
 }
 LOCAL int SIO_Write (struct FDL_ChannelHandler  *channel, const unsigned char *buf, unsigned int len)
 {
-#ifndef CONFIG_NAND_SPL
     const unsigned char *pstart = (const unsigned char *) buf;
     const unsigned char *pend = pstart + len;
     UartPort_T *port  = (UartPort_T *) channel->priv;
@@ -181,12 +180,10 @@ LOCAL int SIO_Write (struct FDL_ChannelHandler  *channel, const unsigned char *b
     }
 
     return pstart - (const unsigned char *) buf;
-#endif
 }
 
 LOCAL int SIO_PutChar (struct FDL_ChannelHandler  *channel, const unsigned char ch)
 {
-#ifndef CONFIG_NAND_SPL
     UartPort_T *port  = (UartPort_T *) channel->priv;
 
     while (!SIO_TX_READY (SIO_GET_TX_STATUS (port->regBase)))
@@ -203,7 +200,6 @@ LOCAL int SIO_PutChar (struct FDL_ChannelHandler  *channel, const unsigned char 
     }
 
     return 0;
-#endif
 }
 LOCAL int SIO_SetBaudrate (struct FDL_ChannelHandler  *channel,  unsigned int baudrate)
 {

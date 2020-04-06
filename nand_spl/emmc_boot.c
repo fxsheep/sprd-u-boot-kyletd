@@ -59,6 +59,7 @@ void nand_boot(void)
 	SPRD_EVM_TAG(1);
 #endif
 
+	serial_puts("U-Boot SPL loaded\n");
 	if(TRUE == Emmc_Init()){                           
 //                      Emmc_Read(PARTITION_BOOT2, 0, CONFIG_SYS_EMMC_U_BOOT_SECTOR_NUM, (uint8 *)CONFIG_SYS_NAND_U_BOOT_DST);    
                       Emmc_Read(PARTITION_USER, CONFIG_SYS_EMMC_S_BOOT_SECTOR_OFFSET, CONFIG_SYS_EMMC_S_BOOT_SECTOR_NUM, (uint8 *)CONFIG_SYS_NAND_S_BOOT_DST);    
